@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     convex.setAuth(clerkToken);
 
     // Save connection to Convex
-    await convex.mutation(api.connections.saveConnection, {
+    await convex.action(api.connections.saveConnection, {
       platform: "twitter",
       accessToken: tokenResponse.access_token,
       refreshToken: tokenResponse.refresh_token,

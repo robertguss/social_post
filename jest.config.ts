@@ -6,6 +6,8 @@ const config: Config = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
+    '^@/convex/_generated/api$': '<rootDir>/__mocks__/convex-api.ts',
+    '^convex/react$': '<rootDir>/__mocks__/convex-react.ts',
     '^@/(.*)$': '<rootDir>/$1',
   },
   testMatch: [
@@ -15,7 +17,7 @@ const config: Config = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/__tests__/api/', // Skip API route tests for now (Next.js server component issues)
-    '/__tests__/convex/', // Skip Convex tests for now (import issues with generated code)
+    '/__tests__/convex/connections.test.ts', // Skip for now (Convex ESM import issues - test logic is valid)
   ],
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',

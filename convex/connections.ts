@@ -1,27 +1,34 @@
-import { mutation, query } from "./_generated/server";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  query,
+} from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 /**
- * Save or update a user's connection to an external platform (X/Twitter or LinkedIn).
+ * PUBLIC ACTION: Save or update a user's connection with encrypted tokens.
  *
- * SECURITY NOTE: In this story (1.2), tokens are stored as plain text.
- * Token encryption will be implemented in Story 1.3.
+ * This action encrypts OAuth tokens before storing them in the database.
+ * It should be called from the OAuth callback flow after receiving tokens from the provider.
  *
  * @param platform - The platform name ("twitter" or "linkedin")
- * @param accessToken - OAuth access token
- * @param refreshToken - OAuth refresh token
+ * @param accessToken - OAuth access token (plain text - will be encrypted)
+ * @param refreshToken - OAuth refresh token (plain text - will be encrypted)
  * @param expiresAt - Token expiration timestamp
  * @returns The ID of the created or updated connection record
  */
-export const saveConnection = mutation({
+export const saveConnection = action({
   args: {
     platform: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
   },
-  returns: v.id("user_connections"),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"user_connections">> => {
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -30,16 +37,72 @@ export const saveConnection = mutation({
 
     const clerkUserId = identity.subject;
 
+    try {
+      // Encrypt the tokens before storage
+      const encryptedAccessToken = await ctx.runAction(
+        internal.encryption.encrypt,
+        { plaintext: args.accessToken }
+      );
+
+      const encryptedRefreshToken = await ctx.runAction(
+        internal.encryption.encrypt,
+        { plaintext: args.refreshToken }
+      );
+
+      // Save the encrypted tokens via internal mutation
+      const connectionId = await ctx.runMutation(
+        internal.connections.saveConnectionInternal,
+        {
+          clerkUserId,
+          platform: args.platform,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          expiresAt: args.expiresAt,
+        }
+      );
+
+      return connectionId;
+    } catch (error) {
+      // Handle encryption errors gracefully - never log tokens
+      throw new Error(
+        `Failed to save connection: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  },
+});
+
+/**
+ * INTERNAL MUTATION: Save encrypted connection to database.
+ *
+ * This mutation should only be called from the saveConnection action after tokens are encrypted.
+ * It handles the database insert/update logic.
+ *
+ * @param clerkUserId - The authenticated user's Clerk ID
+ * @param platform - The platform name ("twitter" or "linkedin")
+ * @param accessToken - ENCRYPTED OAuth access token
+ * @param refreshToken - ENCRYPTED OAuth refresh token
+ * @param expiresAt - Token expiration timestamp
+ * @returns The ID of the created or updated connection record
+ */
+export const saveConnectionInternal = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    platform: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args): Promise<Id<"user_connections">> => {
     // Check if connection already exists for this user and platform
     const existingConnection = await ctx.db
       .query("user_connections")
       .withIndex("by_user_platform", (q) =>
-        q.eq("clerkUserId", clerkUserId).eq("platform", args.platform)
+        q.eq("clerkUserId", args.clerkUserId).eq("platform", args.platform)
       )
       .first();
 
     if (existingConnection) {
-      // Update existing connection
+      // Update existing connection with encrypted tokens
       await ctx.db.patch(existingConnection._id, {
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
@@ -47,9 +110,9 @@ export const saveConnection = mutation({
       });
       return existingConnection._id;
     } else {
-      // Insert new connection
+      // Insert new connection with encrypted tokens
       const connectionId = await ctx.db.insert("user_connections", {
-        clerkUserId,
+        clerkUserId: args.clerkUserId,
         platform: args.platform,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
@@ -57,6 +120,104 @@ export const saveConnection = mutation({
       });
       return connectionId;
     }
+  },
+});
+
+/**
+ * INTERNAL ACTION: Retrieve and decrypt OAuth tokens for a specific platform.
+ *
+ * This action is restricted to internal use only (e.g., from publishing actions).
+ * It retrieves the encrypted tokens from the database and decrypts them.
+ *
+ * @param clerkUserId - The user's Clerk ID
+ * @param platform - The platform name ("twitter" or "linkedin")
+ * @returns Object containing decrypted tokens and expiration, or null if not found
+ */
+export const getDecryptedConnection = internalAction({
+  args: {
+    clerkUserId: v.string(),
+    platform: v.string(),
+  },
+  handler: async (ctx, args): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+  } | null> => {
+    try {
+      // Query the connection using internal query
+      const connection = await ctx.runQuery(
+        internal.connections.getConnectionInternal,
+        {
+          clerkUserId: args.clerkUserId,
+          platform: args.platform,
+        }
+      );
+
+      if (!connection) {
+        return null;
+      }
+
+      // Decrypt the tokens
+      const decryptedAccessToken = await ctx.runAction(
+        internal.encryption.decrypt,
+        { ciphertext: connection.accessToken }
+      );
+
+      const decryptedRefreshToken = await ctx.runAction(
+        internal.encryption.decrypt,
+        { ciphertext: connection.refreshToken }
+      );
+
+      return {
+        accessToken: decryptedAccessToken,
+        refreshToken: decryptedRefreshToken,
+        expiresAt: connection.expiresAt,
+      };
+    } catch (error) {
+      // Handle decryption errors - never log encrypted or decrypted tokens
+      throw new Error(
+        `Failed to retrieve or decrypt connection: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  },
+});
+
+/**
+ * INTERNAL QUERY: Get encrypted connection from database.
+ *
+ * This query retrieves the connection record with encrypted tokens.
+ * Should only be called from internal actions.
+ *
+ * @param clerkUserId - The user's Clerk ID
+ * @param platform - The platform name ("twitter" or "linkedin")
+ * @returns Connection record or null if not found
+ */
+export const getConnectionInternal = internalQuery({
+  args: {
+    clerkUserId: v.string(),
+    platform: v.string(),
+  },
+  handler: async (ctx, args): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+  } | null> => {
+    const connection = await ctx.db
+      .query("user_connections")
+      .withIndex("by_user_platform", (q) =>
+        q.eq("clerkUserId", args.clerkUserId).eq("platform", args.platform)
+      )
+      .first();
+
+    if (!connection) {
+      return null;
+    }
+
+    return {
+      accessToken: connection.accessToken,
+      refreshToken: connection.refreshToken,
+      expiresAt: connection.expiresAt,
+    };
   },
 });
 
@@ -70,12 +231,11 @@ export const getConnectionStatus = query({
   args: {
     platform: v.string(),
   },
-  returns: v.object({
-    connected: v.boolean(),
-    expiresAt: v.optional(v.number()),
-    needsReauth: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{
+    connected: boolean;
+    expiresAt?: number;
+    needsReauth: boolean;
+  }> => {
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {

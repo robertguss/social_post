@@ -8,7 +8,11 @@
  * @module
  */
 
+import type * as connections from "../connections.js";
+import type * as encryption from "../encryption.js";
+import type * as encryptionHelpers from "../encryptionHelpers.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as posts from "../posts.js";
 
 import type {
   ApiFromModules,
@@ -25,7 +29,11 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  connections: typeof connections;
+  encryption: typeof encryption;
+  encryptionHelpers: typeof encryptionHelpers;
   myFunctions: typeof myFunctions;
+  posts: typeof posts;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

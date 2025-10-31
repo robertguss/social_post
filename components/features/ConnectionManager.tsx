@@ -146,13 +146,13 @@ function generateCodeVerifier(): string {
  * @param verifier - The code verifier
  * @returns Base64URL-encoded SHA-256 hash
  */
-function generateCodeChallenge(verifier: string): string {
+async function generateCodeChallenge(verifier: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
-  const hashBuffer = crypto.subtle.digest("SHA-256", data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
   // Convert to base64URL after hashing
-  return hashBuffer.then((buffer) => base64URLEncode(new Uint8Array(buffer)));
+  return base64URLEncode(new Uint8Array(hashBuffer));
 }
 
 /**
