@@ -24,6 +24,7 @@ import { v } from "convex/values";
  * @param errorMessage - The error message describing the failure
  * @param scheduledTime - UTC timestamp of the scheduled time
  * @param retryCount - Number of retry attempts made
+ * @param platform - Optional platform identifier ("twitter" | "linkedin"), defaults to "twitter"
  */
 export const sendFailureNotification = internalAction({
   args: {
@@ -32,6 +33,7 @@ export const sendFailureNotification = internalAction({
     errorMessage: v.string(),
     scheduledTime: v.number(),
     retryCount: v.number(),
+    platform: v.optional(v.string()),
   },
   handler: async (_ctx, args): Promise<void> => {
     // Get Telegram credentials from environment variables
@@ -46,6 +48,10 @@ export const sendFailureNotification = internalAction({
       return;
     }
 
+    // Determine platform label
+    const platform = args.platform || "twitter";
+    const platformLabel = platform === "linkedin" ? "LinkedIn" : "X/Twitter";
+
     // Prepare notification message
     const contentPreview =
       args.content.substring(0, 100) +
@@ -59,7 +65,7 @@ export const sendFailureNotification = internalAction({
       timeZoneName: "short",
     });
 
-    const message = `🚨 *Post Publishing Failed*\n\n*Content:* ${contentPreview}\n\n*Error:* ${args.errorMessage}\n\n*Scheduled Time:* ${formattedTime}\n\n*Retry Attempts:* ${args.retryCount}/3\n\n*Post ID:* ${args.postId}`;
+    const message = `🚨 *${platformLabel} Post Publishing Failed*\n\n*Content:* ${contentPreview}\n\n*Error:* ${args.errorMessage}\n\n*Scheduled Time:* ${formattedTime}\n\n*Retry Attempts:* ${args.retryCount}/3\n\n*Post ID:* ${args.postId}`;
 
     try {
       // Send notification via Telegram Bot API
@@ -83,7 +89,7 @@ export const sendFailureNotification = internalAction({
         );
       } else {
         console.log(
-          `[Notifications] Successfully sent Telegram notification for post ${args.postId}`
+          `[Notifications] Successfully sent Telegram notification for ${platformLabel} post ${args.postId}`
         );
       }
     } catch (error) {

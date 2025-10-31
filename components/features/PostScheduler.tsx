@@ -9,35 +9,53 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * PostScheduler Component
  *
- * Allows users to create and schedule posts for X/Twitter.
+ * Allows users to create and schedule posts for X/Twitter and LinkedIn.
  * Features:
- * - Multi-line text input for post content
- * - Character counter with visual warnings (260 char warning, 280 char max)
- * - Optional URL field for threading
- * - Date/time selector for scheduling (local timezone)
+ * - Platform selection (Twitter, LinkedIn, or both)
+ * - Separate content fields with character counters (Twitter: 280 chars, LinkedIn: 3,000 chars)
+ * - Optional URL field for threading/commenting
+ * - Separate date/time selectors for each platform (staggered scheduling)
  */
 export function PostScheduler() {
   // Convex mutation
   const createPost = useMutation(api.posts.createPost);
 
-  // Form state
-  const [content, setContent] = useState("");
+  // Platform selection state
+  const [enableTwitter, setEnableTwitter] = useState(true);
+  const [enableLinkedIn, setEnableLinkedIn] = useState(false);
+
+  // Twitter form state
+  const [twitterContent, setTwitterContent] = useState("");
+  const [twitterScheduledTime, setTwitterScheduledTime] = useState<Date | undefined>();
+
+  // LinkedIn form state
+  const [linkedInContent, setLinkedInContent] = useState("");
+  const [linkedInScheduledTime, setLinkedInScheduledTime] = useState<Date | undefined>();
+
+  // Shared state
   const [url, setUrl] = useState("");
-  const [scheduledTime, setScheduledTime] = useState<Date | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Character count for Twitter/X (280 max, warning at 260)
-  const charCount = content.length;
-  const MAX_CHARS = 280;
-  const WARNING_THRESHOLD = 260;
-  const isOverLimit = charCount > MAX_CHARS;
-  const isNearLimit = charCount >= WARNING_THRESHOLD && !isOverLimit;
+  // Twitter character count (280 max, warning at 260)
+  const twitterCharCount = twitterContent.length;
+  const TWITTER_MAX_CHARS = 280;
+  const TWITTER_WARNING_THRESHOLD = 260;
+  const isTwitterOverLimit = twitterCharCount > TWITTER_MAX_CHARS;
+  const isTwitterNearLimit = twitterCharCount >= TWITTER_WARNING_THRESHOLD && !isTwitterOverLimit;
+
+  // LinkedIn character count (3,000 max, warning at 2,900)
+  const linkedInCharCount = linkedInContent.length;
+  const LINKEDIN_MAX_CHARS = 3000;
+  const LINKEDIN_WARNING_THRESHOLD = 2900;
+  const isLinkedInOverLimit = linkedInCharCount > LINKEDIN_MAX_CHARS;
+  const isLinkedInNearLimit = linkedInCharCount >= LINKEDIN_WARNING_THRESHOLD && !isLinkedInOverLimit;
 
   /**
    * Handle form submission
@@ -49,40 +67,88 @@ export function PostScheduler() {
     setError(null);
     setSuccess(false);
 
-    // Validation
-    if (!content.trim()) {
-      setError("Post content is required");
+    // Validation: At least one platform must be selected
+    if (!enableTwitter && !enableLinkedIn) {
+      setError("Please select at least one platform");
       return;
     }
 
-    if (isOverLimit) {
-      setError("Post exceeds 280 character limit");
-      return;
+    // Twitter validation (if enabled)
+    if (enableTwitter) {
+      if (!twitterContent.trim()) {
+        setError("Twitter content is required");
+        return;
+      }
+      if (isTwitterOverLimit) {
+        setError("Twitter content exceeds 280 character limit");
+        return;
+      }
+      if (!twitterScheduledTime) {
+        setError("Please select a Twitter scheduled time");
+        return;
+      }
     }
 
-    if (!scheduledTime) {
-      setError("Please select a date and time");
-      return;
+    // LinkedIn validation (if enabled)
+    if (enableLinkedIn) {
+      if (!linkedInContent.trim()) {
+        setError("LinkedIn content is required");
+        return;
+      }
+      if (isLinkedInOverLimit) {
+        setError("LinkedIn content exceeds 3,000 character limit");
+        return;
+      }
+      if (!linkedInScheduledTime) {
+        setError("Please select a LinkedIn scheduled time");
+        return;
+      }
     }
 
     try {
       setIsSubmitting(true);
 
-      // Convert local date/time to UTC timestamp
-      const utcTimestamp = scheduledTime.getTime();
+      // Build mutation args based on platform selection
+      const mutationArgs: {
+        twitterContent?: string;
+        linkedInContent?: string;
+        twitterScheduledTime?: number;
+        linkedInScheduledTime?: number;
+        url?: string;
+      } = {};
+
+      // Add Twitter fields if enabled
+      if (enableTwitter && twitterScheduledTime) {
+        mutationArgs.twitterContent = twitterContent;
+        mutationArgs.twitterScheduledTime = twitterScheduledTime.getTime();
+      }
+
+      // Add LinkedIn fields if enabled
+      if (enableLinkedIn && linkedInScheduledTime) {
+        mutationArgs.linkedInContent = linkedInContent;
+        mutationArgs.linkedInScheduledTime = linkedInScheduledTime.getTime();
+      }
+
+      // Add URL if provided
+      if (url.trim()) {
+        mutationArgs.url = url;
+      }
 
       // Call Convex mutation to create post
-      await createPost({
-        content,
-        url: url || undefined,
-        scheduledTime: utcTimestamp,
-      });
+      await createPost(mutationArgs);
 
       // Success - clear form
       setSuccess(true);
-      setContent("");
+      setTwitterContent("");
+      setLinkedInContent("");
       setUrl("");
-      setScheduledTime(undefined);
+      setTwitterScheduledTime(undefined);
+      setLinkedInScheduledTime(undefined);
+
+      // Build success message based on platforms
+      const platforms: string[] = [];
+      if (enableTwitter) platforms.push("X/Twitter");
+      if (enableLinkedIn) platforms.push("LinkedIn");
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000);
@@ -93,43 +159,153 @@ export function PostScheduler() {
     }
   };
 
+  // Check if submit should be disabled
+  const isSubmitDisabled =
+    isSubmitting ||
+    (!enableTwitter && !enableLinkedIn) ||
+    (enableTwitter && (isTwitterOverLimit || !twitterContent.trim() || !twitterScheduledTime)) ||
+    (enableLinkedIn && (isLinkedInOverLimit || !linkedInContent.trim() || !linkedInScheduledTime));
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Schedule Post</CardTitle>
         <CardDescription>
-          Create and schedule a post for X/Twitter
+          Create and schedule posts for X/Twitter and LinkedIn
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Post Content */}
-          <div className="space-y-2">
-            <Label htmlFor="content">
-              Post Content <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="content"
-              placeholder="What's on your mind?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[120px] resize-none"
-              aria-describedby="char-count"
-              aria-invalid={isOverLimit}
-            />
-            <div
-              id="char-count"
-              className={`text-sm text-right ${
-                isOverLimit ? 'text-destructive font-semibold' :
-                isNearLimit ? 'text-yellow-600 font-medium' :
-                'text-muted-foreground'
-              }`}
-            >
-              {charCount}/{MAX_CHARS}
+          {/* Platform Selection */}
+          <div className="space-y-4">
+            <Label>Select Platforms <span className="text-destructive">*</span></Label>
+            <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-6 sm:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enable-twitter"
+                  checked={enableTwitter}
+                  onCheckedChange={(checked) => setEnableTwitter(checked === true)}
+                />
+                <label
+                  htmlFor="enable-twitter"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Post to X/Twitter
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enable-linkedin"
+                  checked={enableLinkedIn}
+                  onCheckedChange={(checked) => setEnableLinkedIn(checked === true)}
+                />
+                <label
+                  htmlFor="enable-linkedin"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Post to LinkedIn
+                </label>
+              </div>
             </div>
           </div>
 
-          {/* URL Field */}
+          {/* Twitter Section */}
+          {enableTwitter && (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="text-sm font-semibold text-foreground">X/Twitter Post</h3>
+
+              {/* Twitter Content */}
+              <div className="space-y-2">
+                <Label htmlFor="twitter-content">
+                  Content <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="twitter-content"
+                  placeholder="What's happening?"
+                  value={twitterContent}
+                  onChange={(e) => setTwitterContent(e.target.value)}
+                  className="min-h-[120px] resize-none"
+                  aria-describedby="twitter-char-count"
+                  aria-invalid={isTwitterOverLimit}
+                />
+                <div
+                  id="twitter-char-count"
+                  className={`text-sm text-right ${
+                    isTwitterOverLimit ? 'text-destructive font-semibold' :
+                    isTwitterNearLimit ? 'text-yellow-600 font-medium' :
+                    'text-muted-foreground'
+                  }`}
+                >
+                  {twitterCharCount}/{TWITTER_MAX_CHARS}
+                </div>
+              </div>
+
+              {/* Twitter Date/Time Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="twitter-scheduled-time">
+                  Scheduled Time <span className="text-destructive">*</span>
+                </Label>
+                <DateTimePicker
+                  date={twitterScheduledTime}
+                  setDate={setTwitterScheduledTime}
+                  placeholder="Select date and time"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Time is in your local timezone
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* LinkedIn Section */}
+          {enableLinkedIn && (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="text-sm font-semibold text-foreground">LinkedIn Post</h3>
+
+              {/* LinkedIn Content */}
+              <div className="space-y-2">
+                <Label htmlFor="linkedin-content">
+                  Content <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="linkedin-content"
+                  placeholder="Share your professional insights..."
+                  value={linkedInContent}
+                  onChange={(e) => setLinkedInContent(e.target.value)}
+                  className="min-h-[120px] resize-none"
+                  aria-describedby="linkedin-char-count"
+                  aria-invalid={isLinkedInOverLimit}
+                />
+                <div
+                  id="linkedin-char-count"
+                  className={`text-sm text-right ${
+                    isLinkedInOverLimit ? 'text-destructive font-semibold' :
+                    isLinkedInNearLimit ? 'text-yellow-600 font-medium' :
+                    'text-muted-foreground'
+                  }`}
+                >
+                  {linkedInCharCount}/{LINKEDIN_MAX_CHARS}
+                </div>
+              </div>
+
+              {/* LinkedIn Date/Time Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="linkedin-scheduled-time">
+                  Scheduled Time <span className="text-destructive">*</span>
+                </Label>
+                <DateTimePicker
+                  date={linkedInScheduledTime}
+                  setDate={setLinkedInScheduledTime}
+                  placeholder="Select date and time"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Time is in your local timezone
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* URL Field (Shared) */}
           <div className="space-y-2">
             <Label htmlFor="url">
               URL (optional)
@@ -142,22 +318,7 @@ export function PostScheduler() {
               onChange={(e) => setUrl(e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              URL will be posted as a reply to your main post
-            </p>
-          </div>
-
-          {/* Date/Time Selector */}
-          <div className="space-y-2">
-            <Label htmlFor="scheduled-time">
-              Scheduled Time <span className="text-destructive">*</span>
-            </Label>
-            <DateTimePicker
-              date={scheduledTime}
-              setDate={setScheduledTime}
-              placeholder="Select date and time"
-            />
-            <p className="text-sm text-muted-foreground">
-              Time is in your local timezone
+              URL will be posted as a reply on X/Twitter and as the first comment on LinkedIn
             </p>
           </div>
 
@@ -179,7 +340,7 @@ export function PostScheduler() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isSubmitting || isOverLimit || !content.trim() || !scheduledTime}
+            disabled={isSubmitDisabled}
           >
             {isSubmitting ? "Scheduling..." : "Schedule Post"}
           </Button>

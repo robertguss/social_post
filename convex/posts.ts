@@ -4,21 +4,25 @@ import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 
 /**
- * Create a new scheduled post for X/Twitter
+ * Create a new scheduled post for X/Twitter and/or LinkedIn
  *
  * This mutation creates a post record with status "Scheduled".
- * The post will be published at the specified scheduledTime by a scheduled action.
+ * The post will be published at the specified scheduledTime(s) by scheduled action(s).
  *
- * @param content - The post content for X/Twitter (max 280 characters)
- * @param url - Optional URL to be posted as a reply/thread
- * @param scheduledTime - UTC timestamp for when the post should be published
+ * @param twitterContent - Optional post content for X/Twitter (max 280 characters)
+ * @param linkedInContent - Optional post content for LinkedIn (max 3,000 characters)
+ * @param twitterScheduledTime - Optional UTC timestamp for Twitter post
+ * @param linkedInScheduledTime - Optional UTC timestamp for LinkedIn post
+ * @param url - Optional URL to be posted as a reply/thread on Twitter, or first comment on LinkedIn
  * @returns The ID of the created post
  */
 export const createPost = mutation({
   args: {
-    content: v.string(),
+    twitterContent: v.optional(v.string()),
+    linkedInContent: v.optional(v.string()),
+    twitterScheduledTime: v.optional(v.number()),
+    linkedInScheduledTime: v.optional(v.number()),
     url: v.optional(v.string()),
-    scheduledTime: v.number(),
   },
   handler: async (ctx, args): Promise<Id<"posts">> => {
     // Verify user authentication
@@ -29,44 +33,75 @@ export const createPost = mutation({
 
     const clerkUserId = identity.subject;
 
-    // Validate content
-    if (!args.content || args.content.trim() === "") {
-      throw new Error("Post content is required");
+    // Validation: At least one platform must be selected
+    const hasTwitter = args.twitterContent && args.twitterScheduledTime;
+    const hasLinkedIn = args.linkedInContent && args.linkedInScheduledTime;
+
+    if (!hasTwitter && !hasLinkedIn) {
+      throw new Error("At least one platform must be selected with content and scheduled time");
     }
 
-    if (args.content.length > 280) {
-      throw new Error("Post content exceeds 280 character limit");
+    // Twitter validation (if selected)
+    if (hasTwitter) {
+      if (args.twitterContent!.trim() === "") {
+        throw new Error("Twitter content cannot be empty");
+      }
+      if (args.twitterContent!.length > 280) {
+        throw new Error("Twitter content exceeds 280 character limit");
+      }
+      const now = Date.now();
+      if (args.twitterScheduledTime! <= now) {
+        throw new Error("Twitter scheduled time must be in the future");
+      }
     }
 
-    // Validate scheduled time (must be in the future)
-    const now = Date.now();
-    if (args.scheduledTime <= now) {
-      throw new Error("Scheduled time must be in the future");
+    // LinkedIn validation (if selected)
+    if (hasLinkedIn) {
+      if (args.linkedInContent!.trim() === "") {
+        throw new Error("LinkedIn content cannot be empty");
+      }
+      if (args.linkedInContent!.length > 3000) {
+        throw new Error("LinkedIn content exceeds 3,000 character limit");
+      }
+      const now = Date.now();
+      if (args.linkedInScheduledTime! <= now) {
+        throw new Error("LinkedIn scheduled time must be in the future");
+      }
     }
 
     // Create the post record
     const postId = await ctx.db.insert("posts", {
       clerkUserId,
       status: "Scheduled",
-      twitterContent: args.content,
-      linkedInContent: "", // Not used in this story
-      twitterScheduledTime: args.scheduledTime,
-      linkedInScheduledTime: undefined, // Not used in this story
+      twitterContent: args.twitterContent || "",
+      linkedInContent: args.linkedInContent || "",
+      twitterScheduledTime: args.twitterScheduledTime,
+      linkedInScheduledTime: args.linkedInScheduledTime,
       url: args.url || "",
       // Initialize optional fields
       errorMessage: undefined,
-      retryCount: 0, // Initialize retry count to 0
+      retryCount: 0,
       twitterPostId: undefined,
       linkedInPostId: undefined,
     });
 
     try {
-      // Schedule the publishing action to run at the scheduled time
-      await ctx.scheduler.runAt(
-        args.scheduledTime,
-        internal.publishing.publishTwitterPost,
-        { postId }
-      );
+      // Schedule publishing actions for each platform
+      if (hasTwitter && args.twitterScheduledTime) {
+        await ctx.scheduler.runAt(
+          args.twitterScheduledTime,
+          internal.publishing.publishTwitterPost,
+          { postId }
+        );
+      }
+
+      if (hasLinkedIn && args.linkedInScheduledTime) {
+        await ctx.scheduler.runAt(
+          args.linkedInScheduledTime,
+          internal.publishing.publishLinkedInPost,
+          { postId }
+        );
+      }
     } catch (error) {
       // If scheduler fails, update post status to Failed
       await ctx.db.patch(postId, {
@@ -91,6 +126,7 @@ export const createPost = mutation({
  * @param postId - The ID of the post to update
  * @param status - The new status ("Scheduled" | "Publishing" | "Published" | "Failed")
  * @param twitterPostId - Optional Twitter post ID (when published successfully)
+ * @param linkedInPostId - Optional LinkedIn post URN (when published successfully)
  * @param errorMessage - Optional error message (when failed)
  * @param retryCount - Optional retry count (for tracking retry attempts)
  */
@@ -99,6 +135,7 @@ export const updatePostStatus = internalMutation({
     postId: v.id("posts"),
     status: v.string(),
     twitterPostId: v.optional(v.string()),
+    linkedInPostId: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
     retryCount: v.optional(v.number()),
   },
@@ -107,6 +144,7 @@ export const updatePostStatus = internalMutation({
     const updates: {
       status: string;
       twitterPostId?: string;
+      linkedInPostId?: string;
       errorMessage?: string;
       retryCount?: number;
     } = {
@@ -115,6 +153,10 @@ export const updatePostStatus = internalMutation({
 
     if (args.twitterPostId !== undefined) {
       updates.twitterPostId = args.twitterPostId;
+    }
+
+    if (args.linkedInPostId !== undefined) {
+      updates.linkedInPostId = args.linkedInPostId;
     }
 
     if (args.errorMessage !== undefined) {
