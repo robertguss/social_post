@@ -310,11 +310,14 @@ async function handlePublishingError(
       retryCount: currentRetryCount,
     });
 
-    // Trigger Telegram notification (stub for now)
+    // Trigger Telegram notification
     try {
       await ctx.runAction(internal.notifications.sendFailureNotification, {
         postId,
+        content: post.twitterContent || "",
         errorMessage,
+        scheduledTime: post.twitterScheduledTime || Date.now(),
+        retryCount: currentRetryCount,
       });
     } catch (notificationError) {
       console.error(

@@ -19,6 +19,12 @@ export default function Home() {
         Convex + Next.js + Clerk
         <div className="flex items-center gap-4">
           <Authenticated>
+            <Link href="/schedule" className="text-sm hover:underline">
+              Schedule Post
+            </Link>
+            <Link href="/history" className="text-sm hover:underline">
+              Post History
+            </Link>
             <Link href="/settings" className="text-sm hover:underline">
               Settings
             </Link>

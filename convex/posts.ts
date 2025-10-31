@@ -1,4 +1,4 @@
-import { mutation, internalMutation, internalQuery } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -145,5 +145,77 @@ export const getPostById = internalQuery({
   },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.postId);
+  },
+});
+
+/**
+ * PUBLIC QUERY: Get posts for the authenticated user with optional filters
+ *
+ * This query retrieves posts for display in the Post History UI.
+ * Supports filtering by date range and platform.
+ *
+ * @param startDate - Optional start date filter (UTC timestamp)
+ * @param endDate - Optional end date filter (UTC timestamp)
+ * @param platform - Optional platform filter ("twitter" | "linkedin"), defaults to "twitter"
+ * @returns Array of posts sorted by scheduled time descending (newest first)
+ */
+export const getPosts = query({
+  args: {
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+    platform: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Verify authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const clerkUserId = identity.subject;
+
+    // Query with index for efficient lookup by user
+    let postsQuery = ctx.db
+      .query("posts")
+      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId));
+
+    // Apply filters
+    if (args.startDate || args.endDate || args.platform) {
+      postsQuery = postsQuery.filter((q) => {
+        const conditions = [];
+
+        // Date range filter on twitterScheduledTime
+        if (args.startDate !== undefined) {
+          conditions.push(
+            q.gte(q.field("twitterScheduledTime"), args.startDate)
+          );
+        }
+        if (args.endDate !== undefined) {
+          conditions.push(
+            q.lte(q.field("twitterScheduledTime"), args.endDate)
+          );
+        }
+
+        // Platform filter (X/Twitter only for now)
+        // For Twitter, ensure twitterScheduledTime is defined
+        if (args.platform === "twitter") {
+          conditions.push(q.neq(q.field("twitterScheduledTime"), undefined));
+        }
+
+        // Return AND of all conditions if any exist
+        return conditions.length > 0 ? q.and(...conditions) : q.and();
+      });
+    }
+
+    // Collect all posts
+    const posts = await postsQuery.collect();
+
+    // Sort by scheduled time descending (newest first)
+    // Convex doesn't support indexed sorting on non-primary fields, so we sort in-memory
+    return posts.sort((a, b) => {
+      const timeA = a.twitterScheduledTime || 0;
+      const timeB = b.twitterScheduledTime || 0;
+      return timeB - timeA;
+    });
   },
 });
