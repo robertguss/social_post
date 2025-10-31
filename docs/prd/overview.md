@@ -6,18 +6,10 @@ A self-hosted social media scheduling application built to eliminate expensive s
 
 ## Target User
 
-Solo content creator (initially single-user) who:
-
-- Posts daily, scaling to multiple times per day
-- Creates content in batches and spontaneously
-- Repurposes content across platforms with platform-specific adaptations
-- Starts with Twitter due to character constraints, then expands for LinkedIn
+Solo content creator (initially single-user) who posts daily/multiple times per day, creates content in batches and spontaneously, and repurposes content across platforms with platform-specific adaptations.
 
 ## Core Value Proposition
 
-- Zero recurring subscription costs
-- Custom-built for specific workflow needs
-- Full control over scheduling and content management
-- Built by engineer for engineer
+Zero recurring subscription costs, custom-built for specific workflow needs, full control over scheduling and content management, and built by engineer for engineer.
 
 ---

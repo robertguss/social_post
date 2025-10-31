@@ -1,4 +1,4 @@
-# Social Posting Scheduler - Product Requirements Document
+# Social Posting Scheduler Product Requirements Document (PRD)
 
 ## Overview
 
@@ -8,427 +8,190 @@ A self-hosted social media scheduling application built to eliminate expensive s
 
 ### Target User
 
-Solo content creator (initially single-user) who:
-
-- Posts daily, scaling to multiple times per day
-- Creates content in batches and spontaneously
-- Repurposes content across platforms with platform-specific adaptations
-- Starts with Twitter due to character constraints, then expands for LinkedIn
+Solo content creator (initially single-user) who posts daily/multiple times per day, creates content in batches and spontaneously, and repurposes content across platforms with platform-specific adaptations.
 
 ### Core Value Proposition
 
-- Zero recurring subscription costs
-- Custom-built for specific workflow needs
-- Full control over scheduling and content management
-- Built by engineer for engineer
+Zero recurring subscription costs, custom-built for specific workflow needs, full control over scheduling and content management, and built by engineer for engineer.
 
 ---
 
-## Technical Stack
+## 1. Goals and Background Context
 
-- **Frontend**: Next.js, Tailwind CSS, shadcn/ui
-- **Backend**: Convex (database + scheduled functions)
-- **Authentication**: Clerk
-- **Integrations**: X API, LinkedIn API, Telegram Bot API
-- **Deployment**: Web-based, mobile-responsive
+### Goals
 
----
+- Replace current paid social media scheduling tools completely.
+- Successfully publish 95%+ of scheduled posts.
+- Can schedule $7+$ posts per week.
+- Achieve zero recurring subscription costs.
+- Implement custom-built support for content repurposing between X/Twitter and LinkedIn.
 
-## Feature Prioritization
+### Background Context
 
-### MVP - Phase 1 (Must Have for Launch)
+The product is a productivity tool, requiring a simple, fast UI to minimize clicks and avoid feature creep until the core workflow is solid. The architecture is defined as a Serverless Fullstack using Next.js, Convex (for database and scheduled functions), and Clerk (for authentication).
 
-These are the absolute essentials to replace current paid tools:
+### Change Log
 
-#### 1. Authentication & Security
-
-- Single-user authentication via Clerk
-- Secure session management
-- Protected routes
-
-#### 2. Platform Connections
-
-- OAuth flow for X/Twitter
-- OAuth flow for LinkedIn
-- Store API credentials securely
-- Connection status indicator (active/needs re-auth)
-
-#### 3. Post Creation & Scheduling
-
-- Text input for post content
-- Separate URL field for auto-commenting/threading
-- Character counter with visual warnings
-  - X: 280 characters (highlight at 260, error at 280)
-  - LinkedIn: 3,000 characters
-- Manual time selection for each platform
-- Staggered posting (different times for X vs LinkedIn)
-- Timezone: Local timezone only
-
-#### 4. Post Management
-
-- List view of all scheduled posts
-- Edit scheduled posts
-- Delete scheduled posts
-- Reschedule posts (change time)
-- Post status indicators:
-  - Scheduled
-  - Publishing
-  - Published
-  - Failed
-
-#### 5. Post History
-
-- View all published posts
-- Search by date range
-- Filter by platform
-
-#### 6. Error Handling & Notifications
-
-- Auto-retry failed posts (2-3 attempts)
-- Telegram notification on final failure
-- Display error messages in UI
-- Manual retry option
-
-#### 7. Core Publishing
-
-- Publish text posts to X
-- Publish text posts to LinkedIn
-- Auto-post URL as first comment on LinkedIn
-- Auto-post URL as reply in X thread
-- Convex scheduled functions for timed publishing
+| Date           | Version | Description                                                                                             | Author   |
+| :------------- | :------ | :------------------------------------------------------------------------------------------------------ | :------- |
+| **Original**   | 1.0     | Initial comprehensive document.                                                                         | User     |
+| **2025-10-30** | 1.1     | **Formatted to BMad PRD standard** including Technical Assumptions and Epic Sequencing for Dev Handoff. | PO Agent |
 
 ---
 
-### Phase 2 (Should Have Soon)
+## 2. Requirements
 
-Features that significantly enhance usability but aren't blocking:
+### Functional
 
-#### 1. Enhanced Views
+1. **FR1 (Authentication):** The system must support single-user authentication and secure session management via Clerk.
+2. **FR2 (Platform Connection):** The system must allow users to establish OAuth flows for X/Twitter and LinkedIn.
+3. **FR3 (Content Input):** The system must provide a text input field for post content with separate character counters for X (280 max) and LinkedIn (3,000 max).
+4. **FR4 (URL Handling):** The system must have a separate URL field, which is used for auto-posting as the first comment (LinkedIn) or as a thread reply (X).
+5. **FR5 (Scheduling):** The system must allow manual time selection and support staggered posting times for X vs. LinkedIn in the user's local timezone.
+6. **FR6 (Publishing):** The system must publish text posts to X and LinkedIn using Convex scheduled functions for timed publishing.
+7. **FR7 (Post Management):** The system must display a list view of all scheduled posts and allow for editing, deleting, and rescheduling these posts.
+8. **FR8 (Post Status):** The system must show clear status indicators: Scheduled, Publishing, Published, and Failed.
+9. **FR9 (Post History):** The system must display a view of all published posts, filterable by date range and platform.
 
-- Calendar view (week and month)
-- Visual schedule overview
-- Drag-and-drop rescheduling in calendar
+### Non Functional
 
-#### 2. Post Previews
-
-- Real-time preview for X
-- Real-time preview for LinkedIn
-- LinkedIn "below the fold" indicator
-  - Show first ~140 characters clearly
-  - Indicate where "see more" appears
-
-#### 3. Drafts System
-
-- Save posts as drafts
-- Draft management section
-- Convert draft to scheduled post
-- Edit drafts without scheduling
-
-#### 4. Post Duplication
-
-- One-click duplicate of existing posts
-- Duplicate from scheduled posts
-- Duplicate from post history
-- Creates new draft by default
+1. **NFR1 (Cost):** The application must have zero recurring subscription costs for the core product.
+2. **NFR2 (Performance):** Post publishing must be triggered within 30 seconds of the scheduled time.
+3. **NFR3 (Reliability):** The scheduling service must target $99\%$ uptime.
+4. **NFR4 (Resilience):** The system must auto-retry failed posts (2-3 attempts) and send a Telegram notification on final failure.
+5. **NFR5 (Security):** The system must ensure secure OAuth token storage and use HTTPS only.
+6. **NFR6 (Usability):** The interface must be mobile-responsive and minimal-click for post scheduling.
 
 ---
 
-### Phase 3 (Nice to Have)
+## 3. User Interface Design Goals
 
-Features for long-term enhancement and scalability:
+The core design principle is that the UI must be **simple and fast** as a productivity tool.
 
-#### 1. Swipe File / Templates
+### Overall UX Vision
 
-- Create templates from successful posts
-- Save examples from other creators
-- Organize by:
-  - Content type (hooks, threads, announcements, etc.)
-  - Creator/source
-  - Effectiveness rating
-- Click template to pre-populate new draft
-- Search and filter templates
+The application should prioritize utility and efficiency for the solo content creator, moving quickly from content creation to scheduling.
 
-#### 2. Content Organization
+### Core Screens and Views
 
-- Tags/categories for posts (e.g., "AI tips," "course promo")
-- Bulk tagging
-- Filter history by tags
-- Tag-based analytics (what types you post most)
+- **Authentication Screen:** Login/Signup (Clerk integration)
+- **Connection Manager:** For linking X/Twitter and LinkedIn
+- **Post Creation Form:** The primary, integrated workspace.
+- **Dashboard/List View:** Main view for scheduled and pending posts.
+- **History View:** Archival/Search view for past posts.
 
-#### 3. Advanced Search & Filtering
+### Accessibility: None
 
-- Full-text search in post history
-- Filter by multiple criteria:
-  - Date range
-  - Platform
-  - Status
-  - Tags
-  - Contains URL
+_(Inherited from PRD - note: compliance with WCAG standards is a Phase 3 Nice-to-Have.)_
 
-#### 4. Analytics (Future)
+### Target Device and Platforms: Web Responsive
 
-- Basic post performance tracking
-- Engagement metrics (if APIs allow)
-- Best posting times analysis
+_(Mobile usage is secondary but should be functional.)_
 
 ---
 
-## User Workflows
+## 4. Technical Assumptions
 
-### Primary Workflow: Batch Content Creation
+These decisions guide the Architect (Winston) and Developer (James) agents.
 
-1. User drafts multiple posts in notes app
-2. Opens scheduler app
-3. For each piece of content:
-   - Creates Twitter version first (working within 280 characters)
-   - Expands content for LinkedIn version
-   - Adds URL if applicable (same for both platforms)
-   - Schedules Twitter post for specific time
-   - Schedules LinkedIn post for staggered time (e.g., 30 mins later)
-   - Reviews character counts and previews
-   - Saves as scheduled post
-4. Views calendar to ensure distribution looks good
-5. App automatically publishes at scheduled times
-
-### Secondary Workflow: Spontaneous Post Creation
-
-1. User gets content idea
-2. Opens scheduler app
-3. Writes Twitter version
-4. Expands for LinkedIn
-5. Schedules both with staggered times
-6. Continues work
-
-### Tertiary Workflow: Using Templates
-
-1. User browses swipe file
-2. Finds relevant template/example
-3. Clicks to populate new draft
-4. Customizes for current topic
-5. Schedules as normal
+- **Repository Structure:** Monorepo (Next.js App with integrated Convex folder).
+- **Service Architecture:** Serverless architecture leveraging **Convex Scheduled Functions** for publishing and **Convex Queries/Mutations** for data management.
+- **Testing Requirements:** Full Testing Pyramid required, with **specialized Action Testing** (Node.js environment) for API calls, rate limits, and retries.
+- **Additional Technical Assumptions and Requests:**
+  - OAuth tokens (`accessToken`, `refreshToken`) must be stored **encrypted** within the database layer for security.
+  - API integration will be handled by **Convex Actions** to securely access API keys and manage network retries.
 
 ---
 
-## Non-Functional Requirements
+## 5. Epic List
 
-### Performance
+The MVP is sequenced into a single, comprehensive Epic to deliver core scheduling functionality.
 
-- Schedule creation < 2 seconds
-- Post publishing triggered within 30 seconds of scheduled time
-- Calendar view loads < 1 second
-
-### Reliability
-
-- 99% uptime for scheduling service
-- Auto-retry for transient API failures
-- Graceful degradation if one platform API is down
-
-### Usability
-
-- Mobile-responsive design
-- Keyboard shortcuts for power users
-- Minimal clicks to schedule post
-
-### Security
-
-- Secure OAuth token storage
-- HTTPS only
-- Session timeouts
-- No logging of post content
+- **Epic 1: Foundation & Core Publishing:** Establish authentication, platform connections, secure storage, and implement the minimal core publishing logic for X/Twitter.
+- **Epic 2: Core UX & LinkedIn Integration:** Complete the UI/UX features, integrate LinkedIn, and implement post management/history.
 
 ---
 
-## API Integration Requirements
+## 6. Epic Details
 
-### X/Twitter API
+### Epic 1: Foundation & Core Publishing
 
-- OAuth 2.0 authentication
-- POST /2/tweets (create tweet)
-- POST /2/tweets/:id/replies (for URL threading)
-- Rate limit handling
-- Error handling for:
-  - Duplicate content
-  - Rate limits
-  - Authentication failures
+**Epic Goal:** Establish the secure single-user foundation and deploy the minimal end-to-end functionality to schedule and publish posts to at least one platform (X/Twitter).
 
-### LinkedIn API
+| Story ID | Story Title                                | Prerequisite |
+| :------- | :----------------------------------------- | :----------- |
+| **1.1**  | Project Setup & Authentication             | None         |
+| **1.2**  | Secure X/Twitter OAuth Integration         | 1.1          |
+| **1.3**  | Secure Token Encryption & Storage          | 1.2          |
+| **1.4**  | Post Creation Form (X Focus & Core Fields) | 1.3          |
+| **1.5**  | Core Publishing Logic (X only)             | 1.4          |
+| **1.6**  | Post Status & Basic History Readout        | 1.5          |
 
-- OAuth 2.0 authentication
-- POST /v2/ugcPosts (create post)
-- POST /v2/socialActions/:urn/comments (for URL commenting)
-- Rate limit handling
-- Error handling for:
-  - Invalid content
-  - Rate limits
-  - Authentication failures
+#### Story 1.1 Project Setup & Authentication
 
-### Telegram API
+**As a** user, **I want** a secure login and the base project structure, **so that** I can begin connecting my accounts.
 
-- Bot token authentication
-- sendMessage for failure notifications
-- Simple webhook or polling setup
+##### Acceptance Criteria
 
----
+1. The Next.js project runs with the Clerk/Convex context provided.
+2. A user can successfully sign up and log in via Clerk/Next.js components.
+3. The main app route is protected by Clerk middleware.
+4. The foundational Convex database is initialized with the `posts` and `user_connections` tables defined in the schema.
 
-## Data Models
+#### Story 1.2 Secure X/Twitter OAuth Integration
 
-### Post
+**As a** content creator, **I want** to connect my X/Twitter account securely, **so that** the scheduler can post on my behalf.
 
-```
-{
-  id: string
-  userId: string
-  status: "draft" | "scheduled" | "publishing" | "published" | "failed"
+##### Acceptance Criteria
 
-  twitterContent: string
-  linkedInContent: string
-  url?: string
+1. The UI displays a button to initiate the X/Twitter OAuth flow.
+2. Upon successful OAuth, a single `user_connections` record is created for X/Twitter linked to the Clerk user ID.
+3. The API credentials (`accessToken`, `refreshToken`) are stored and secured.
+4. The UI displays the X/Twitter connection status (active/needs re-auth).
 
-  twitterScheduledTime?: timestamp
-  linkedInScheduledTime?: timestamp
+#### Story 1.3 Secure Token Encryption & Storage
 
-  twitterPublishedTime?: timestamp
-  linkedInPublishedTime?: timestamp
+**As an** engineer, **I want** all sensitive OAuth tokens to be encrypted when stored in the database, **so that** unauthorized access risk is minimized.
 
-  twitterPostId?: string
-  linkedInPostId?: string
+##### Acceptance Criteria
 
-  tags?: string[]
-  category?: string
+1. A standard encryption/decryption utility is implemented in a secure Convex function.
+2. The `accessToken` and `refreshToken` in the `user_connections` table are stored in their encrypted format.
+3. Only authorized Convex Actions can decrypt and access these tokens for publishing.
+4. Encryption keys are stored securely as Convex Environment Variables.
 
-  errorMessage?: string
-  retryCount?: number
+#### Story 1.4 Post Creation Form (X Focus & Core Fields)
 
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-```
+**As a** content creator, **I want** a form to enter my content and schedule it for X/Twitter, **so that** I can batch create my content.
 
-### Template (Phase 3)
+##### Acceptance Criteria
 
-```
-{
-  id: string
-  userId: string
-  title: string
-  content: string
-  platform: "twitter" | "linkedin" | "both"
-  contentType: string (hook, thread, announcement, etc.)
-  creator?: string
-  effectiveness?: 1-5 rating
-  notes?: string
-  createdAt: timestamp
-}
-```
+1. A multi-line text input field is provided for post content.
+2. A character counter for X/Twitter (280 max) displays with visual warnings (260 char limit).
+3. A field for a separate URL is provided for threading.
+4. A date/time selector is provided for manual time selection (local timezone only).
+5. On submission, a `posts` record is created in the database with status `Scheduled`.
 
-### UserConnection
+#### Story 1.5 Core Publishing Logic (X only)
 
-```
-{
-  id: string
-  userId: string
-  platform: "twitter" | "linkedin"
-  accessToken: string (encrypted)
-  refreshToken: string (encrypted)
-  expiresAt: timestamp
-  status: "active" | "expired" | "revoked"
-  lastChecked: timestamp
-}
-```
+**As a** content creator, **I want** my scheduled X/Twitter posts to be reliably published at the designated time, **so that** my audience receives my content on schedule.
 
----
+##### Acceptance Criteria
 
-## Success Metrics
+1. A Convex Mutation successfully schedules an internal Convex Action upon form submission.
+2. The internal Action is triggered within 30 seconds of the scheduled time.
+3. The Action successfully retrieves the encrypted X token, decrypts it, and publishes the text post to the X API.
+4. If a URL is provided, the Action posts the URL as a reply in the X thread.
+5. The Action updates the post status to `Published` and stores the `twitterPostId`.
+6. The Action implements auto-retry (2-3 attempts) for transient API failures.
 
-### MVP Success Criteria
+#### Story 1.6 Post Status & Basic History Readout
 
-- Can schedule 7+ posts per week
-- Successfully publishes 95%+ of scheduled posts
-- Zero subscription costs
-- Can replace current paid tool completely
+**As a** content creator, **I want** to see a list of my posts and their outcome, **so that** I can manage my content stream.
 
-### Phase 2 Success Criteria
+##### Acceptance Criteria
 
-- Drafts feature reduces scheduling time by 30%
-- Calendar view used in 80%+ of sessions
-- Preview feature catches formatting issues before publishing
-
-### Phase 3 Success Criteria
-
-- Swipe file has 20+ templates
-- Templates used for 40%+ of posts
-- Search used regularly to find past content
-
----
-
-## Future Considerations (Not Prioritized)
-
-- Multi-user support
-- Team collaboration features
-- Content approval workflows
-- Instagram/Facebook integration
-- Image/video support
-- AI-powered features (content suggestions, optimal timing)
-- Analytics dashboard
-- A/B testing
-- Bulk import from spreadsheet
-- Browser extension for capturing content ideas
-- Mobile apps (native iOS/Android)
-
----
-
-## Launch Checklist
-
-### Pre-Launch (MVP)
-
-- [ ] Set up Next.js + Convex + Clerk
-- [ ] Implement authentication
-- [ ] Build X OAuth flow
-- [ ] Build LinkedIn OAuth flow
-- [ ] Create post scheduling UI
-- [ ] Implement Convex scheduled functions
-- [ ] Build post publishing logic
-- [ ] Add URL auto-commenting/threading
-- [ ] Implement error handling + retries
-- [ ] Set up Telegram notifications
-- [ ] Build post management (edit/delete/reschedule)
-- [ ] Create list view
-- [ ] Add post history
-- [ ] Test end-to-end workflow
-- [ ] Deploy to production
-- [ ] Monitor first week of scheduled posts
-
-### Post-Launch (Phase 2)
-
-- [ ] Add calendar view
-- [ ] Build post previews
-- [ ] Implement LinkedIn fold indicator
-- [ ] Create drafts system
-- [ ] Add post duplication
-
-### Later (Phase 3)
-
-- [ ] Build swipe file
-- [ ] Add tags/categories
-- [ ] Implement advanced search
-- [ ] Consider analytics
-
----
-
-## Open Questions
-
-1. Should failed posts automatically reschedule for X hours later, or require manual intervention?
-2. What's the maximum number of retries before giving up? (Current: 2-3)
-3. Should the app archive old posts after X days/months?
-4. Do we need export functionality (CSV, JSON) for post history?
-5. Should there be a "queue" mode where posts auto-schedule at optimal times?
-
----
-
-## Notes
-
-- Keep UI simple and fast - this is a productivity tool
-- Avoid feature creep - resist adding complexity until core workflow is solid
-- Consider each feature's impact on the primary workflow
-- Mobile usage is secondary but should be functional
-- This is a tool, not a product (initially) - build for speed and utility
+1. The UI displays a basic list of posts in the `posts` table.
+2. The list displays the current post status: `Scheduled`, `Publishing`, `Published`, or `Failed`.
+3. The list displays posts filtered by date range and platform (X/Twitter only initially).
+4. The system sends a Telegram notification if a post fails after all retry attempts.
