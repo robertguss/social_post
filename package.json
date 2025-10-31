@@ -17,10 +17,15 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.25.0",
     "@clerk/nextjs": "^6.12.6",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "convex": "^1.28.0",
+    "lucide-react": "^0.548.0",
     "next": "15.5.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^1.0.0",
@@ -41,6 +46,7 @@
     "prettier": "^3.5.3",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.5",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   }
 }
