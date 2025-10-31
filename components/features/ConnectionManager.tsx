@@ -17,6 +17,11 @@ export function ConnectionManager() {
     platform: "twitter",
   });
 
+  // Fetch LinkedIn connection status
+  const linkedInStatus = useQuery(api.connections.getConnectionStatus, {
+    platform: "linkedin",
+  });
+
   /**
    * Initiates the OAuth 2.0 flow for X/Twitter.
    * Redirects user to Twitter's authorization page.
@@ -57,24 +62,59 @@ export function ConnectionManager() {
   };
 
   /**
-   * Renders the connection status badge with appropriate styling.
+   * Initiates the OAuth 2.0 flow for LinkedIn.
+   * Redirects user to LinkedIn's authorization page.
+   * Note: LinkedIn uses standard OAuth 2.0 (no PKCE required).
    */
-  const renderConnectionStatus = () => {
-    if (!twitterStatus) {
+  const handleConnectLinkedIn = () => {
+    // Generate random state for CSRF protection
+    const state = generateRandomState();
+
+    // Store state in cookie (accessible server-side)
+    document.cookie = `linkedin_oauth_state=${state}; path=/; max-age=600; secure; samesite=lax`;
+
+    // Build authorization URL
+    const clientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID;
+    const redirectUri = `${window.location.origin}/api/auth/linkedin/callback`;
+    const scopes = ["w_member_social", "r_liteprofile", "r_emailaddress"].join(
+      " ",
+    );
+
+    const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("client_id", clientId!);
+    authUrl.searchParams.set("redirect_uri", redirectUri);
+    authUrl.searchParams.set("scope", scopes);
+    authUrl.searchParams.set("state", state);
+
+    // Redirect to LinkedIn OAuth page
+    window.location.href = authUrl.toString();
+  };
+
+  /**
+   * Renders the connection status badge with appropriate styling.
+   * @param status - Connection status object for a platform
+   */
+  const renderConnectionStatus = (
+    status:
+      | { connected: boolean; needsReauth?: boolean; expiresAt?: number }
+      | undefined,
+  ) => {
+    if (!status) {
       return <Badge variant="outline">Loading...</Badge>;
     }
 
-    if (!twitterStatus.connected) {
+    if (!status.connected) {
       return <Badge variant="outline">Not Connected</Badge>;
     }
 
-    if (twitterStatus.needsReauth) {
+    if (status.needsReauth) {
       return <Badge variant="destructive">Needs Re-authentication</Badge>;
     }
 
     // Format expiration date
-    const expiresDate = twitterStatus.expiresAt
-      ? new Date(twitterStatus.expiresAt).toLocaleDateString()
+    const expiresDate = status.expiresAt
+      ? new Date(status.expiresAt).toLocaleDateString()
       : "Unknown";
 
     return (
@@ -90,17 +130,21 @@ export function ConnectionManager() {
   };
 
   /**
-   * Determines whether to show the "Connect X/Twitter" button.
+   * Determines whether to show the "Connect" button for a platform.
    */
-  const showConnectButton =
+  const showTwitterConnectButton =
     !twitterStatus?.connected || twitterStatus?.needsReauth;
+
+  const showLinkedInConnectButton =
+    !linkedInStatus?.connected || linkedInStatus?.needsReauth;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-lg border p-4">
+      {/* Twitter/X Connection */}
+      <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {/* Twitter/X Icon */}
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black dark:bg-white">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black dark:bg-white">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -119,10 +163,42 @@ export function ConnectionManager() {
         </div>
 
         <div className="flex items-center gap-3">
-          {renderConnectionStatus()}
-          {showConnectButton && (
+          {renderConnectionStatus(twitterStatus)}
+          {showTwitterConnectButton && (
             <Button onClick={handleConnectTwitter} variant="default">
               {twitterStatus?.needsReauth ? "Re-connect" : "Connect X/Twitter"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* LinkedIn Connection */}
+      <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          {/* LinkedIn Icon */}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0A66C2]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="white"
+              className="h-5 w-5"
+            >
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-medium">LinkedIn</h3>
+            <p className="text-sm text-muted-foreground">
+              Connect your LinkedIn account to schedule posts
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {renderConnectionStatus(linkedInStatus)}
+          {showLinkedInConnectButton && (
+            <Button onClick={handleConnectLinkedIn} variant="default">
+              {linkedInStatus?.needsReauth ? "Re-connect" : "Connect LinkedIn"}
             </Button>
           )}
         </div>
