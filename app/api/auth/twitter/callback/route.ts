@@ -154,7 +154,7 @@ async function exchangeCodeForTokens(
     throw new Error("Code verifier not found in cookies");
   }
 
-  const tokenEndpoint = "https://api.twitter.com/2/oauth2/token";
+  const tokenEndpoint = "https://api.x.com/2/oauth2/token";
 
   const response = await fetch(tokenEndpoint, {
     method: "POST",
