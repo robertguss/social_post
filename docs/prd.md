@@ -3,16 +3,20 @@
 ## Overview
 
 ### Product Vision
+
 A self-hosted social media scheduling application built to eliminate expensive subscription costs while providing a tailored workflow for content repurposing across X/Twitter and LinkedIn.
 
 ### Target User
+
 Solo content creator (initially single-user) who:
+
 - Posts daily, scaling to multiple times per day
 - Creates content in batches and spontaneously
 - Repurposes content across platforms with platform-specific adaptations
 - Starts with Twitter due to character constraints, then expands for LinkedIn
 
 ### Core Value Proposition
+
 - Zero recurring subscription costs
 - Custom-built for specific workflow needs
 - Full control over scheduling and content management
@@ -37,17 +41,20 @@ Solo content creator (initially single-user) who:
 These are the absolute essentials to replace current paid tools:
 
 #### 1. Authentication & Security
+
 - Single-user authentication via Clerk
 - Secure session management
 - Protected routes
 
 #### 2. Platform Connections
+
 - OAuth flow for X/Twitter
 - OAuth flow for LinkedIn
 - Store API credentials securely
 - Connection status indicator (active/needs re-auth)
 
 #### 3. Post Creation & Scheduling
+
 - Text input for post content
 - Separate URL field for auto-commenting/threading
 - Character counter with visual warnings
@@ -58,6 +65,7 @@ These are the absolute essentials to replace current paid tools:
 - Timezone: Local timezone only
 
 #### 4. Post Management
+
 - List view of all scheduled posts
 - Edit scheduled posts
 - Delete scheduled posts
@@ -69,17 +77,20 @@ These are the absolute essentials to replace current paid tools:
   - Failed
 
 #### 5. Post History
+
 - View all published posts
 - Search by date range
 - Filter by platform
 
 #### 6. Error Handling & Notifications
+
 - Auto-retry failed posts (2-3 attempts)
 - Telegram notification on final failure
 - Display error messages in UI
 - Manual retry option
 
 #### 7. Core Publishing
+
 - Publish text posts to X
 - Publish text posts to LinkedIn
 - Auto-post URL as first comment on LinkedIn
@@ -93,11 +104,13 @@ These are the absolute essentials to replace current paid tools:
 Features that significantly enhance usability but aren't blocking:
 
 #### 1. Enhanced Views
+
 - Calendar view (week and month)
 - Visual schedule overview
 - Drag-and-drop rescheduling in calendar
 
 #### 2. Post Previews
+
 - Real-time preview for X
 - Real-time preview for LinkedIn
 - LinkedIn "below the fold" indicator
@@ -105,12 +118,14 @@ Features that significantly enhance usability but aren't blocking:
   - Indicate where "see more" appears
 
 #### 3. Drafts System
+
 - Save posts as drafts
 - Draft management section
 - Convert draft to scheduled post
 - Edit drafts without scheduling
 
 #### 4. Post Duplication
+
 - One-click duplicate of existing posts
 - Duplicate from scheduled posts
 - Duplicate from post history
@@ -123,6 +138,7 @@ Features that significantly enhance usability but aren't blocking:
 Features for long-term enhancement and scalability:
 
 #### 1. Swipe File / Templates
+
 - Create templates from successful posts
 - Save examples from other creators
 - Organize by:
@@ -133,12 +149,14 @@ Features for long-term enhancement and scalability:
 - Search and filter templates
 
 #### 2. Content Organization
+
 - Tags/categories for posts (e.g., "AI tips," "course promo")
 - Bulk tagging
 - Filter history by tags
 - Tag-based analytics (what types you post most)
 
 #### 3. Advanced Search & Filtering
+
 - Full-text search in post history
 - Filter by multiple criteria:
   - Date range
@@ -148,6 +166,7 @@ Features for long-term enhancement and scalability:
   - Contains URL
 
 #### 4. Analytics (Future)
+
 - Basic post performance tracking
 - Engagement metrics (if APIs allow)
 - Best posting times analysis
@@ -193,21 +212,25 @@ Features for long-term enhancement and scalability:
 ## Non-Functional Requirements
 
 ### Performance
+
 - Schedule creation < 2 seconds
 - Post publishing triggered within 30 seconds of scheduled time
 - Calendar view loads < 1 second
 
 ### Reliability
+
 - 99% uptime for scheduling service
 - Auto-retry for transient API failures
 - Graceful degradation if one platform API is down
 
 ### Usability
+
 - Mobile-responsive design
 - Keyboard shortcuts for power users
 - Minimal clicks to schedule post
 
 ### Security
+
 - Secure OAuth token storage
 - HTTPS only
 - Session timeouts
@@ -218,6 +241,7 @@ Features for long-term enhancement and scalability:
 ## API Integration Requirements
 
 ### X/Twitter API
+
 - OAuth 2.0 authentication
 - POST /2/tweets (create tweet)
 - POST /2/tweets/:id/replies (for URL threading)
@@ -228,6 +252,7 @@ Features for long-term enhancement and scalability:
   - Authentication failures
 
 ### LinkedIn API
+
 - OAuth 2.0 authentication
 - POST /v2/ugcPosts (create post)
 - POST /v2/socialActions/:urn/comments (for URL commenting)
@@ -238,6 +263,7 @@ Features for long-term enhancement and scalability:
   - Authentication failures
 
 ### Telegram API
+
 - Bot token authentication
 - sendMessage for failure notifications
 - Simple webhook or polling setup
@@ -247,37 +273,39 @@ Features for long-term enhancement and scalability:
 ## Data Models
 
 ### Post
+
 ```
 {
   id: string
   userId: string
   status: "draft" | "scheduled" | "publishing" | "published" | "failed"
-  
+
   twitterContent: string
   linkedInContent: string
   url?: string
-  
+
   twitterScheduledTime?: timestamp
   linkedInScheduledTime?: timestamp
-  
+
   twitterPublishedTime?: timestamp
   linkedInPublishedTime?: timestamp
-  
+
   twitterPostId?: string
   linkedInPostId?: string
-  
+
   tags?: string[]
   category?: string
-  
+
   errorMessage?: string
   retryCount?: number
-  
+
   createdAt: timestamp
   updatedAt: timestamp
 }
 ```
 
 ### Template (Phase 3)
+
 ```
 {
   id: string
@@ -294,6 +322,7 @@ Features for long-term enhancement and scalability:
 ```
 
 ### UserConnection
+
 ```
 {
   id: string
@@ -312,17 +341,20 @@ Features for long-term enhancement and scalability:
 ## Success Metrics
 
 ### MVP Success Criteria
+
 - Can schedule 7+ posts per week
 - Successfully publishes 95%+ of scheduled posts
 - Zero subscription costs
 - Can replace current paid tool completely
 
 ### Phase 2 Success Criteria
+
 - Drafts feature reduces scheduling time by 30%
 - Calendar view used in 80%+ of sessions
 - Preview feature catches formatting issues before publishing
 
 ### Phase 3 Success Criteria
+
 - Swipe file has 20+ templates
 - Templates used for 40%+ of posts
 - Search used regularly to find past content
@@ -348,6 +380,7 @@ Features for long-term enhancement and scalability:
 ## Launch Checklist
 
 ### Pre-Launch (MVP)
+
 - [ ] Set up Next.js + Convex + Clerk
 - [ ] Implement authentication
 - [ ] Build X OAuth flow
@@ -366,6 +399,7 @@ Features for long-term enhancement and scalability:
 - [ ] Monitor first week of scheduled posts
 
 ### Post-Launch (Phase 2)
+
 - [ ] Add calendar view
 - [ ] Build post previews
 - [ ] Implement LinkedIn fold indicator
@@ -373,6 +407,7 @@ Features for long-term enhancement and scalability:
 - [ ] Add post duplication
 
 ### Later (Phase 3)
+
 - [ ] Build swipe file
 - [ ] Add tags/categories
 - [ ] Implement advanced search
