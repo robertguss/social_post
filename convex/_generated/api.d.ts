@@ -11,7 +11,6 @@
 import type * as connections from "../connections.js";
 import type * as encryption from "../encryption.js";
 import type * as encryptionHelpers from "../encryptionHelpers.js";
-import type * as myFunctions from "../myFunctions.js";
 import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as publishing from "../publishing.js";
@@ -35,7 +34,6 @@ declare const fullApi: ApiFromModules<{
   connections: typeof connections;
   encryption: typeof encryption;
   encryptionHelpers: typeof encryptionHelpers;
-  myFunctions: typeof myFunctions;
   notifications: typeof notifications;
   posts: typeof posts;
   publishing: typeof publishing;

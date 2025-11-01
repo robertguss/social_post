@@ -3,11 +3,6 @@ import { v } from "convex/values";
 
 // Schema for Social Posting Scheduler application
 export default defineSchema({
-  // Example table from starter template (can be removed later)
-  numbers: defineTable({
-    value: v.number(),
-  }),
-
   // Stores scheduled and published content
   posts: defineTable({
     clerkUserId: v.string(),
