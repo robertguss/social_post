@@ -22,9 +22,24 @@ export function DateTimePicker({
   placeholder = "Pick a date and time",
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [time, setTime] = React.useState("12:00");
 
-  // Initialize time from date if provided
+  // Initialize time to current time or from existing date
+  const getInitialTime = () => {
+    if (date) {
+      const hours = date.getHours().toString().padStart(2, "0");
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+      return `${hours}:${minutes}`;
+    }
+    // Default to current time
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  const [time, setTime] = React.useState(getInitialTime);
+
+  // Update time when date prop changes
   React.useEffect(() => {
     if (date) {
       const hours = date.getHours().toString().padStart(2, "0");
@@ -54,6 +69,7 @@ export function DateTimePicker({
     const newTime = e.target.value;
     setTime(newTime);
 
+    // If there's already a selected date, update its time
     if (date) {
       const [hours, minutes] = newTime.split(":").map(Number);
       const newDate = new Date(date);
@@ -65,6 +81,18 @@ export function DateTimePicker({
   // Get minimum date/time (current time)
   const minDate = new Date();
   minDate.setHours(0, 0, 0, 0);
+
+  // Handle Done button click - ensure date is set with current time
+  const handleDone = () => {
+    // If no date is selected yet, use today's date with the selected time
+    if (!date) {
+      const [hours, minutes] = time.split(":").map(Number);
+      const newDate = new Date();
+      newDate.setHours(hours, minutes, 0, 0);
+      setDate(newDate);
+    }
+    setIsOpen(false);
+  };
 
   return (
     <div className="space-y-2">
@@ -110,7 +138,7 @@ export function DateTimePicker({
               />
             </div>
             <Button
-              onClick={() => setIsOpen(false)}
+              onClick={handleDone}
               className="w-full"
               size="sm"
             >
