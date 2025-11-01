@@ -28,4 +28,14 @@ export default defineSchema({
     refreshToken: v.string(), // Must be encrypted before storage
     expiresAt: v.number(), // Timestamp
   }).index("by_user_platform", ["clerkUserId", "platform"]),
+
+  // Stores reusable content templates for users
+  templates: defineTable({
+    clerkUserId: v.string(),
+    name: v.string(), // Unique per user
+    content: v.string(), // Template text content
+    tags: v.array(v.string()), // e.g., ["hashtags", "closing", "buildinpublic"]
+    lastUsedAt: v.optional(v.number()), // Timestamp, null until first use
+    usageCount: v.number(), // Default 0
+  }).index("by_user", ["clerkUserId"]),
 });
