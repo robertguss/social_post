@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Social Posting Scheduler",
+  title: "SocialPost",
   description: "Schedule and publish content to X/Twitter and LinkedIn",
   icons: {
     icon: "/convex.svg",

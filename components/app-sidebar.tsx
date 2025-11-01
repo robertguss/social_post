@@ -77,7 +77,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="/dashboard">
                 <IconShare3 className="!size-5" />
-                <span className="text-base font-semibold">Social Scheduler</span>
+                <span className="text-base font-semibold">SocialPost</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

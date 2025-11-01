@@ -11,7 +11,7 @@ export default function Home() {
     <>
       <main className="p-8 flex flex-col gap-8">
         <h1 className="text-4xl font-bold text-center">
-          Social Posting Scheduler
+          SocialPost
         </h1>
         <Authenticated>
           <RedirectToDashboard />
