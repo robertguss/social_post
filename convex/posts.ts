@@ -439,23 +439,58 @@ export const getPosts = query({
       postsQuery = postsQuery.filter((q) => {
         const conditions = [];
 
-        // Date range filter on twitterScheduledTime
-        if (args.startDate !== undefined) {
-          conditions.push(
-            q.gte(q.field("twitterScheduledTime"), args.startDate)
-          );
-        }
-        if (args.endDate !== undefined) {
-          conditions.push(
-            q.lte(q.field("twitterScheduledTime"), args.endDate)
-          );
+        // Date range filter based on platform
+        if (args.platform === "linkedin") {
+          // Filter by LinkedIn scheduled time
+          if (args.startDate !== undefined) {
+            conditions.push(
+              q.gte(q.field("linkedInScheduledTime"), args.startDate)
+            );
+          }
+          if (args.endDate !== undefined) {
+            conditions.push(
+              q.lte(q.field("linkedInScheduledTime"), args.endDate)
+            );
+          }
+        } else if (args.platform === "twitter") {
+          // Filter by Twitter scheduled time
+          if (args.startDate !== undefined) {
+            conditions.push(
+              q.gte(q.field("twitterScheduledTime"), args.startDate)
+            );
+          }
+          if (args.endDate !== undefined) {
+            conditions.push(
+              q.lte(q.field("twitterScheduledTime"), args.endDate)
+            );
+          }
+        } else {
+          // For "all" or undefined platform, include posts with either timestamp
+          if (args.startDate !== undefined) {
+            conditions.push(
+              q.or(
+                q.gte(q.field("twitterScheduledTime"), args.startDate),
+                q.gte(q.field("linkedInScheduledTime"), args.startDate)
+              )
+            );
+          }
+          if (args.endDate !== undefined) {
+            conditions.push(
+              q.or(
+                q.lte(q.field("twitterScheduledTime"), args.endDate),
+                q.lte(q.field("linkedInScheduledTime"), args.endDate)
+              )
+            );
+          }
         }
 
-        // Platform filter (X/Twitter only for now)
-        // For Twitter, ensure twitterScheduledTime is defined
+        // Platform filter
         if (args.platform === "twitter") {
           conditions.push(q.neq(q.field("twitterScheduledTime"), undefined));
+        } else if (args.platform === "linkedin") {
+          conditions.push(q.neq(q.field("linkedInScheduledTime"), undefined));
         }
+        // For "all" or undefined, no additional platform filter needed
 
         // Return AND of all conditions if any exist
         return conditions.length > 0 ? q.and(...conditions) : q.and();
@@ -468,8 +503,30 @@ export const getPosts = query({
     // Sort by scheduled time descending (newest first)
     // Convex doesn't support indexed sorting on non-primary fields, so we sort in-memory
     return posts.sort((a, b) => {
-      const timeA = a.twitterScheduledTime || 0;
-      const timeB = b.twitterScheduledTime || 0;
+      let timeA: number;
+      let timeB: number;
+
+      if (args.platform === "linkedin") {
+        timeA = a.linkedInScheduledTime || 0;
+        timeB = b.linkedInScheduledTime || 0;
+      } else if (args.platform === "twitter") {
+        timeA = a.twitterScheduledTime || 0;
+        timeB = b.twitterScheduledTime || 0;
+      } else {
+        // For "all" platform, prioritize the earliest scheduled time for each post
+        timeA = Math.min(
+          a.twitterScheduledTime || Infinity,
+          a.linkedInScheduledTime || Infinity
+        );
+        timeB = Math.min(
+          b.twitterScheduledTime || Infinity,
+          b.linkedInScheduledTime || Infinity
+        );
+        // If both are Infinity, use 0
+        timeA = timeA === Infinity ? 0 : timeA;
+        timeB = timeB === Infinity ? 0 : timeB;
+      }
+
       return timeB - timeA;
     });
   },

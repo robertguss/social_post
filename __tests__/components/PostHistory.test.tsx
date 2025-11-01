@@ -45,11 +45,11 @@ describe("PostHistory Component", () => {
 
       expect(screen.getByText("Post History")).toBeInTheDocument();
       expect(
-        screen.getByText("No posts found for the selected date range.")
+        screen.getByText("No posts found for the selected filters.")
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Try selecting a different date range or schedule your first post!"
+          "Try selecting different date range or platform filters, or schedule your first post!"
         )
       ).toBeInTheDocument();
     });
@@ -207,7 +207,7 @@ describe("PostHistory Component", () => {
       expect(lastCall[1]).toEqual({
         startDate: undefined,
         endDate: undefined,
-        platform: "twitter",
+        platform: "all",
       });
     });
   });
@@ -231,24 +231,24 @@ describe("PostHistory Component", () => {
       },
     ];
 
-    it("should display X/Twitter as active platform", () => {
+    it("should display 'All Platforms' as active by default", () => {
       mockUseQuery.mockReturnValue(mockPosts);
 
       render(<PostHistory />);
 
-      const twitterButton = screen.getByRole("button", { name: "X/Twitter" });
-      expect(twitterButton).toBeInTheDocument();
-      expect(twitterButton.className).toContain("bg-primary");
+      const allPlatformsButton = screen.getByRole("button", { name: "All Platforms" });
+      expect(allPlatformsButton).toBeInTheDocument();
+      expect(allPlatformsButton.className).toContain("bg-primary");
     });
 
-    it("should display LinkedIn as disabled 'Coming Soon'", () => {
+    it("should display LinkedIn as enabled", () => {
       mockUseQuery.mockReturnValue(mockPosts);
 
       render(<PostHistory />);
 
-      const linkedInButton = screen.getByRole("button", { name: "LinkedIn (Coming Soon)" });
+      const linkedInButton = screen.getByRole("button", { name: "LinkedIn" });
       expect(linkedInButton).toBeInTheDocument();
-      expect(linkedInButton).toBeDisabled();
+      expect(linkedInButton).not.toBeDisabled();
     });
 
     it("should pass platform parameter to query", () => {
@@ -257,7 +257,7 @@ describe("PostHistory Component", () => {
       render(<PostHistory />);
 
       const lastCall = mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1];
-      expect(lastCall[1]).toHaveProperty("platform", "twitter");
+      expect(lastCall[1]).toHaveProperty("platform", "all");
     });
   });
 
@@ -734,6 +734,212 @@ describe("PostHistory Component", () => {
         expect(screen.queryByText("Post Details")).not.toBeInTheDocument();
         expect(screen.queryByText("Full details for this scheduled post")).not.toBeInTheDocument();
       });
+    });
+  });
+
+  /**
+   * LinkedIn Integration Tests (Story 2.6)
+   */
+  describe("LinkedIn Support", () => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const linkedInOnlyPost = [
+      {
+        _id: "post-linkedin-1",
+        status: "Scheduled",
+        linkedInContent: "LinkedIn post content",
+        linkedInScheduledTime: now - 3 * DAY_MS,
+        linkedInPostId: undefined,
+        twitterContent: undefined,
+        twitterScheduledTime: undefined,
+        twitterPostId: undefined,
+        url: null,
+        errorMessage: null,
+      },
+    ];
+
+    const dualPlatformPost = [
+      {
+        _id: "post-dual-1",
+        status: "Scheduled",
+        twitterContent: "Twitter content",
+        twitterScheduledTime: now - 2 * DAY_MS,
+        twitterPostId: undefined,
+        linkedInContent: "LinkedIn content",
+        linkedInScheduledTime: now - 5 * DAY_MS,
+        linkedInPostId: undefined,
+        url: null,
+        errorMessage: null,
+      },
+    ];
+
+    it("should render LinkedIn platform filter button", () => {
+      mockUseQuery.mockReturnValue([]);
+
+      render(<PostHistory />);
+
+      const linkedInButton = screen.getByRole("button", { name: "LinkedIn" });
+      expect(linkedInButton).toBeInTheDocument();
+      expect(linkedInButton).not.toBeDisabled();
+    });
+
+    it("should render All Platforms filter button", () => {
+      mockUseQuery.mockReturnValue([]);
+
+      render(<PostHistory />);
+
+      const allPlatformsButton = screen.getByRole("button", { name: "All Platforms" });
+      expect(allPlatformsButton).toBeInTheDocument();
+    });
+
+    it("should display LinkedIn badge for LinkedIn-only posts", () => {
+      mockUseQuery.mockReturnValue(linkedInOnlyPost);
+
+      render(<PostHistory />);
+
+      // Find badges (not buttons) - there should be a LinkedIn badge in the post card
+      const badges = screen.getAllByText("LinkedIn");
+      expect(badges.length).toBeGreaterThan(1); // Filter button + badge
+    });
+
+    it("should display both platform badges for dual-platform posts", () => {
+      mockUseQuery.mockReturnValue(dualPlatformPost);
+
+      render(<PostHistory />);
+
+      // Should have X and LinkedIn badges in the post card
+      const xBadges = screen.getAllByText("X");
+      const linkedInBadges = screen.getAllByText("LinkedIn");
+      expect(xBadges.length).toBeGreaterThan(0);
+      expect(linkedInBadges.length).toBeGreaterThan(1); // Filter button + badge
+    });
+
+    it("should display LinkedIn content when viewing LinkedIn-only post", () => {
+      mockUseQuery.mockReturnValue(linkedInOnlyPost);
+
+      render(<PostHistory />);
+
+      expect(screen.getByText("LinkedIn post content")).toBeInTheDocument();
+    });
+
+    it("should open post details modal with LinkedIn information", async () => {
+      const publishedLinkedInPost = [
+        {
+          _id: "post-linkedin-published",
+          status: "Published",
+          linkedInContent: "Published LinkedIn post",
+          linkedInScheduledTime: now - 10 * DAY_MS,
+          linkedInPostId: "urn:li:share:1234567890",
+          twitterContent: undefined,
+          twitterScheduledTime: undefined,
+          twitterPostId: undefined,
+          url: null,
+          errorMessage: null,
+        },
+      ];
+
+      mockUseQuery.mockReturnValue(publishedLinkedInPost);
+
+      render(<PostHistory />);
+
+      const postCard = screen.getByText("Published LinkedIn post").closest(".cursor-pointer");
+      fireEvent.click(postCard!);
+
+      await waitFor(() => {
+        expect(screen.getByText("Post Details")).toBeInTheDocument();
+        expect(screen.getByText("LinkedIn Post")).toBeInTheDocument();
+        expect(screen.getByText("Published LinkedIn post")).toBeInTheDocument();
+      });
+    });
+
+    it("should display LinkedIn post link in modal when post is published", async () => {
+      const publishedLinkedInPost = [
+        {
+          _id: "post-linkedin-published",
+          status: "Published",
+          linkedInContent: "Published LinkedIn post",
+          linkedInScheduledTime: now - 10 * DAY_MS,
+          linkedInPostId: "urn:li:share:1234567890",
+          twitterContent: undefined,
+          twitterScheduledTime: undefined,
+          twitterPostId: undefined,
+          url: null,
+          errorMessage: null,
+        },
+      ];
+
+      mockUseQuery.mockReturnValue(publishedLinkedInPost);
+
+      render(<PostHistory />);
+
+      const postCard = screen.getByText("Published LinkedIn post").closest(".cursor-pointer");
+      fireEvent.click(postCard!);
+
+      await waitFor(() => {
+        const linkedInLink = screen.getByText("Open Post on LinkedIn");
+        expect(linkedInLink).toBeInTheDocument();
+        expect(linkedInLink).toHaveAttribute("href", "https://www.linkedin.com/feed/update/urn:li:share:1234567890");
+      });
+    });
+
+    it("should show dual-platform status badges for posts scheduled to both platforms", () => {
+      const dualPublishedPost = [
+        {
+          _id: "post-dual-published",
+          status: "Published",
+          twitterContent: "Twitter content",
+          twitterScheduledTime: now - 2 * DAY_MS,
+          twitterPostId: "123456789",
+          linkedInContent: "LinkedIn content",
+          linkedInScheduledTime: now - 2 * DAY_MS,
+          linkedInPostId: "urn:li:share:987654321",
+          url: null,
+          errorMessage: null,
+        },
+      ];
+
+      mockUseQuery.mockReturnValue(dualPublishedPost);
+
+      render(<PostHistory />);
+
+      // Should show separate status badges for each platform
+      expect(screen.getByText(/X:/)).toBeInTheDocument();
+      expect(screen.getByText(/LinkedIn:/)).toBeInTheDocument();
+    });
+
+    it("should display platform-specific content in post details modal for dual-platform posts", async () => {
+      mockUseQuery.mockReturnValue(dualPlatformPost);
+
+      render(<PostHistory />);
+
+      // Find the post card - it will show Twitter content since it's scheduled first
+      const cards = document.querySelectorAll(".cursor-pointer");
+      expect(cards.length).toBeGreaterThan(0);
+      fireEvent.click(cards[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText("X/Twitter Post")).toBeInTheDocument();
+        expect(screen.getByText("LinkedIn Post")).toBeInTheDocument();
+      });
+
+      // Check both contents are present
+      const twitterContent = screen.queryByText("Twitter content");
+      const linkedInContent = screen.queryByText("LinkedIn content");
+
+      expect(twitterContent).toBeInTheDocument();
+      expect(linkedInContent).toBeInTheDocument();
+    });
+
+    it("should update card description to be platform-agnostic", () => {
+      mockUseQuery.mockReturnValue([]);
+
+      render(<PostHistory />);
+
+      const description = screen.getByText("View your scheduled and published posts");
+      expect(description).toBeInTheDocument();
+      // Verify the description doesn't specifically mention only one platform
+      expect(description.textContent).not.toContain("(X/Twitter)");
     });
   });
 });

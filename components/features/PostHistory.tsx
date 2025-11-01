@@ -17,6 +17,21 @@ import {
 import { Id } from "@/convex/_generated/dataModel";
 import { PostScheduler } from "./PostScheduler";
 
+// Post type definition
+type Post = {
+  _id: Id<"posts">;
+  status: string;
+  twitterContent?: string;
+  twitterScheduledTime?: number;
+  twitterPostId?: string;
+  linkedInContent?: string;
+  linkedInScheduledTime?: number;
+  linkedInPostId?: string;
+  url?: string | null;
+  errorMessage?: string | null;
+  retryCount?: number;
+};
+
 /**
  * PostHistory Component
  *
@@ -33,9 +48,9 @@ export function PostHistory() {
   type DateRangeOption = "7days" | "30days" | "90days" | "all";
   const [dateRange, setDateRange] = useState<DateRangeOption>("30days");
 
-  // Platform filter state (X/Twitter only for now)
-  // Note: setPlatform will be used when LinkedIn support is added in future stories
-  const [platform] = useState<string>("twitter");
+  // Platform filter state
+  type PlatformOption = "all" | "twitter" | "linkedin";
+  const [platform, setPlatform] = useState<PlatformOption>("all");
 
   // Modal state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -46,7 +61,6 @@ export function PostHistory() {
 
   // Edit state
   const [editPostId, setEditPostId] = useState<Id<"posts"> | null>(null);
-  const [success, setSuccess] = useState(false);
 
   // Mutations
   const deletePost = useMutation(api.posts.deletePost);
@@ -135,6 +149,79 @@ export function PostHistory() {
   };
 
   /**
+   * Get platform-specific status for a post
+   */
+  const getPlatformStatus = (
+    post: Post,
+    platformType: "twitter" | "linkedin"
+  ): string => {
+    const postId = platformType === "twitter" ? post.twitterPostId : post.linkedInPostId;
+    const scheduledTime =
+      platformType === "twitter"
+        ? post.twitterScheduledTime
+        : post.linkedInScheduledTime;
+
+    if (!scheduledTime) return "N/A";
+
+    // If post ID exists, it's published
+    if (postId) return "Published";
+
+    // Check if scheduled time has passed
+    const now = Date.now();
+    if (scheduledTime < now) {
+      // Check for error message to determine if failed
+      if (post.errorMessage) return "Failed";
+      // If time passed but no post ID, might be publishing or failed
+      return post.status === "Failed" ? "Failed" : "Publishing";
+    }
+
+    // Future time = Scheduled
+    return "Scheduled";
+  };
+
+  /**
+   * Render platform-specific status badges for dual-platform posts
+   */
+  const PlatformStatusBadges = ({ post }: { post: Post }) => {
+    const hasTwitter = post.twitterScheduledTime !== undefined;
+    const hasLinkedIn = post.linkedInScheduledTime !== undefined;
+
+    // If only one platform, show standard status badge
+    if (!hasTwitter || !hasLinkedIn) {
+      return <StatusBadge status={post.status} />;
+    }
+
+    // Dual platform - show separate badges
+    const twitterStatus = getPlatformStatus(post, "twitter");
+    const linkedInStatus = getPlatformStatus(post, "linkedin");
+
+    const getStatusColor = (status: string) => {
+      const colors: Record<string, string> = {
+        Scheduled: "bg-blue-500 hover:bg-blue-600",
+        Publishing: "bg-yellow-500 hover:bg-yellow-600",
+        Published: "bg-green-500 hover:bg-green-600",
+        Failed: "bg-red-500 hover:bg-red-600",
+      };
+      return colors[status] || "bg-gray-500";
+    };
+
+    return (
+      <div className="flex gap-2 flex-wrap">
+        {hasTwitter && (
+          <Badge className={`${getStatusColor(twitterStatus)} text-white text-xs`}>
+            X: {twitterStatus}
+          </Badge>
+        )}
+        {hasLinkedIn && (
+          <Badge className={`${getStatusColor(linkedInStatus)} text-white text-xs`}>
+            LinkedIn: {linkedInStatus}
+          </Badge>
+        )}
+      </div>
+    );
+  };
+
+  /**
    * Format timestamp to readable date/time
    */
   const formatDateTime = (timestamp: number) => {
@@ -207,13 +294,40 @@ export function PostHistory() {
               </div>
             </div>
 
+            {/* Platform Filter */}
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={platform === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPlatform("all")}
+                >
+                  All Platforms
+                </Button>
+                <Button
+                  variant={platform === "twitter" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPlatform("twitter")}
+                >
+                  X/Twitter
+                </Button>
+                <Button
+                  variant={platform === "linkedin" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPlatform("linkedin")}
+                >
+                  LinkedIn
+                </Button>
+              </div>
+            </div>
+
             {/* Empty State */}
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
-                No posts found for the selected date range.
+                No posts found for the selected filters.
               </p>
               <p className="text-muted-foreground text-sm mt-2">
-                Try selecting a different date range or schedule your first post!
+                Try selecting different date range or platform filters, or schedule your first post!
               </p>
             </div>
           </CardContent>
@@ -229,7 +343,7 @@ export function PostHistory() {
         <CardHeader>
           <CardTitle>Post History</CardTitle>
           <CardDescription>
-            View your scheduled and published posts (X/Twitter)
+            View your scheduled and published posts
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -254,14 +368,29 @@ export function PostHistory() {
             </div>
           </div>
 
-          {/* Platform Filter (X/Twitter only for now) */}
+          {/* Platform Filter */}
           <div className="mb-6">
-            <div className="flex gap-2">
-              <Button variant="default" size="sm">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={platform === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPlatform("all")}
+              >
+                All Platforms
+              </Button>
+              <Button
+                variant={platform === "twitter" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPlatform("twitter")}
+              >
                 X/Twitter
               </Button>
-              <Button variant="outline" size="sm" disabled>
-                LinkedIn (Coming Soon)
+              <Button
+                variant={platform === "linkedin" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPlatform("linkedin")}
+              >
+                LinkedIn
               </Button>
             </div>
           </div>
@@ -276,13 +405,47 @@ export function PostHistory() {
               >
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start mb-3">
-                    <StatusBadge status={post.status} />
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <PlatformStatusBadges post={post} />
+                      {/* Platform Badges */}
+                      <div className="flex gap-1">
+                        {post.twitterScheduledTime && (
+                          <Badge className="bg-blue-500 text-white">X</Badge>
+                        )}
+                        {post.linkedInScheduledTime && (
+                          <Badge className="bg-[#0A66C2] text-white">LinkedIn</Badge>
+                        )}
+                      </div>
+                    </div>
                     <span className="text-sm text-muted-foreground">
-                      {formatDateTime(post.twitterScheduledTime || 0)}
+                      {formatDateTime(
+                        platform === "linkedin"
+                          ? post.linkedInScheduledTime || 0
+                          : platform === "twitter"
+                            ? post.twitterScheduledTime || 0
+                            : Math.min(
+                                post.twitterScheduledTime || Infinity,
+                                post.linkedInScheduledTime || Infinity
+                              ) === Infinity
+                              ? 0
+                              : Math.min(
+                                  post.twitterScheduledTime || Infinity,
+                                  post.linkedInScheduledTime || Infinity
+                                )
+                      )}
                     </span>
                   </div>
                   <p className="text-sm mb-2">
-                    {truncateContent(post.twitterContent || "")}
+                    {truncateContent(
+                      platform === "linkedin"
+                        ? post.linkedInContent || ""
+                        : platform === "twitter"
+                          ? post.twitterContent || ""
+                          : (post.twitterScheduledTime || Infinity) <
+                              (post.linkedInScheduledTime || Infinity)
+                            ? post.twitterContent || ""
+                            : post.linkedInContent || ""
+                    )}
                   </p>
                   {post.url && (
                     <p className="text-xs text-blue-500 truncate">
@@ -338,29 +501,95 @@ export function PostHistory() {
               {/* Status */}
               <div>
                 <h4 className="text-sm font-medium mb-2">Status</h4>
-                <StatusBadge status={selectedPost.status} />
+                <PlatformStatusBadges post={selectedPost} />
               </div>
 
-              {/* Scheduled Time */}
-              <div>
-                <h4 className="text-sm font-medium mb-2">Scheduled Time</h4>
-                <p className="text-sm text-muted-foreground">
-                  {formatDateTime(selectedPost.twitterScheduledTime || 0)}
-                </p>
-              </div>
+              {/* Twitter Section */}
+              {selectedPost.twitterScheduledTime && (
+                <div className="border-l-4 border-blue-500 pl-4">
+                  <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
+                    <Badge className="bg-blue-500 text-white">X</Badge>
+                    X/Twitter Post
+                  </h3>
 
-              {/* Content */}
-              <div>
-                <h4 className="text-sm font-medium mb-2">Content</h4>
-                <p className="text-sm whitespace-pre-wrap">
-                  {selectedPost.twitterContent}
-                </p>
-              </div>
+                  {/* Twitter Scheduled Time */}
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium mb-2">Scheduled Time</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDateTime(selectedPost.twitterScheduledTime)}
+                    </p>
+                  </div>
 
-              {/* URL */}
+                  {/* Twitter Content */}
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium mb-2">Content</h4>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedPost.twitterContent}
+                    </p>
+                  </div>
+
+                  {/* Twitter Post Link */}
+                  {selectedPost.twitterPostId && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">View Post</h4>
+                      <a
+                        href={`https://x.com/i/web/status/${selectedPost.twitterPostId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-500 hover:underline"
+                      >
+                        Open Post on X
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* LinkedIn Section */}
+              {selectedPost.linkedInScheduledTime && (
+                <div className="border-l-4 border-[#0A66C2] pl-4">
+                  <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
+                    <Badge className="bg-[#0A66C2] text-white">LinkedIn</Badge>
+                    LinkedIn Post
+                  </h3>
+
+                  {/* LinkedIn Scheduled Time */}
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium mb-2">Scheduled Time</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDateTime(selectedPost.linkedInScheduledTime)}
+                    </p>
+                  </div>
+
+                  {/* LinkedIn Content */}
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium mb-2">Content</h4>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedPost.linkedInContent}
+                    </p>
+                  </div>
+
+                  {/* LinkedIn Post Link */}
+                  {selectedPost.linkedInPostId && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">View Post</h4>
+                      <a
+                        href={`https://www.linkedin.com/feed/update/${selectedPost.linkedInPostId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-500 hover:underline"
+                      >
+                        Open Post on LinkedIn
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* URL for auto-commenting */}
               {selectedPost.url && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">URL</h4>
+                  <h4 className="text-sm font-medium mb-2">URL for Auto-Comment</h4>
                   <a
                     href={selectedPost.url}
                     target="_blank"
@@ -368,21 +597,6 @@ export function PostHistory() {
                     className="text-sm text-blue-500 hover:underline break-all"
                   >
                     {selectedPost.url}
-                  </a>
-                </div>
-              )}
-
-              {/* Published Post Link */}
-              {selectedPost.status === "Published" && selectedPost.twitterPostId && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">View on X/Twitter</h4>
-                  <a
-                    href={`https://x.com/i/web/status/${selectedPost.twitterPostId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-500 hover:underline"
-                  >
-                    Open Post on X
                   </a>
                 </div>
               )}
@@ -450,8 +664,6 @@ export function PostHistory() {
               }}
               onSuccess={() => {
                 setEditPostId(null);
-                setSuccess(true);
-                setTimeout(() => setSuccess(false), 3000);
               }}
             />
           )}

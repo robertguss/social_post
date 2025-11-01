@@ -1141,3 +1141,327 @@ describe("deletePost mutation - Validation errors", () => {
     await expect(deletePostMock(mockContext, args)).rejects.toThrow("Not authenticated");
   });
 });
+
+/**
+ * getPosts Query Tests
+ *
+ * Tests for the getPosts query with LinkedIn support:
+ * - Platform filtering (all, twitter, linkedin)
+ * - Date range filtering for both platforms
+ * - Sorting by appropriate scheduled time
+ * - Dual-platform post handling
+ */
+describe("getPosts query", () => {
+  let mockQueryContext: any;
+  let mockPosts: any[];
+
+  beforeEach(() => {
+    // Reset mocks
+    jest.clearAllMocks();
+
+    // Create test posts
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    mockPosts = [
+      {
+        _id: "post-1",
+        clerkUserId: "user-123",
+        status: "Scheduled",
+        twitterContent: "Twitter post 1",
+        twitterScheduledTime: now - 2 * DAY_MS,
+        twitterPostId: undefined,
+        linkedInContent: undefined,
+        linkedInScheduledTime: undefined,
+        linkedInPostId: undefined,
+      },
+      {
+        _id: "post-2",
+        clerkUserId: "user-123",
+        status: "Scheduled",
+        twitterContent: undefined,
+        twitterScheduledTime: undefined,
+        twitterPostId: undefined,
+        linkedInContent: "LinkedIn post 2",
+        linkedInScheduledTime: now - 5 * DAY_MS,
+        linkedInPostId: undefined,
+      },
+      {
+        _id: "post-3",
+        clerkUserId: "user-123",
+        status: "Scheduled",
+        twitterContent: "Twitter post 3",
+        twitterScheduledTime: now - 10 * DAY_MS,
+        twitterPostId: undefined,
+        linkedInContent: "LinkedIn post 3",
+        linkedInScheduledTime: now - 8 * DAY_MS,
+        linkedInPostId: undefined,
+      },
+      {
+        _id: "post-4",
+        clerkUserId: "user-123",
+        status: "Scheduled",
+        twitterContent: "Twitter post 4",
+        twitterScheduledTime: now - 35 * DAY_MS,
+        twitterPostId: undefined,
+        linkedInContent: undefined,
+        linkedInScheduledTime: undefined,
+        linkedInPostId: undefined,
+      },
+    ];
+
+    // Mock query context
+    mockQueryContext = {
+      db: {
+        query: jest.fn().mockReturnValue({
+          withIndex: jest.fn().mockReturnValue({
+            filter: jest.fn().mockReturnValue({
+              collect: jest.fn().mockResolvedValue(mockPosts),
+            }),
+            collect: jest.fn().mockResolvedValue(mockPosts),
+          }),
+        }),
+      },
+      auth: {
+        getUserIdentity: jest.fn().mockResolvedValue({
+          subject: "user-123",
+        }),
+      },
+    };
+  });
+
+  // Mock implementation of getPosts query
+  async function getPostsMock(
+    ctx: any,
+    args: {
+      startDate?: number;
+      endDate?: number;
+      platform?: string;
+    }
+  ) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Simulate querying and filtering
+    let posts = await ctx.db
+      .query("posts")
+      .withIndex("by_user")
+      .collect();
+
+    // Apply platform filter
+    if (args.platform === "twitter") {
+      posts = posts.filter((p: any) => p.twitterScheduledTime !== undefined);
+    } else if (args.platform === "linkedin") {
+      posts = posts.filter((p: any) => p.linkedInScheduledTime !== undefined);
+    }
+
+    // Apply date range filter
+    if (args.startDate !== undefined || args.endDate !== undefined) {
+      posts = posts.filter((p: any) => {
+        if (args.platform === "linkedin") {
+          const time = p.linkedInScheduledTime || 0;
+          return (
+            (args.startDate === undefined || time >= args.startDate) &&
+            (args.endDate === undefined || time <= args.endDate)
+          );
+        } else if (args.platform === "twitter") {
+          const time = p.twitterScheduledTime || 0;
+          return (
+            (args.startDate === undefined || time >= args.startDate) &&
+            (args.endDate === undefined || time <= args.endDate)
+          );
+        } else {
+          // For "all" platform
+          const twitterTime = p.twitterScheduledTime || 0;
+          const linkedInTime = p.linkedInScheduledTime || 0;
+          const matchTwitter =
+            (args.startDate === undefined || twitterTime >= args.startDate) &&
+            (args.endDate === undefined || twitterTime <= args.endDate);
+          const matchLinkedIn =
+            (args.startDate === undefined || linkedInTime >= args.startDate) &&
+            (args.endDate === undefined || linkedInTime <= args.endDate);
+          return matchTwitter || matchLinkedIn;
+        }
+      });
+    }
+
+    // Sort by appropriate scheduled time
+    posts.sort((a: any, b: any) => {
+      let timeA: number;
+      let timeB: number;
+
+      if (args.platform === "linkedin") {
+        timeA = a.linkedInScheduledTime || 0;
+        timeB = b.linkedInScheduledTime || 0;
+      } else if (args.platform === "twitter") {
+        timeA = a.twitterScheduledTime || 0;
+        timeB = b.twitterScheduledTime || 0;
+      } else {
+        timeA = Math.min(
+          a.twitterScheduledTime || Infinity,
+          a.linkedInScheduledTime || Infinity
+        );
+        timeB = Math.min(
+          b.twitterScheduledTime || Infinity,
+          b.linkedInScheduledTime || Infinity
+        );
+        timeA = timeA === Infinity ? 0 : timeA;
+        timeB = timeB === Infinity ? 0 : timeB;
+      }
+
+      return timeB - timeA;
+    });
+
+    return posts;
+  }
+
+  it("should return only Twitter posts when platform filter is 'twitter'", async () => {
+    const args = {
+      platform: "twitter",
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    expect(result).toHaveLength(3); // post-1, post-3, post-4
+    expect(result.every((p: any) => p.twitterScheduledTime !== undefined)).toBe(true);
+  });
+
+  it("should return only LinkedIn posts when platform filter is 'linkedin'", async () => {
+    const args = {
+      platform: "linkedin",
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    expect(result).toHaveLength(2); // post-2, post-3
+    expect(result.every((p: any) => p.linkedInScheduledTime !== undefined)).toBe(true);
+  });
+
+  it("should return all posts when platform filter is 'all'", async () => {
+    const args = {
+      platform: "all",
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    expect(result).toHaveLength(4); // All posts
+  });
+
+  it("should filter by date range for LinkedIn posts", async () => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const args = {
+      platform: "linkedin",
+      startDate: now - 7 * DAY_MS,
+      endDate: now,
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    expect(result).toHaveLength(1); // Only post-2 (5 days ago)
+    expect(result[0]._id).toBe("post-2");
+  });
+
+  it("should filter by date range for Twitter posts", async () => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const args = {
+      platform: "twitter",
+      startDate: now - 7 * DAY_MS,
+      endDate: now,
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    expect(result).toHaveLength(1); // Only post-1 (2 days ago)
+    expect(result[0]._id).toBe("post-1");
+  });
+
+  it("should filter by date range for all platforms", async () => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const args = {
+      platform: "all",
+      startDate: now - 30 * DAY_MS,
+      endDate: now,
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    expect(result).toHaveLength(3); // post-1, post-2, post-3 (within 30 days)
+  });
+
+  it("should sort LinkedIn posts by linkedInScheduledTime descending", async () => {
+    const args = {
+      platform: "linkedin",
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    // post-2 is 5 days ago, post-3 is 8 days ago
+    // Sorted descending (newest first), so post-2 should be first
+    expect(result[0]._id).toBe("post-2");
+    expect(result[1]._id).toBe("post-3");
+  });
+
+  it("should sort Twitter posts by twitterScheduledTime descending", async () => {
+    const args = {
+      platform: "twitter",
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    // post-1 is 2 days ago, post-3 is 10 days ago, post-4 is 35 days ago
+    // Sorted descending, so post-1, post-3, post-4
+    expect(result[0]._id).toBe("post-1");
+    expect(result[1]._id).toBe("post-3");
+    expect(result[2]._id).toBe("post-4");
+  });
+
+  it("should sort all posts by earliest scheduled time", async () => {
+    const args = {
+      platform: "all",
+    };
+
+    const result = await getPostsMock(mockQueryContext, args);
+
+    // post-1: 2 days ago (twitter)
+    // post-2: 5 days ago (linkedin)
+    // post-3: 10 days ago (twitter, but linkedin is 8 days ago - use earliest)
+    // post-4: 35 days ago (twitter)
+    // Sorted descending by earliest time: post-1, post-2, post-3, post-4
+    expect(result[0]._id).toBe("post-1");
+    expect(result[1]._id).toBe("post-2");
+    expect(result[2]._id).toBe("post-3");
+    expect(result[3]._id).toBe("post-4");
+  });
+
+  it("should include dual-platform posts in both platform filters", async () => {
+    // Test Twitter filter includes dual-platform post
+    const twitterResult = await getPostsMock(mockQueryContext, {
+      platform: "twitter",
+    });
+    expect(twitterResult.some((p: any) => p._id === "post-3")).toBe(true);
+
+    // Test LinkedIn filter includes dual-platform post
+    const linkedInResult = await getPostsMock(mockQueryContext, {
+      platform: "linkedin",
+    });
+    expect(linkedInResult.some((p: any) => p._id === "post-3")).toBe(true);
+  });
+
+  it("should throw error if not authenticated", async () => {
+    mockQueryContext.auth.getUserIdentity.mockResolvedValue(null);
+
+    const args = {
+      platform: "all",
+    };
+
+    await expect(getPostsMock(mockQueryContext, args)).rejects.toThrow("Not authenticated");
+  });
+});
