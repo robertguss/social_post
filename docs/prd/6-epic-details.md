@@ -176,13 +176,13 @@
 
 **Epic Goal:** Enable users to save, manage, and reuse content blocks (hashtags, closings, disclaimers) to speed up post creation and maintain consistency across posts.
 
-| Story ID | Story Title                          | Prerequisite |
-| :------- | :----------------------------------- | :----------- |
-| **3.1**  | Template Data Model & Storage        | 2.6          |
-| **3.2**  | Create/Edit/Delete Templates UI      | 3.1          |
-| **3.3**  | Tag & Search System for Templates    | 3.2          |
-| **3.4**  | Insert Templates into Post Composer  | 3.3          |
-| **3.5**  | Template Usage Analytics             | 3.4          |
+| Story ID | Story Title                         | Prerequisite |
+| :------- | :---------------------------------- | :----------- |
+| **3.1**  | Template Data Model & Storage       | 2.6          |
+| **3.2**  | Create/Edit/Delete Templates UI     | 3.1          |
+| **3.3**  | Tag & Search System for Templates   | 3.2          |
+| **3.4**  | Insert Templates into Post Composer | 3.3          |
+| **3.5**  | Template Usage Analytics            | 3.4          |
 
 ### Story 3.1 Template Data Model & Storage
 
@@ -338,14 +338,14 @@
 
 **Epic Goal:** Improve the dual-platform workflow with separate, clearly delineated text fields, smart content pre-population from Twitter to LinkedIn, and enhanced platform-specific validation and preview capabilities.
 
-| Story ID | Story Title                                | Prerequisite |
-| :------- | :----------------------------------------- | :----------- |
-| **5.1**  | Dual Text Field UI Architecture            | 4.5          |
+| Story ID | Story Title                                       | Prerequisite |
+| :------- | :------------------------------------------------ | :----------- |
+| **5.1**  | Dual Text Field UI Architecture                   | 4.5          |
 | **5.2**  | Smart Content Pre-population (Twitter → LinkedIn) | 5.1          |
 | **5.3**  | Platform-Specific Character Counters & Validation | 5.2          |
-| **5.4**  | Extended Content Field with Formatting Hints | 5.3          |
-| **5.5**  | Preview Mode for Both Platforms Side-by-Side | 5.4          |
-| **5.6**  | Platform-Specific Post Drafts              | 5.5          |
+| **5.4**  | Extended Content Field with Formatting Hints      | 5.3          |
+| **5.5**  | Preview Mode for Both Platforms Side-by-Side      | 5.4          |
+| **5.6**  | Platform-Specific Post Drafts                     | 5.5          |
 
 ### Story 5.1 Dual Text Field UI Architecture
 
@@ -436,13 +436,13 @@
 
 **Epic Goal:** Provide data-driven suggestions for optimal posting times based on platform-specific best practices and industry research, helping users maximize engagement without requiring their own historical performance data.
 
-| Story ID | Story Title                               | Prerequisite |
-| :------- | :---------------------------------------- | :----------- |
-| **6.1**  | Best Practices Data Model & Storage       | 5.6          |
+| Story ID | Story Title                                | Prerequisite |
+| :------- | :----------------------------------------- | :----------- |
+| **6.1**  | Best Practices Data Model & Storage        | 5.6          |
 | **6.2**  | Time Suggestion Algorithm (Platform-Aware) | 6.1          |
-| **6.3**  | Suggestion UI in Scheduler Picker         | 6.2          |
-| **6.4**  | Historical Performance Tracking (Future)  | 6.3          |
-| **6.5**  | Custom User Preference Overrides          | 6.3          |
+| **6.3**  | Suggestion UI in Scheduler Picker          | 6.2          |
+| **6.4**  | Historical Performance Tracking (Future)   | 6.3          |
+| **6.5**  | Custom User Preference Overrides           | 6.3          |
 
 ### Story 6.1 Best Practices Data Model & Storage
 
@@ -517,15 +517,15 @@
 
 **Epic Goal:** Integrate Google Gemini AI to assist with content refinement, expansion for LinkedIn, tone adjustment, and hashtag generation, reducing the cognitive load of content creation.
 
-| Story ID | Story Title                           | Prerequisite |
-| :------- | :------------------------------------ | :----------- |
-| **7.1**  | Gemini API Setup & Authentication     | 6.5          |
-| **7.2**  | AI Assistant UI Controls in Composer  | 7.1          |
-| **7.3**  | Tone Adjustment Feature               | 7.2          |
-| **7.4**  | Twitter-to-LinkedIn Expansion         | 7.2          |
-| **7.5**  | Hashtag Generation Based on Content   | 7.2          |
+| Story ID | Story Title                             | Prerequisite  |
+| :------- | :-------------------------------------- | :------------ |
+| **7.1**  | Gemini API Setup & Authentication       | 6.5           |
+| **7.2**  | AI Assistant UI Controls in Composer    | 7.1           |
+| **7.3**  | Tone Adjustment Feature                 | 7.2           |
+| **7.4**  | Twitter-to-LinkedIn Expansion           | 7.2           |
+| **7.5**  | Hashtag Generation Based on Content     | 7.2           |
 | **7.6**  | AI Response Handling & Error Management | 7.3, 7.4, 7.5 |
-| **7.7**  | Rate Limit Management & Cost Tracking | 7.6          |
+| **7.7**  | Rate Limit Management & Cost Tracking   | 7.6           |
 
 ### Story 7.1 Gemini API Setup & Authentication
 
