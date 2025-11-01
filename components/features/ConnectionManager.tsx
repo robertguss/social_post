@@ -76,9 +76,11 @@ export function ConnectionManager() {
     // Build authorization URL
     const clientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID;
     const redirectUri = `${window.location.origin}/api/auth/linkedin/callback`;
-    const scopes = ["w_member_social", "r_liteprofile", "r_emailaddress"].join(
-      " ",
-    );
+    // Updated scopes for LinkedIn's v2 API with OpenID Connect
+    // Note: "Share on LinkedIn" product must be approved in LinkedIn Developer Portal
+    // Note: offline_access requires additional approval from LinkedIn
+    // Access tokens are valid for 60 days without it
+    const scopes = ["openid", "profile", "email", "w_member_social"].join(" ");
 
     const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
     authUrl.searchParams.set("response_type", "code");

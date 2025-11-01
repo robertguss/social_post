@@ -21,10 +21,15 @@ export async function GET(request: NextRequest) {
 
     // Handle OAuth errors (user denied, etc.)
     if (error) {
-      console.error("OAuth error:", error);
+      const errorDescription = searchParams.get("error_description") || error;
+      console.error("LinkedIn OAuth error:", {
+        error,
+        errorDescription,
+        fullUrl: request.url,
+      });
       return NextResponse.redirect(
         new URL(
-          `/settings?error=${encodeURIComponent("OAuth authorization failed")}`,
+          `/settings?error=${encodeURIComponent(`OAuth failed: ${errorDescription}`)}`,
           request.url,
         ),
       );
@@ -70,9 +75,14 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for tokens
     const tokenResponse = await exchangeCodeForTokens(code, request);
 
-    if (!tokenResponse.access_token || !tokenResponse.refresh_token) {
-      throw new Error("Failed to obtain access tokens");
+    if (!tokenResponse.access_token) {
+      throw new Error("Failed to obtain access token");
     }
+
+    // LinkedIn's refresh_token is only available with offline_access scope
+    // If not available, use access_token as placeholder (tokens last 60 days)
+    const refreshToken =
+      tokenResponse.refresh_token || tokenResponse.access_token;
 
     // Calculate token expiration timestamp
     // LinkedIn tokens expire in 60 days by default
@@ -97,7 +107,7 @@ export async function GET(request: NextRequest) {
     await convex.action(api.connections.saveConnection, {
       platform: "linkedin",
       accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token,
+      refreshToken: refreshToken,
       expiresAt,
     });
 
@@ -196,7 +206,18 @@ async function exchangeCodeForTokens(
         throw new Error(`Token exchange failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      // Parse and log the response to debug token exchange
+      const responseData = await response.json();
+      console.log("LinkedIn token response:", {
+        hasAccessToken: !!responseData.access_token,
+        hasRefreshToken: !!responseData.refresh_token,
+        hasIdToken: !!responseData.id_token,
+        expiresIn: responseData.expires_in,
+        scope: responseData.scope,
+        keys: Object.keys(responseData),
+      });
+
+      return responseData;
     } catch (error) {
       // Handle timeout errors
       if (error instanceof Error && error.name === "AbortError") {

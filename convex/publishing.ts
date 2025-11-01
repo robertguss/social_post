@@ -585,7 +585,9 @@ async function getLinkedInPersonId(accessToken: string): Promise<string> {
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
-    const response = await fetch(`${LINKEDIN_API_BASE_URL}/v2/me`, {
+    // Use OpenID Connect userinfo endpoint (works with openid scope)
+    // This endpoint is compatible with the OpenID Connect flow
+    const response = await fetch(`${LINKEDIN_API_BASE_URL}/v2/userinfo`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -606,11 +608,20 @@ async function getLinkedInPersonId(accessToken: string): Promise<string> {
 
     const data = await response.json();
 
-    if (!data.id) {
-      throw new Error("LinkedIn API response missing person ID");
+    // OpenID Connect userinfo returns 'sub' as the user identifier
+    // Format: urn:li:person:XXXXXXXXXX or just the ID
+    if (!data.sub) {
+      throw new Error("LinkedIn API response missing person ID (sub claim)");
     }
 
-    return data.id;
+    // Extract the person ID from the sub claim
+    // If it's in URN format (urn:li:person:ID), extract just the ID
+    // Otherwise, use it as-is
+    const personId = data.sub.includes(":")
+      ? data.sub.split(":").pop()
+      : data.sub;
+
+    return personId;
   } catch (error) {
     clearTimeout(timeoutId);
 
