@@ -485,7 +485,7 @@ export const publishLinkedInPost = internalAction({
         );
 
         const refreshResult = await ctx.runAction(
-          internal.connections.refreshLinkedInToken,
+          internal.tokenRefresh.refreshLinkedInToken,
           { clerkUserId: post.clerkUserId }
         );
 

@@ -9,7 +9,7 @@
  * - Token encryption after refresh
  */
 
-import { refreshLinkedInToken } from "@/convex/connections";
+import { refreshLinkedInToken } from "@/convex/tokenRefresh";
 
 // Mock Convex action context
 const createMockActionContext = () => {
