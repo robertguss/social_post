@@ -1,9 +1,10 @@
 "use client";
 
 import { Authenticated, Unauthenticated } from "convex/react";
-import Link from "next/link";
 import { SignUpButton } from "@clerk/nextjs";
 import { SignInButton } from "@clerk/nextjs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   return (
@@ -13,7 +14,7 @@ export default function Home() {
           Social Posting Scheduler
         </h1>
         <Authenticated>
-          <WelcomeContent />
+          <RedirectToDashboard />
         </Authenticated>
         <Unauthenticated>
           <SignInForm />
@@ -43,26 +44,17 @@ function SignInForm() {
   );
 }
 
-function WelcomeContent() {
+function RedirectToDashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push("/dashboard");
+  }, [router]);
+
   return (
-    <div className="flex flex-col gap-8 max-w-lg mx-auto">
-      <p className="text-center">
-        Welcome to your social posting scheduler! Get started by connecting your
-        accounts and scheduling your first post.
-      </p>
-      <div className="flex flex-col gap-4">
-        <Link
-          href="/schedule"
-          className="bg-foreground text-background px-6 py-3 rounded-md text-center hover:opacity-90"
-        >
-          Schedule a Post
-        </Link>
-        <Link
-          href="/settings"
-          className="border-2 border-foreground text-foreground px-6 py-3 rounded-md text-center hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          Connect Your Accounts
-        </Link>
+    <div className="flex justify-center items-center">
+      <div className="text-center">
+        <p className="text-muted-foreground">Redirecting to dashboard...</p>
       </div>
     </div>
   );

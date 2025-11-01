@@ -9,6 +9,7 @@
  */
 
 import type * as connections from "../connections.js";
+import type * as dashboard from "../dashboard.js";
 import type * as encryption from "../encryption.js";
 import type * as encryptionHelpers from "../encryptionHelpers.js";
 import type * as notifications from "../notifications.js";
@@ -32,6 +33,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   connections: typeof connections;
+  dashboard: typeof dashboard;
   encryption: typeof encryption;
   encryptionHelpers: typeof encryptionHelpers;
   notifications: typeof notifications;
