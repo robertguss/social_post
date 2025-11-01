@@ -16,6 +16,8 @@ export default defineSchema({
     linkedInContent: v.optional(v.string()),
     twitterScheduledTime: v.optional(v.number()),
     linkedInScheduledTime: v.optional(v.number()),
+    twitterSchedulerId: v.optional(v.id("_scheduled_functions")),
+    linkedInSchedulerId: v.optional(v.id("_scheduled_functions")),
     url: v.optional(v.string()), // For auto-commenting
     errorMessage: v.optional(v.string()),
     retryCount: v.optional(v.number()),

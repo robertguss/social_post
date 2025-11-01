@@ -8,11 +8,12 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { PostHistory } from "@/components/features/PostHistory";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 
 // Mock Convex React hooks
 jest.mock("convex/react", () => ({
   useQuery: jest.fn(),
+  useMutation: jest.fn(),
 }));
 
 const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
@@ -431,6 +432,308 @@ describe("PostHistory Component", () => {
 
       const badge = screen.getByText("Failed");
       expect(badge.className).toContain("bg-red-500");
+    });
+  });
+
+  describe("Edit/Delete Button Visibility", () => {
+    it("should show Edit and Delete buttons only for Scheduled posts", () => {
+      const posts = [
+        {
+          _id: "scheduled-post" as any,
+          _creationTime: 1698768000000,
+          clerkUserId: "user123",
+          status: "Scheduled",
+          twitterContent: "Scheduled post",
+          linkedInContent: "",
+          twitterScheduledTime: 1698768000000,
+          linkedInScheduledTime: undefined,
+          url: "",
+          errorMessage: undefined,
+          retryCount: 0,
+          twitterPostId: undefined,
+          linkedInPostId: undefined,
+        },
+        {
+          _id: "published-post" as any,
+          _creationTime: 1698854400000,
+          clerkUserId: "user123",
+          status: "Published",
+          twitterContent: "Published post",
+          linkedInContent: "",
+          twitterScheduledTime: 1698854400000,
+          linkedInScheduledTime: undefined,
+          url: "",
+          errorMessage: undefined,
+          retryCount: 0,
+          twitterPostId: "123456",
+          linkedInPostId: undefined,
+        },
+      ];
+
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(posts);
+
+      render(<PostHistory />);
+
+      // Scheduled post should have Edit and Delete buttons
+      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+
+      expect(editButtons).toHaveLength(1);
+      expect(deleteButtons).toHaveLength(1);
+    });
+
+    it("should NOT show Edit/Delete buttons for Published posts", () => {
+      const posts = [
+        {
+          _id: "published-post" as any,
+          _creationTime: 1698854400000,
+          clerkUserId: "user123",
+          status: "Published",
+          twitterContent: "Published post",
+          linkedInContent: "",
+          twitterScheduledTime: 1698854400000,
+          linkedInScheduledTime: undefined,
+          url: "",
+          errorMessage: undefined,
+          retryCount: 0,
+          twitterPostId: "123456",
+          linkedInPostId: undefined,
+        },
+      ];
+
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(posts);
+
+      render(<PostHistory />);
+
+      expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    });
+
+    it("should NOT show Edit/Delete buttons for Publishing posts", () => {
+      const posts = [
+        {
+          _id: "publishing-post" as any,
+          _creationTime: 1698854400000,
+          clerkUserId: "user123",
+          status: "Publishing",
+          twitterContent: "Publishing post",
+          linkedInContent: "",
+          twitterScheduledTime: 1698854400000,
+          linkedInScheduledTime: undefined,
+          url: "",
+          errorMessage: undefined,
+          retryCount: 0,
+          twitterPostId: undefined,
+          linkedInPostId: undefined,
+        },
+      ];
+
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(posts);
+
+      render(<PostHistory />);
+
+      expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    });
+
+    it("should NOT show Edit/Delete buttons for Failed posts", () => {
+      const posts = [
+        {
+          _id: "failed-post" as any,
+          _creationTime: 1698854400000,
+          clerkUserId: "user123",
+          status: "Failed",
+          twitterContent: "Failed post",
+          linkedInContent: "",
+          twitterScheduledTime: 1698854400000,
+          linkedInScheduledTime: undefined,
+          url: "",
+          errorMessage: "Error message",
+          retryCount: 3,
+          twitterPostId: undefined,
+          linkedInPostId: undefined,
+        },
+      ];
+
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(posts);
+
+      render(<PostHistory />);
+
+      expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Delete Confirmation Dialog", () => {
+    const scheduledPost = [
+      {
+        _id: "scheduled-post" as any,
+        _creationTime: 1698768000000,
+        clerkUserId: "user123",
+        status: "Scheduled",
+        twitterContent: "Scheduled post",
+        linkedInContent: "",
+        twitterScheduledTime: 1698768000000,
+        linkedInScheduledTime: undefined,
+        url: "",
+        errorMessage: undefined,
+        retryCount: 0,
+        twitterPostId: undefined,
+        linkedInPostId: undefined,
+      },
+    ];
+
+    it("should show confirmation dialog when Delete button is clicked", async () => {
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(scheduledPost);
+
+      render(<PostHistory />);
+
+      const deleteButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Delete Post")).toBeInTheDocument();
+        expect(
+          screen.getByText("Are you sure you want to delete this post? This action cannot be undone.")
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should close dialog when Cancel button is clicked", async () => {
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(scheduledPost);
+
+      render(<PostHistory />);
+
+      const deleteButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Delete Post")).toBeInTheDocument();
+      });
+
+      const cancelButton = screen.getByRole("button", { name: "Cancel" });
+      fireEvent.click(cancelButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Delete Post")).not.toBeInTheDocument();
+      });
+
+      // Mutation should not have been called
+      expect(mockDeletePost).not.toHaveBeenCalled();
+    });
+
+    it("should call deletePost mutation when Delete is confirmed", async () => {
+      const mockDeletePost = jest.fn().mockResolvedValue(undefined);
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(scheduledPost);
+
+      render(<PostHistory />);
+
+      const deleteButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Delete Post")).toBeInTheDocument();
+      });
+
+      const confirmButton = screen.getAllByRole("button", { name: "Delete" })[1]; // Second Delete button is in dialog
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(mockDeletePost).toHaveBeenCalledWith({ postId: "scheduled-post" });
+      });
+    });
+
+    it("should not open post details modal when Delete button is clicked", async () => {
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(scheduledPost);
+
+      render(<PostHistory />);
+
+      const deleteButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButton);
+
+      // Should show delete dialog, not post details modal
+      await waitFor(() => {
+        expect(screen.getByText("Delete Post")).toBeInTheDocument();
+        expect(screen.queryByText("Post Details")).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Edit Button Interaction", () => {
+    const scheduledPost = [
+      {
+        _id: "scheduled-post" as any,
+        _creationTime: 1698768000000,
+        clerkUserId: "user123",
+        status: "Scheduled",
+        twitterContent: "Scheduled post to edit",
+        linkedInContent: "LinkedIn content",
+        twitterScheduledTime: 1698768000000,
+        linkedInScheduledTime: 1698854400000,
+        url: "https://example.com",
+        errorMessage: undefined,
+        retryCount: 0,
+        twitterPostId: undefined,
+        linkedInPostId: undefined,
+      },
+    ];
+
+    it("should open edit modal when Edit button is clicked", async () => {
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(scheduledPost);
+
+      render(<PostHistory />);
+
+      const editButton = screen.getByRole("button", { name: "Edit" });
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit Post")).toBeInTheDocument();
+      });
+    });
+
+    it("should not open post details modal when Edit button is clicked", async () => {
+      const mockDeletePost = jest.fn();
+      const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
+      mockUseMutation.mockReturnValue(mockDeletePost);
+      mockUseQuery.mockReturnValue(scheduledPost);
+
+      render(<PostHistory />);
+
+      const editButton = screen.getByRole("button", { name: "Edit" });
+      fireEvent.click(editButton);
+
+      // Should show edit form, not post details modal
+      await waitFor(() => {
+        expect(screen.getByText("Edit Post")).toBeInTheDocument();
+        expect(screen.queryByText("Post Details")).not.toBeInTheDocument();
+        expect(screen.queryByText("Full details for this scheduled post")).not.toBeInTheDocument();
+      });
     });
   });
 });

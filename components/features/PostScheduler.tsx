@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -10,20 +10,39 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Id } from "@/convex/_generated/dataModel";
 
 /**
  * PostScheduler Component
  *
  * Allows users to create and schedule posts for X/Twitter and LinkedIn.
+ * Supports both "create" and "edit" modes for managing scheduled posts.
  * Features:
  * - Platform selection (Twitter, LinkedIn, or both)
  * - Separate content fields with character counters (Twitter: 280 chars, LinkedIn: 3,000 chars)
  * - Optional URL field for threading/commenting
  * - Separate date/time selectors for each platform (staggered scheduling)
  */
-export function PostScheduler() {
-  // Convex mutation
+
+interface PostData {
+  _id: Id<"posts">;
+  twitterContent?: string;
+  linkedInContent?: string;
+  twitterScheduledTime?: number;
+  linkedInScheduledTime?: number;
+  url?: string;
+}
+
+interface PostSchedulerProps {
+  mode?: "create" | "edit";
+  postData?: PostData;
+  onSuccess?: () => void;
+}
+
+export function PostScheduler({ mode = "create", postData, onSuccess }: PostSchedulerProps) {
+  // Convex mutations
   const createPost = useMutation(api.posts.createPost);
+  const updatePost = useMutation(api.posts.updatePost);
 
   // Platform selection state
   const [enableTwitter, setEnableTwitter] = useState(true);
@@ -56,6 +75,38 @@ export function PostScheduler() {
   const LINKEDIN_WARNING_THRESHOLD = 2900;
   const isLinkedInOverLimit = linkedInCharCount > LINKEDIN_MAX_CHARS;
   const isLinkedInNearLimit = linkedInCharCount >= LINKEDIN_WARNING_THRESHOLD && !isLinkedInOverLimit;
+
+  /**
+   * Pre-fill form when in edit mode
+   */
+  useEffect(() => {
+    if (mode === "edit" && postData) {
+      // Pre-fill platform selection
+      setEnableTwitter(!!postData.twitterContent);
+      setEnableLinkedIn(!!postData.linkedInContent);
+
+      // Pre-fill Twitter fields
+      if (postData.twitterContent) {
+        setTwitterContent(postData.twitterContent);
+      }
+      if (postData.twitterScheduledTime) {
+        setTwitterScheduledTime(new Date(postData.twitterScheduledTime));
+      }
+
+      // Pre-fill LinkedIn fields
+      if (postData.linkedInContent) {
+        setLinkedInContent(postData.linkedInContent);
+      }
+      if (postData.linkedInScheduledTime) {
+        setLinkedInScheduledTime(new Date(postData.linkedInScheduledTime));
+      }
+
+      // Pre-fill URL
+      if (postData.url) {
+        setUrl(postData.url);
+      }
+    }
+  }, [mode, postData]);
 
   /**
    * Handle form submission
@@ -134,24 +185,37 @@ export function PostScheduler() {
         mutationArgs.url = url;
       }
 
-      // Call Convex mutation to create post
-      await createPost(mutationArgs);
+      // Call appropriate mutation based on mode
+      if (mode === "edit" && postData) {
+        await updatePost({
+          postId: postData._id,
+          ...mutationArgs,
+        });
+      } else {
+        await createPost(mutationArgs);
+      }
 
-      // Success - clear form
+      // Success - show message and callback
       setSuccess(true);
-      setTwitterContent("");
-      setLinkedInContent("");
-      setUrl("");
-      setTwitterScheduledTime(undefined);
-      setLinkedInScheduledTime(undefined);
 
-      // Build success message based on platforms
-      const platforms: string[] = [];
-      if (enableTwitter) platforms.push("X/Twitter");
-      if (enableLinkedIn) platforms.push("LinkedIn");
+      if (mode === "create") {
+        // Clear form on create
+        setTwitterContent("");
+        setLinkedInContent("");
+        setUrl("");
+        setTwitterScheduledTime(undefined);
+        setLinkedInScheduledTime(undefined);
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        // Call onSuccess callback for edit mode (e.g., close modal)
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 1000);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to schedule post");
     } finally {
@@ -169,9 +233,11 @@ export function PostScheduler() {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Schedule Post</CardTitle>
+        <CardTitle>{mode === "edit" ? "Edit Post" : "Schedule Post"}</CardTitle>
         <CardDescription>
-          Create and schedule posts for X/Twitter and LinkedIn
+          {mode === "edit"
+            ? "Update your scheduled post"
+            : "Create and schedule posts for X/Twitter and LinkedIn"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -332,7 +398,7 @@ export function PostScheduler() {
           {/* Success Message */}
           {success && (
             <div className="p-3 text-sm text-green-600 bg-green-50 rounded-md">
-              Post scheduled successfully!
+              {mode === "edit" ? "Post updated successfully!" : "Post scheduled successfully!"}
             </div>
           )}
 
@@ -342,7 +408,9 @@ export function PostScheduler() {
             className="w-full"
             disabled={isSubmitDisabled}
           >
-            {isSubmitting ? "Scheduling..." : "Schedule Post"}
+            {isSubmitting
+              ? (mode === "edit" ? "Updating..." : "Scheduling...")
+              : (mode === "edit" ? "Update Post" : "Schedule Post")}
           </Button>
         </form>
       </CardContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Id } from "@/convex/_generated/dataModel";
+import { PostScheduler } from "./PostScheduler";
 
 /**
  * PostHistory Component
@@ -36,6 +39,17 @@ export function PostHistory() {
 
   // Modal state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<Id<"posts"> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit state
+  const [editPostId, setEditPostId] = useState<Id<"posts"> | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  // Mutations
+  const deletePost = useMutation(api.posts.deletePost);
 
   // Calculate date range timestamps
   const { startDate, endDate } = useMemo(() => {
@@ -62,6 +76,43 @@ export function PostHistory() {
 
   // Find selected post for modal
   const selectedPost = posts?.find((p) => p._id === selectedPostId);
+
+  // Find post to edit
+  const editPost = posts?.find((p) => p._id === editPostId);
+
+  /**
+   * Handle delete confirmation
+   */
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
+
+    setIsDeleting(true);
+    try {
+      await deletePost({ postId: deleteConfirmId });
+      setDeleteConfirmId(null);
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      alert(`Failed to delete post: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  /**
+   * Handle edit button click
+   */
+  const handleEditClick = (postId: Id<"posts">, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
+    setEditPostId(postId);
+  };
+
+  /**
+   * Handle delete button click
+   */
+  const handleDeleteClick = (postId: Id<"posts">, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
+    setDeleteConfirmId(postId);
+  };
 
   /**
    * Render status badge with appropriate styling
@@ -245,6 +296,26 @@ export function PostHistory() {
                       </p>
                     </div>
                   )}
+
+                  {/* Edit/Delete Actions - Only show for Scheduled posts */}
+                  {post.status === "Scheduled" && (
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => handleEditClick(post._id, e)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => handleDeleteClick(post._id, e)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -331,6 +402,58 @@ export function PostHistory() {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this post? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmId(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Post Modal */}
+      <Dialog open={!!editPostId} onOpenChange={() => setEditPostId(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {editPost && (
+            <PostScheduler
+              mode="edit"
+              postData={{
+                _id: editPost._id,
+                twitterContent: editPost.twitterContent,
+                linkedInContent: editPost.linkedInContent,
+                twitterScheduledTime: editPost.twitterScheduledTime,
+                linkedInScheduledTime: editPost.linkedInScheduledTime,
+                url: editPost.url,
+              }}
+              onSuccess={() => {
+                setEditPostId(null);
+                setSuccess(true);
+                setTimeout(() => setSuccess(false), 3000);
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

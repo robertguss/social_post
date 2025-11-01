@@ -17,12 +17,15 @@ const mockContext = {
   db: {
     insert: jest.fn().mockResolvedValue("mock-post-id"),
     patch: jest.fn().mockResolvedValue(undefined),
+    get: jest.fn(),
+    delete: jest.fn().mockResolvedValue(undefined),
   },
   auth: {
     getUserIdentity: jest.fn(),
   },
   scheduler: {
-    runAt: jest.fn().mockResolvedValue(undefined),
+    runAt: jest.fn().mockResolvedValue("mock-scheduler-id"),
+    cancel: jest.fn().mockResolvedValue(undefined),
   },
 };
 
@@ -125,6 +128,180 @@ async function createPostMock(
   }
 
   return postId;
+}
+
+// Mock implementation of updatePost mutation logic
+async function updatePostMock(
+  ctx: any,
+  args: {
+    postId: string;
+    twitterContent?: string;
+    linkedInContent?: string;
+    twitterScheduledTime?: number;
+    linkedInScheduledTime?: number;
+    url?: string;
+  }
+) {
+  // Verify user authentication
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+
+  const clerkUserId = identity.subject;
+
+  // Retrieve existing post and verify ownership
+  const post = await ctx.db.get(args.postId);
+  if (!post) {
+    throw new Error("Post not found");
+  }
+  if (post.clerkUserId !== clerkUserId) {
+    throw new Error("Unauthorized: You can only edit your own posts");
+  }
+
+  // Verify post status is "Scheduled"
+  if (post.status !== "Scheduled") {
+    throw new Error("Only scheduled posts can be edited");
+  }
+
+  // Validation: At least one platform must be selected
+  const hasTwitter = args.twitterContent && args.twitterScheduledTime;
+  const hasLinkedIn = args.linkedInContent && args.linkedInScheduledTime;
+
+  if (!hasTwitter && !hasLinkedIn) {
+    throw new Error("At least one platform must be selected with content and scheduled time");
+  }
+
+  // Twitter validation (if selected)
+  if (hasTwitter) {
+    if (args.twitterContent!.trim() === "") {
+      throw new Error("Twitter content cannot be empty");
+    }
+    if (args.twitterContent!.length > 280) {
+      throw new Error("Twitter content exceeds 280 character limit");
+    }
+    const now = Date.now();
+    if (args.twitterScheduledTime! <= now) {
+      throw new Error("Twitter scheduled time must be in the future");
+    }
+  }
+
+  // LinkedIn validation (if selected)
+  if (hasLinkedIn) {
+    if (args.linkedInContent!.trim() === "") {
+      throw new Error("LinkedIn content cannot be empty");
+    }
+    if (args.linkedInContent!.length > 3000) {
+      throw new Error("LinkedIn content exceeds 3,000 character limit");
+    }
+    const now = Date.now();
+    if (args.linkedInScheduledTime! <= now) {
+      throw new Error("LinkedIn scheduled time must be in the future");
+    }
+  }
+
+  // Cancel existing scheduled actions
+  try {
+    if (post.twitterSchedulerId) {
+      await ctx.scheduler.cancel(post.twitterSchedulerId);
+    }
+    if (post.linkedInSchedulerId) {
+      await ctx.scheduler.cancel(post.linkedInSchedulerId);
+    }
+  } catch (error) {
+    console.warn("Failed to cancel scheduler:", error);
+  }
+
+  // Update post content and times
+  await ctx.db.patch(args.postId, {
+    twitterContent: args.twitterContent || "",
+    linkedInContent: args.linkedInContent || "",
+    twitterScheduledTime: args.twitterScheduledTime,
+    linkedInScheduledTime: args.linkedInScheduledTime,
+    url: args.url || "",
+  });
+
+  // Schedule new publishing actions and store new scheduler IDs
+  try {
+    const schedulerIds: any = {};
+
+    if (hasTwitter && args.twitterScheduledTime) {
+      const twitterSchedulerId = await ctx.scheduler.runAt(
+        args.twitterScheduledTime,
+        "internal.publishing.publishTwitterPost",
+        { postId: args.postId }
+      );
+      schedulerIds.twitterSchedulerId = twitterSchedulerId;
+    } else {
+      schedulerIds.twitterSchedulerId = undefined;
+    }
+
+    if (hasLinkedIn && args.linkedInScheduledTime) {
+      const linkedInSchedulerId = await ctx.scheduler.runAt(
+        args.linkedInScheduledTime,
+        "internal.publishing.publishLinkedInPost",
+        { postId: args.postId }
+      );
+      schedulerIds.linkedInSchedulerId = linkedInSchedulerId;
+    } else {
+      schedulerIds.linkedInSchedulerId = undefined;
+    }
+
+    await ctx.db.patch(args.postId, schedulerIds);
+  } catch (error) {
+    await ctx.db.patch(args.postId, {
+      status: "Failed",
+      errorMessage: `Failed to reschedule post: ${error instanceof Error ? error.message : "Unknown error"}`,
+    });
+    throw new Error(
+      `Failed to reschedule post: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+}
+
+// Mock implementation of deletePost mutation logic
+async function deletePostMock(
+  ctx: any,
+  args: {
+    postId: string;
+  }
+) {
+  // Verify user authentication
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+
+  const clerkUserId = identity.subject;
+
+  // Retrieve post and verify ownership
+  const post = await ctx.db.get(args.postId);
+  if (!post) {
+    throw new Error("Post not found");
+  }
+  if (post.clerkUserId !== clerkUserId) {
+    throw new Error("Unauthorized: You can only delete your own posts");
+  }
+
+  // Verify post status is "Scheduled"
+  if (post.status !== "Scheduled") {
+    throw new Error("Only scheduled posts can be deleted");
+  }
+
+  // Cancel scheduled actions before deletion
+  try {
+    if (post.twitterSchedulerId) {
+      await ctx.scheduler.cancel(post.twitterSchedulerId);
+    }
+    if (post.linkedInSchedulerId) {
+      await ctx.scheduler.cancel(post.linkedInSchedulerId);
+    }
+  } catch (error) {
+    console.warn("Failed to cancel scheduler:", error);
+  }
+
+  // Delete the post document
+  await ctx.db.delete(args.postId);
 }
 
 describe("createPost mutation - Twitter-only posts", () => {
@@ -578,5 +755,389 @@ describe("createPost mutation - Scheduler integration", () => {
       status: "Failed",
       errorMessage: "Failed to schedule post: Scheduler error",
     });
+  });
+});
+
+describe("updatePost mutation - Successful updates", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should successfully update a scheduled post with new content and times", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterContent: "Old content",
+      twitterScheduledTime: Date.now() + 3600000,
+      twitterSchedulerId: "old-scheduler-id",
+    });
+
+    const futureTime = Date.now() + 7200000;
+    const args = {
+      postId: "post-123",
+      twitterContent: "New content",
+      twitterScheduledTime: futureTime,
+    };
+
+    await updatePostMock(mockContext, args);
+
+    // Verify old scheduler was canceled
+    expect(mockContext.scheduler.cancel).toHaveBeenCalledWith("old-scheduler-id");
+
+    // Verify post content was updated
+    expect(mockContext.db.patch).toHaveBeenCalledWith("post-123", {
+      twitterContent: "New content",
+      linkedInContent: "",
+      twitterScheduledTime: futureTime,
+      linkedInScheduledTime: undefined,
+      url: "",
+    });
+
+    // Verify new scheduler was created
+    expect(mockContext.scheduler.runAt).toHaveBeenCalledWith(
+      futureTime,
+      "internal.publishing.publishTwitterPost",
+      { postId: "post-123" }
+    );
+
+    // Verify new scheduler ID was stored
+    expect(mockContext.db.patch).toHaveBeenCalledWith("post-123", {
+      twitterSchedulerId: "mock-scheduler-id",
+      linkedInSchedulerId: undefined,
+    });
+  });
+
+  it("should handle partial updates (only Twitter changes)", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterContent: "Old Twitter",
+      linkedInContent: "Keep LinkedIn",
+      twitterScheduledTime: Date.now() + 3600000,
+      linkedInScheduledTime: Date.now() + 7200000,
+      twitterSchedulerId: "twitter-scheduler-id",
+      linkedInSchedulerId: "linkedin-scheduler-id",
+    });
+
+    const newTwitterTime = Date.now() + 10800000;
+    const newLinkedInTime = Date.now() + 14400000;
+    const args = {
+      postId: "post-123",
+      twitterContent: "New Twitter",
+      linkedInContent: "Keep LinkedIn",
+      twitterScheduledTime: newTwitterTime,
+      linkedInScheduledTime: newLinkedInTime,
+    };
+
+    await updatePostMock(mockContext, args);
+
+    // Both schedulers should be canceled
+    expect(mockContext.scheduler.cancel).toHaveBeenCalledWith("twitter-scheduler-id");
+    expect(mockContext.scheduler.cancel).toHaveBeenCalledWith("linkedin-scheduler-id");
+
+    // Both schedulers should be recreated
+    expect(mockContext.scheduler.runAt).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("updatePost mutation - Validation errors", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should reject updates for non-Scheduled posts", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Published",
+      twitterContent: "Published content",
+    });
+
+    const futureTime = Date.now() + 3600000;
+    const args = {
+      postId: "post-123",
+      twitterContent: "New content",
+      twitterScheduledTime: futureTime,
+    };
+
+    await expect(updatePostMock(mockContext, args)).rejects.toThrow(
+      "Only scheduled posts can be edited"
+    );
+  });
+
+  it("should reject updates for posts not owned by user", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_456",  // Different user
+      status: "Scheduled",
+      twitterContent: "Someone else's post",
+    });
+
+    const futureTime = Date.now() + 3600000;
+    const args = {
+      postId: "post-123",
+      twitterContent: "Trying to update",
+      twitterScheduledTime: futureTime,
+    };
+
+    await expect(updatePostMock(mockContext, args)).rejects.toThrow(
+      "Unauthorized: You can only edit your own posts"
+    );
+  });
+
+  it("should reject updates with invalid content (exceeds Twitter limit)", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterContent: "Old content",
+    });
+
+    const futureTime = Date.now() + 3600000;
+    const args = {
+      postId: "post-123",
+      twitterContent: "a".repeat(281),
+      twitterScheduledTime: futureTime,
+    };
+
+    await expect(updatePostMock(mockContext, args)).rejects.toThrow(
+      "Twitter content exceeds 280 character limit"
+    );
+  });
+
+  it("should reject updates with past scheduled time", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterContent: "Old content",
+    });
+
+    const pastTime = Date.now() - 3600000;
+    const args = {
+      postId: "post-123",
+      twitterContent: "New content",
+      twitterScheduledTime: pastTime,
+    };
+
+    await expect(updatePostMock(mockContext, args)).rejects.toThrow(
+      "Twitter scheduled time must be in the future"
+    );
+  });
+
+  it("should reject updates with no platform selected", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterContent: "Old content",
+    });
+
+    const args = {
+      postId: "post-123",
+    };
+
+    await expect(updatePostMock(mockContext, args)).rejects.toThrow(
+      "At least one platform must be selected with content and scheduled time"
+    );
+  });
+
+  it("should throw error if post not found", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue(null);
+
+    const futureTime = Date.now() + 3600000;
+    const args = {
+      postId: "non-existent",
+      twitterContent: "New content",
+      twitterScheduledTime: futureTime,
+    };
+
+    await expect(updatePostMock(mockContext, args)).rejects.toThrow("Post not found");
+  });
+});
+
+describe("deletePost mutation - Successful deletion", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should successfully delete a scheduled post", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterSchedulerId: "twitter-scheduler-id",
+      linkedInSchedulerId: "linkedin-scheduler-id",
+    });
+
+    const args = {
+      postId: "post-123",
+    };
+
+    await deletePostMock(mockContext, args);
+
+    // Verify schedulers were canceled
+    expect(mockContext.scheduler.cancel).toHaveBeenCalledWith("twitter-scheduler-id");
+    expect(mockContext.scheduler.cancel).toHaveBeenCalledWith("linkedin-scheduler-id");
+
+    // Verify post was deleted
+    expect(mockContext.db.delete).toHaveBeenCalledWith("post-123");
+  });
+
+  it("should handle deletion when no scheduler IDs exist", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      // No scheduler IDs
+    });
+
+    const args = {
+      postId: "post-123",
+    };
+
+    await deletePostMock(mockContext, args);
+
+    // Cancel should not have been called
+    expect(mockContext.scheduler.cancel).not.toHaveBeenCalled();
+
+    // Post should still be deleted
+    expect(mockContext.db.delete).toHaveBeenCalledWith("post-123");
+  });
+
+  it("should handle scheduler cancellation failure gracefully", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Scheduled",
+      twitterSchedulerId: "twitter-scheduler-id",
+    });
+    mockContext.scheduler.cancel.mockRejectedValueOnce(new Error("Already executing"));
+
+    const args = {
+      postId: "post-123",
+    };
+
+    // Should not throw despite cancellation failure
+    await deletePostMock(mockContext, args);
+
+    // Post should still be deleted
+    expect(mockContext.db.delete).toHaveBeenCalledWith("post-123");
+  });
+});
+
+describe("deletePost mutation - Validation errors", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should reject deletion for non-Scheduled posts", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_123",
+      status: "Published",
+    });
+
+    const args = {
+      postId: "post-123",
+    };
+
+    await expect(deletePostMock(mockContext, args)).rejects.toThrow(
+      "Only scheduled posts can be deleted"
+    );
+  });
+
+  it("should reject deletion for posts not owned by user", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue({
+      _id: "post-123",
+      clerkUserId: "user_456",  // Different user
+      status: "Scheduled",
+    });
+
+    const args = {
+      postId: "post-123",
+    };
+
+    await expect(deletePostMock(mockContext, args)).rejects.toThrow(
+      "Unauthorized: You can only delete your own posts"
+    );
+  });
+
+  it("should throw error if post not found", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "user_123",
+      email: "test@example.com",
+    });
+    mockContext.db.get.mockResolvedValue(null);
+
+    const args = {
+      postId: "non-existent",
+    };
+
+    await expect(deletePostMock(mockContext, args)).rejects.toThrow("Post not found");
+  });
+
+  it("should throw error if not authenticated", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue(null);
+
+    const args = {
+      postId: "post-123",
+    };
+
+    await expect(deletePostMock(mockContext, args)).rejects.toThrow("Not authenticated");
   });
 });
