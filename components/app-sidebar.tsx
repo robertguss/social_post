@@ -42,11 +42,6 @@ const data = {
       url: "/history",
       icon: IconClock,
     },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      icon: IconChartBar,
-    },
   ],
   navSecondary: [
     {
