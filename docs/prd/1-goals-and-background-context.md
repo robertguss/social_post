@@ -18,5 +18,6 @@ The product is a productivity tool, requiring a simple, fast UI to minimize clic
 | :------------- | :------ | :------------------------------------------------------------------------------------------------------ | :------- |
 | **Original**   | 1.0     | Initial comprehensive document.                                                                         | User     |
 | **2025-10-30** | 1.1     | **Formatted to BMad PRD standard** including Technical Assumptions and Epic Sequencing for Dev Handoff. | PO Agent |
+| **2025-11-01** | 1.2     | **Added 5 new epics (3-7) for Advanced & Workflow Features** - Templates, Recycling, Cross-Platform Enhancement, Time Recommendations, AI Assistant. | Sarah (PO) |
 
 ---

@@ -11,6 +11,11 @@
 7. **FR7 (Post Management):** The system must display a list view of all scheduled posts and allow for editing, deleting, and rescheduling these posts.
 8. **FR8 (Post Status):** The system must show clear status indicators: Scheduled, Publishing, Published, and Failed.
 9. **FR9 (Post History):** The system must display a view of all published posts, filterable by date range and platform.
+10. **FR10 (Post Templates):** The system must allow users to save, tag, search, and insert reusable content blocks (hashtags, closings, disclaimers) into posts.
+11. **FR11 (Content Recycling):** The system must enable users to clone past posts for rescheduling and support recurring queue functionality with pause/resume controls.
+12. **FR12 (Enhanced Cross-Platform Adaptation):** The system must provide separate text fields for X/Twitter and LinkedIn with smart pre-population and platform-specific character validation.
+13. **FR13 (Posting Time Recommendations):** The system must suggest optimal posting times based on platform-specific best practices and allow custom user preferences.
+14. **FR14 (AI Content Assistant):** The system must integrate with Gemini AI to provide tone adjustment, content expansion, and hashtag generation features.
 
 ## Non Functional
 
