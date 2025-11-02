@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateFormModal } from "./TemplateFormModal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { IconPlus, IconTemplate } from "@tabler/icons-react";
+import { IconPlus, IconTemplate, IconSearch, IconX, IconFilter } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 /**
@@ -44,6 +46,56 @@ export function TemplateLibrary() {
   // Delete confirmation state
   const [deleteConfirmId, setDeleteConfirmId] = useState<Id<"templates"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  /**
+   * Extract all unique tags from templates
+   */
+  const allTags = useMemo(() => {
+    if (!templates) return [];
+    const tagSet = new Set(templates.flatMap((template) => template.tags));
+    return Array.from(tagSet).sort();
+  }, [templates]);
+
+  /**
+   * Toggle tag selection
+   */
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  /**
+   * Filter templates by search query and tags
+   */
+  const filteredTemplates = useMemo(() => {
+    if (!templates) return [];
+
+    let filtered = templates;
+
+    // Filter by selected tags (AND logic)
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter((template) =>
+        selectedTags.every((tag) => template.tags.includes(tag))
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (template) =>
+          template.name.toLowerCase().includes(query) ||
+          template.content.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [templates, searchQuery, selectedTags]);
 
   /**
    * Handle opening create modal
@@ -121,6 +173,82 @@ export function TemplateLibrary() {
         </Button>
       </div>
 
+      {/* Search bar */}
+      {templates && templates.length > 0 && (
+        <div className="mb-6 space-y-4">
+          <div className="relative">
+            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <IconX className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Tag filter chips */}
+          {allTags.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <IconFilter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filter by tags:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {allTags.map((tag) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <Badge
+                      key={tag}
+                      variant={isSelected ? "default" : "outline"}
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => toggleTag(tag)}
+                    >
+                      #{tag}
+                    </Badge>
+                  );
+                })}
+              </div>
+              {selectedTags.length > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>{selectedTags.length} tag{selectedTags.length > 1 ? "s" : ""} selected</span>
+                  <button
+                    onClick={() => setSelectedTags([])}
+                    className="text-primary hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results count */}
+          {(searchQuery || selectedTags.length > 0) && (
+            <p className="text-sm text-muted-foreground">
+              {searchQuery && selectedTags.length > 0 ? (
+                <>
+                  {filteredTemplates.length} result{filteredTemplates.length !== 1 ? "s" : ""} for &quot;{searchQuery}&quot; with tags: {selectedTags.join(", ")}
+                </>
+              ) : searchQuery ? (
+                <>Showing {filteredTemplates.length} of {templates.length} templates</>
+              ) : (
+                <>Showing {filteredTemplates.length} of {templates.length} templates with selected tags</>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Empty state */}
       {templates.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12">
@@ -136,15 +264,45 @@ export function TemplateLibrary() {
         </div>
       )}
 
+      {/* No search/filter results */}
+      {templates.length > 0 && filteredTemplates.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <IconSearch className="mb-4 h-16 w-16 text-muted-foreground" />
+          <h2 className="mb-2 text-xl font-semibold">No templates found</h2>
+          <p className="mb-6 text-muted-foreground">
+            {searchQuery && selectedTags.length > 0 ? (
+              <>No results for &quot;{searchQuery}&quot; with tags: {selectedTags.join(", ")}</>
+            ) : searchQuery ? (
+              <>No templates match your search for &quot;{searchQuery}&quot;</>
+            ) : (
+              <>No templates with selected tags</>
+            )}
+          </p>
+          <div className="flex gap-2">
+            {searchQuery && (
+              <Button variant="outline" onClick={() => setSearchQuery("")}>
+                Clear search
+              </Button>
+            )}
+            {selectedTags.length > 0 && (
+              <Button variant="outline" onClick={() => setSelectedTags([])}>
+                Clear filters
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Templates grid */}
-      {templates.length > 0 && (
+      {filteredTemplates.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => (
+          {filteredTemplates.map((template) => (
             <TemplateCard
               key={template._id}
               template={template}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              searchQuery={searchQuery}
             />
           ))}
         </div>

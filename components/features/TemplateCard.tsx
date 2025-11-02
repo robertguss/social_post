@@ -17,6 +17,19 @@ interface TemplateCardProps {
   template: Doc<"templates">;
   onEdit: (template: Doc<"templates">) => void;
   onDelete: (template: Doc<"templates">) => void;
+  searchQuery?: string;
+}
+
+/**
+ * Highlights matching text in a string using <mark> tags
+ */
+function highlightText(text: string, query?: string): string {
+  if (!query || !query.trim()) return text;
+
+  // Escape special regex characters in the query
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escapedQuery})`, "gi");
+  return text.replace(regex, "<mark class='bg-yellow-200 dark:bg-yellow-900'>$1</mark>");
 }
 
 /**
@@ -28,20 +41,28 @@ interface TemplateCardProps {
  * - Tags as badges
  * - Usage count
  * - Edit and Delete action buttons
+ * - Search term highlighting (when searchQuery provided)
  */
-export function TemplateCard({ template, onEdit, onDelete }: TemplateCardProps) {
+export function TemplateCard({ template, onEdit, onDelete, searchQuery }: TemplateCardProps) {
   // Truncate content for preview
   const contentPreview =
     template.content.length > 150
       ? template.content.substring(0, 150) + "..."
       : template.content;
 
+  // Highlighted versions
+  const highlightedName = highlightText(template.name, searchQuery);
+  const highlightedContent = highlightText(contentPreview, searchQuery);
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">{template.name}</CardTitle>
+            <CardTitle
+              className="text-lg"
+              dangerouslySetInnerHTML={{ __html: highlightedName }}
+            />
             <CardDescription className="mt-1 flex items-center gap-2">
               <IconCopy className="h-4 w-4" />
               <span>Used {template.usageCount} times</span>
@@ -51,9 +72,10 @@ export function TemplateCard({ template, onEdit, onDelete }: TemplateCardProps) 
       </CardHeader>
 
       <CardContent className="flex-1">
-        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-          {contentPreview}
-        </p>
+        <p
+          className="text-sm text-muted-foreground whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: highlightedContent }}
+        />
 
         {template.tags.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">

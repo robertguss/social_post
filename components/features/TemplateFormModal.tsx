@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { IconX } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 interface TemplateFormModalProps {
@@ -46,7 +48,8 @@ export function TemplateFormModal({
   // Form state
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Mutations
@@ -63,15 +66,53 @@ export function TemplateFormModal({
         // Edit mode - populate form with template data
         setName(template.name);
         setContent(template.content);
-        setTagsInput(template.tags.join(", "));
+        setTags(template.tags);
+        setTagInput("");
       } else {
         // Create mode - reset form
         setName("");
         setContent("");
-        setTagsInput("");
+        setTags([]);
+        setTagInput("");
       }
     }
   }, [isOpen, template]);
+
+  /**
+   * Add a tag from the input field
+   */
+  const addTag = (tagToAdd: string) => {
+    const trimmedTag = tagToAdd.trim();
+
+    // Prevent empty tags
+    if (!trimmedTag) return;
+
+    // Prevent duplicate tags (case-insensitive)
+    if (tags.some((t) => t.toLowerCase() === trimmedTag.toLowerCase())) {
+      toast.error("Tag already exists");
+      return;
+    }
+
+    setTags([...tags, trimmedTag]);
+    setTagInput("");
+  };
+
+  /**
+   * Remove a tag by index
+   */
+  const removeTag = (indexToRemove: number) => {
+    setTags(tags.filter((_, index) => index !== indexToRemove));
+  };
+
+  /**
+   * Handle key press in tag input (Enter or comma)
+   */
+  const handleTagInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag(tagInput);
+    }
+  };
 
   /**
    * Handle form submission
@@ -90,11 +131,10 @@ export function TemplateFormModal({
       return;
     }
 
-    // Parse tags from comma-separated input
-    const tags = tagsInput
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
+    // Add any pending tag input before submitting
+    if (tagInput.trim()) {
+      addTag(tagInput);
+    }
 
     setIsSubmitting(true);
 
@@ -184,16 +224,40 @@ export function TemplateFormModal({
 
             {/* Tags */}
             <div className="space-y-2">
-              <Label htmlFor="tags">Tags (comma-separated)</Label>
+              <Label htmlFor="tags">Tags</Label>
               <Input
                 id="tags"
-                placeholder="e.g., hashtags, closing, buildinpublic"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="Type a tag and press Enter or comma"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagInputKeyDown}
                 disabled={isSubmitting}
               />
+              {/* Tag chips display */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="flex items-center gap-1 px-2 py-1"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(index)}
+                        disabled={isSubmitting}
+                        className="ml-1 hover:text-destructive"
+                        aria-label={`Remove ${tag} tag`}
+                      >
+                        <IconX size={14} />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
-                Separate tags with commas to organize your templates
+                Press Enter or comma to add tags
               </p>
             </div>
           </div>
