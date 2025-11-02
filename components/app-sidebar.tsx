@@ -9,6 +9,7 @@ import {
   IconHelp,
   IconSettings,
   IconShare3,
+  IconTemplate,
 } from "@tabler/icons-react"
 import { useUser } from "@clerk/nextjs"
 
@@ -41,6 +42,11 @@ const data = {
       title: "Post History",
       url: "/history",
       icon: IconClock,
+    },
+    {
+      title: "Templates",
+      url: "/templates",
+      icon: IconTemplate,
     },
   ],
   navSecondary: [

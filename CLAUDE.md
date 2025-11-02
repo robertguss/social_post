@@ -9,31 +9,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Starting Development
+
 ```bash
-npm run dev              # Runs both frontend and Convex backend in parallel
-npm run dev:frontend     # Next.js dev server only
-npm run dev:backend      # Convex dev server only
-npm run predev           # Convex dev + dashboard (runs before dev)
+pnpm run dev              # Runs both frontend and Convex backend in parallel
+pnpm run dev:frontend     # Next.js dev server only
+pnpm run dev:backend      # Convex dev server only
+pnpm run predev           # Convex dev + dashboard (runs before dev)
 ```
 
 ### Build & Deploy
+
 ```bash
-npm run build            # Build Next.js for production
-npm run start            # Start production server
-npm run lint             # Run ESLint
+pnpm run build            # Build Next.js for production
+pnpm run start            # Start production server
+pnpm run lint             # Run ESLint
 ```
 
 ### Convex Commands
+
 ```bash
-npx convex dev           # Start Convex dev deployment
-npx convex dashboard     # Open Convex dashboard
-npx convex deploy        # Deploy Convex functions to production
-npx convex docs          # Open Convex documentation
+pnpm dlx convex dev           # Start Convex dev deployment
+pnpm dlx convex dashboard     # Open Convex dashboard
+pnpm dlx convex deploy        # Deploy Convex functions to production
+pnpm dlx convex docs          # Open Convex documentation
 ```
 
 ## Architecture Overview
 
 ### Stack
+
 - **Frontend**: Next.js 15.5.4 (App Router), React 19, Tailwind CSS 4
 - **Backend**: Convex (database, queries, mutations, scheduled actions)
 - **Auth**: Clerk (single-user authentication)
@@ -41,7 +45,8 @@ npx convex docs          # Open Convex documentation
 - **Language**: TypeScript throughout
 
 ### Repository Structure
-```
+
+```console
 social_post/
 ├── app/                    # Next.js App Router pages
 │   ├── layout.tsx          # Root layout with Clerk + Convex providers
@@ -65,18 +70,21 @@ social_post/
 ### Critical Architectural Patterns
 
 **Convex Backend Philosophy**: All backend logic lives in `convex/`. Convex provides:
+
 - **Queries**: Read data reactively (realtime updates)
 - **Mutations**: Write data transactionally
 - **Actions**: Call external APIs (X, LinkedIn, Telegram) with Node.js runtime
 - **Scheduled Functions**: Critical for timed post publishing
 
 **Authentication Flow**:
+
 - Clerk handles auth on frontend via `middleware.ts`
 - Convex functions use `ctx.auth.getUserIdentity()` to verify users
 - All data must be scoped to `clerkUserId` to ensure single-user isolation
 
 **Scheduled Publishing Architecture**:
 The core feature is time-based post publishing:
+
 ```mermaid
 User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
   → Convex Action publishes to X/LinkedIn → Update post status → On failure: Telegram notification
@@ -85,7 +93,9 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 ## Data Models
 
 ### posts
+
 Stores scheduled and published content. Key fields:
+
 - `clerkUserId`: string (Clerk user ID)
 - `status`: "draft" | "scheduled" | "publishing" | "published" | "failed"
 - `twitterContent`, `linkedInContent`: string (platform-specific content)
@@ -96,7 +106,9 @@ Stores scheduled and published content. Key fields:
 **Index**: `by_user` on `["clerkUserId"]`
 
 ### user_connections
+
 Stores encrypted OAuth tokens for external platforms. Key fields:
+
 - `clerkUserId`: string
 - `platform`: "twitter" | "linkedin"
 - `accessToken`, `refreshToken`: string (must be encrypted)
@@ -107,7 +119,9 @@ Stores encrypted OAuth tokens for external platforms. Key fields:
 ## Convex Function Patterns
 
 ### Function Registration
+
 Always use the new function syntax with validators:
+
 ```typescript
 import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
@@ -130,7 +144,9 @@ export const myQuery = query({
 ```
 
 ### Authentication in Convex Functions
+
 **Always verify the user in queries and mutations:**
+
 ```typescript
 const identity = await ctx.auth.getUserIdentity();
 if (!identity) throw new Error("Not authenticated");
@@ -138,26 +154,32 @@ const clerkUserId = identity.subject; // Use this for data access
 ```
 
 ### Scheduling Posts (Critical Pattern)
+
 ```typescript
 import { mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 export const schedulePost = mutation({
-  args: { /* ... */ },
+  args: {
+    /* ... */
+  },
   handler: async (ctx, args) => {
-    const postId = await ctx.db.insert("posts", { /* ... */ });
+    const postId = await ctx.db.insert("posts", {
+      /* ... */
+    });
 
     // Schedule the publishing action
     await ctx.scheduler.runAt(
       args.scheduledTime,
       internal.publishing.publishPost,
-      { postId }
+      { postId },
     );
   },
 });
 ```
 
 ### Calling External APIs (Actions Only)
+
 ```typescript
 // Add "use node"; for Node.js APIs
 "use node";
@@ -174,8 +196,10 @@ export const publishToTwitter = action({
     // Call external API
     const response = await fetch("https://api.twitter.com/2/tweets", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}` },
-      body: JSON.stringify({ /* ... */ }),
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        /* ... */
+      }),
     });
 
     // Update post status via mutation
@@ -190,17 +214,21 @@ export const publishToTwitter = action({
 ## Key Implementation Requirements
 
 ### Character Counting
+
 - Twitter: 280 character limit (warn at 260, error at 280)
 - LinkedIn: 3,000 character limit
 - Implement on frontend with real-time validation
 
 ### URL Auto-Posting
+
 - LinkedIn: Post URL as first comment after main post publishes
 - Twitter: Post URL as reply in thread after main tweet publishes
 - Both require chained API calls within Actions
 
 ### Error Handling & Retries
+
 Critical for reliability:
+
 1. Catch API errors in Actions
 2. Implement auto-retry logic (2-3 attempts) with exponential backoff
 3. Update post status to "failed" after max retries
@@ -208,6 +236,7 @@ Critical for reliability:
 5. Store `errorMessage` in post document for UI display
 
 ### Security Requirements
+
 - OAuth tokens in `user_connections` **must be encrypted** before storing
 - Use Convex environment variables for API keys (never in code/repo)
 - All Convex functions must verify user authentication
@@ -236,14 +265,17 @@ Based on architecture document:
 ## External API Integration
 
 ### Required APIs
+
 - **X/Twitter API**: OAuth 2.0, POST /2/tweets, threading for URL replies
 - **LinkedIn API**: OAuth 2.0, POST /v2/ugcPosts, comments for URL posting
 - **Telegram Bot API**: For failure notifications
 
 ### Rate Limiting
+
 Handle rate limits gracefully in Actions with exponential backoff and retry logic.
 
 ## Path Alias
+
 The project uses `@/*` for imports from the root directory (configured in `tsconfig.json`).
 
 ## Important Notes
