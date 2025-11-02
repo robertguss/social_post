@@ -2,14 +2,20 @@ import { render, screen } from "@testing-library/react";
 import { TemplateCard } from "../TemplateCard";
 import { Doc } from "@/convex/_generated/dataModel";
 
+// Mock date-fns formatDistanceToNow for predictable tests
+jest.mock("date-fns", () => ({
+  formatDistanceToNow: jest.fn(() => "2 hours ago"),
+}));
+
 const mockTemplate: Doc<"templates"> = {
-  _id: "1" as any,
+  _id: "1" as unknown as Doc<"templates">["_id"],
   _creationTime: Date.now(),
   clerkUserId: "user1",
   name: "Test Template",
   content: "This is test content with hashtags",
   tags: ["test", "example"],
   usageCount: 5,
+  lastUsedAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
 };
 
 describe("TemplateCard - Search Highlighting", () => {
@@ -26,6 +32,8 @@ describe("TemplateCard - Search Highlighting", () => {
         template={mockTemplate}
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
+        usageCount={mockTemplate.usageCount}
+        lastUsedAt={mockTemplate.lastUsedAt}
       />
     );
 
@@ -44,6 +52,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="template"
+        usageCount={mockTemplate.usageCount}
+        lastUsedAt={mockTemplate.lastUsedAt}
       />
     );
 
@@ -60,6 +70,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="hashtags"
+        usageCount={mockTemplate.usageCount}
+        lastUsedAt={mockTemplate.lastUsedAt}
       />
     );
 
@@ -81,6 +93,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="important"
+        usageCount={template.usageCount}
+        lastUsedAt={template.lastUsedAt}
       />
     );
 
@@ -101,6 +115,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="test"
+        usageCount={template.usageCount}
+        lastUsedAt={template.lastUsedAt}
       />
     );
 
@@ -123,6 +139,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="$100"
+        usageCount={template.usageCount}
+        lastUsedAt={template.lastUsedAt}
       />
     );
 
@@ -138,6 +156,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery=""
+        usageCount={mockTemplate.usageCount}
+        lastUsedAt={mockTemplate.lastUsedAt}
       />
     );
 
@@ -152,6 +172,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="   "
+        usageCount={mockTemplate.usageCount}
+        lastUsedAt={mockTemplate.lastUsedAt}
       />
     );
 
@@ -166,6 +188,8 @@ describe("TemplateCard - Search Highlighting", () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         searchQuery="test"
+        usageCount={mockTemplate.usageCount}
+        lastUsedAt={mockTemplate.lastUsedAt}
       />
     );
 
@@ -173,5 +197,89 @@ describe("TemplateCard - Search Highlighting", () => {
     // Should have bg-yellow-200 for light mode and dark:bg-yellow-900 for dark mode
     expect(titleElement?.innerHTML).toContain("bg-yellow-200");
     expect(titleElement?.innerHTML).toContain("dark:bg-yellow-900");
+  });
+});
+
+describe("TemplateCard - Analytics Display", () => {
+  const mockOnEdit = jest.fn();
+  const mockOnDelete = jest.fn();
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should display usageCount badge with chart icon", () => {
+    render(
+      <TemplateCard
+        template={mockTemplate}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        usageCount={5}
+        lastUsedAt={Date.now()}
+      />
+    );
+
+    // Check that usageCount is displayed
+    expect(screen.getByText("5")).toBeInTheDocument();
+  });
+
+  it("should display lastUsedAt as relative time", () => {
+    render(
+      <TemplateCard
+        template={mockTemplate}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        usageCount={5}
+        lastUsedAt={Date.now() - 2 * 60 * 60 * 1000}
+      />
+    );
+
+    // Check that relative time is displayed (mocked to "2 hours ago")
+    expect(screen.getByText("2 hours ago")).toBeInTheDocument();
+  });
+
+  it("should display 'Never used' when lastUsedAt is undefined", () => {
+    render(
+      <TemplateCard
+        template={mockTemplate}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        usageCount={0}
+        lastUsedAt={undefined}
+      />
+    );
+
+    // Check that "Never used" is displayed
+    expect(screen.getByText("Never used")).toBeInTheDocument();
+  });
+
+  it("should display usageCount of 0", () => {
+    render(
+      <TemplateCard
+        template={mockTemplate}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        usageCount={0}
+        lastUsedAt={undefined}
+      />
+    );
+
+    // Check that "0" is displayed in the badge
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
+  it("should display high usageCount correctly", () => {
+    render(
+      <TemplateCard
+        template={mockTemplate}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+        usageCount={1234}
+        lastUsedAt={Date.now()}
+      />
+    );
+
+    // Check that large numbers are displayed correctly
+    expect(screen.getByText("1234")).toBeInTheDocument();
   });
 });

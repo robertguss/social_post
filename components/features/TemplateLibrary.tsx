@@ -17,7 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { IconPlus, IconTemplate, IconSearch, IconX, IconFilter } from "@tabler/icons-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { IconPlus, IconTemplate, IconSearch, IconX, IconFilter, IconArrowsSort } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 /**
@@ -50,6 +57,7 @@ export function TemplateLibrary() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"mostUsed" | "recentlyUsed" | "name" | "dateCreated">("mostUsed");
 
   /**
    * Extract all unique tags from templates
@@ -70,7 +78,7 @@ export function TemplateLibrary() {
   };
 
   /**
-   * Filter templates by search query and tags
+   * Filter and sort templates by search query, tags, and sort option
    */
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
@@ -94,8 +102,25 @@ export function TemplateLibrary() {
       );
     }
 
-    return filtered;
-  }, [templates, searchQuery, selectedTags]);
+    // Apply sorting (AFTER filtering)
+    const sorted = [...filtered];
+    switch (sortBy) {
+      case "mostUsed":
+        sorted.sort((a, b) => b.usageCount - a.usageCount);
+        break;
+      case "recentlyUsed":
+        sorted.sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0));
+        break;
+      case "name":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "dateCreated":
+        sorted.sort((a, b) => a._creationTime - b._creationTime);
+        break;
+    }
+
+    return sorted;
+  }, [templates, searchQuery, selectedTags, sortBy]);
 
   /**
    * Handle opening create modal
@@ -173,27 +198,43 @@ export function TemplateLibrary() {
         </Button>
       </div>
 
-      {/* Search bar */}
+      {/* Search bar and sort dropdown */}
       {templates && templates.length > 0 && (
         <div className="mb-6 space-y-4">
-          <div className="relative">
-            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <IconX className="h-4 w-4" />
-              </button>
-            )}
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <IconX className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <IconArrowsSort className="h-4 w-4 text-muted-foreground" />
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                <SelectTrigger className="w-[180px]" aria-label="Sort templates by">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mostUsed">Most Used</SelectItem>
+                  <SelectItem value="recentlyUsed">Recently Used</SelectItem>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="dateCreated">Date Created</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Tag filter chips */}
@@ -303,6 +344,8 @@ export function TemplateLibrary() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               searchQuery={searchQuery}
+              usageCount={template.usageCount}
+              lastUsedAt={template.lastUsedAt}
             />
           ))}
         </div>

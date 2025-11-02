@@ -1,23 +1,25 @@
 "use client";
 
 import { Doc } from "@/convex/_generated/dataModel";
+import { formatDistanceToNow } from "date-fns";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconEdit, IconTrash, IconCopy } from "@tabler/icons-react";
+import { IconEdit, IconTrash, IconChartBar, IconClock } from "@tabler/icons-react";
 
 interface TemplateCardProps {
   template: Doc<"templates">;
   onEdit: (template: Doc<"templates">) => void;
   onDelete: (template: Doc<"templates">) => void;
   searchQuery?: string;
+  usageCount: number;
+  lastUsedAt?: number;
 }
 
 /**
@@ -33,6 +35,15 @@ function highlightText(text: string, query?: string): string {
 }
 
 /**
+ * Formats lastUsedAt timestamp as relative time or "Never used"
+ */
+function formatLastUsed(lastUsedAt?: number): string {
+  if (!lastUsedAt) return "Never used";
+
+  return formatDistanceToNow(new Date(lastUsedAt), { addSuffix: true });
+}
+
+/**
  * TemplateCard Component
  *
  * Displays an individual template in a card format with:
@@ -43,7 +54,14 @@ function highlightText(text: string, query?: string): string {
  * - Edit and Delete action buttons
  * - Search term highlighting (when searchQuery provided)
  */
-export function TemplateCard({ template, onEdit, onDelete, searchQuery }: TemplateCardProps) {
+export function TemplateCard({
+  template,
+  onEdit,
+  onDelete,
+  searchQuery,
+  usageCount,
+  lastUsedAt
+}: TemplateCardProps) {
   // Truncate content for preview
   const contentPreview =
     template.content.length > 150
@@ -57,17 +75,15 @@ export function TemplateCard({ template, onEdit, onDelete, searchQuery }: Templa
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle
-              className="text-lg"
-              dangerouslySetInnerHTML={{ __html: highlightedName }}
-            />
-            <CardDescription className="mt-1 flex items-center gap-2">
-              <IconCopy className="h-4 w-4" />
-              <span>Used {template.usageCount} times</span>
-            </CardDescription>
-          </div>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle
+            className="text-lg flex-1"
+            dangerouslySetInnerHTML={{ __html: highlightedName }}
+          />
+          <Badge variant="secondary" className="flex items-center gap-1 shrink-0">
+            <IconChartBar className="h-3 w-3" />
+            <span>{usageCount}</span>
+          </Badge>
         </div>
       </CardHeader>
 
@@ -86,6 +102,11 @@ export function TemplateCard({ template, onEdit, onDelete, searchQuery }: Templa
             ))}
           </div>
         )}
+
+        <div className={`flex items-center gap-1.5 text-sm ${template.tags.length > 0 ? 'mt-3' : 'mt-4'} ${lastUsedAt ? 'text-muted-foreground' : 'text-muted-foreground/60'}`}>
+          <IconClock className="h-4 w-4" />
+          <span>{formatLastUsed(lastUsedAt)}</span>
+        </div>
       </CardContent>
 
       <CardFooter className="flex justify-end gap-2">
