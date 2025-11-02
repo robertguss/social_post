@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Id } from "@/convex/_generated/dataModel";
+import { Id, Doc } from "@/convex/_generated/dataModel";
+import { TemplatePickerModal } from "./TemplatePickerModal";
+import { IconTemplate } from "@tabler/icons-react";
+import { toast } from "sonner";
 
 /**
  * PostScheduler Component
@@ -43,6 +46,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Convex mutations
   const createPost = useMutation(api.posts.createPost);
   const updatePost = useMutation(api.posts.updatePost);
+  const incrementTemplateUsage = useMutation(api.templates.incrementTemplateUsage);
 
   // Platform selection state
   const [enableTwitter, setEnableTwitter] = useState(true);
@@ -61,6 +65,14 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Template picker modal state
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [activeField, setActiveField] = useState<"twitter" | "linkedin" | null>(null);
+
+  // Textarea refs for cursor position
+  const twitterTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const linkedInTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Twitter character count (280 max, warning at 260)
   const twitterCharCount = twitterContent.length;
@@ -107,6 +119,76 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
       }
     }
   }, [mode, postData]);
+
+  /**
+   * Handle opening template picker modal
+   */
+  const handleOpenTemplatePicker = (field: "twitter" | "linkedin") => {
+    setActiveField(field);
+    setIsTemplateModalOpen(true);
+  };
+
+  /**
+   * Handle template selection and insertion
+   */
+  const handleTemplateSelect = async (template: Doc<"templates">) => {
+    if (!activeField) return;
+
+    const templateContent = template.content;
+    const isTwitter = activeField === "twitter";
+    const existingContent = isTwitter ? twitterContent : linkedInContent;
+    const textareaRef = isTwitter ? twitterTextareaRef : linkedInTextareaRef;
+    const maxChars = isTwitter ? TWITTER_MAX_CHARS : LINKEDIN_MAX_CHARS;
+
+    // Check if insertion would exceed character limit
+    const newContentLength = existingContent.length + templateContent.length;
+    if (newContentLength > maxChars) {
+      toast.error(
+        `Template insertion would exceed ${isTwitter ? "Twitter" : "LinkedIn"}'s ${maxChars} character limit`
+      );
+      return;
+    }
+
+    // Get cursor position from textarea
+    const textarea = textareaRef.current;
+    const cursorPos = textarea?.selectionStart;
+
+    let newContent: string;
+    let newCursorPos: number;
+
+    // Insert at cursor position or append to end
+    if (cursorPos !== undefined && cursorPos >= 0) {
+      const before = existingContent.substring(0, cursorPos);
+      const after = existingContent.substring(cursorPos);
+      newContent = before + templateContent + after;
+      newCursorPos = cursorPos + templateContent.length;
+    } else {
+      // Fallback: Append to end
+      newContent = existingContent + templateContent;
+      newCursorPos = newContent.length;
+    }
+
+    // Update state
+    if (isTwitter) {
+      setTwitterContent(newContent);
+    } else {
+      setLinkedInContent(newContent);
+    }
+
+    // Focus textarea and set cursor position after state update
+    setTimeout(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+
+    // Increment usage stats (fire-and-forget, don't block UI)
+    try {
+      await incrementTemplateUsage({ templateId: template._id });
+    } catch (error) {
+      // Log error but don't block insertion
+      console.error("Failed to increment template usage:", error);
+    }
+  };
 
   /**
    * Handle form submission
@@ -282,10 +364,22 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
               {/* Twitter Content */}
               <div className="space-y-2">
-                <Label htmlFor="twitter-content">
-                  Content <span className="text-destructive">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="twitter-content">
+                    Content <span className="text-destructive">*</span>
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenTemplatePicker("twitter")}
+                  >
+                    <IconTemplate className="mr-2 h-4 w-4" />
+                    Insert Template
+                  </Button>
+                </div>
                 <Textarea
+                  ref={twitterTextareaRef}
                   id="twitter-content"
                   placeholder="What's happening?"
                   value={twitterContent}
@@ -330,10 +424,22 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
               {/* LinkedIn Content */}
               <div className="space-y-2">
-                <Label htmlFor="linkedin-content">
-                  Content <span className="text-destructive">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="linkedin-content">
+                    Content <span className="text-destructive">*</span>
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenTemplatePicker("linkedin")}
+                  >
+                    <IconTemplate className="mr-2 h-4 w-4" />
+                    Insert Template
+                  </Button>
+                </div>
                 <Textarea
+                  ref={linkedInTextareaRef}
                   id="linkedin-content"
                   placeholder="Share your professional insights..."
                   value={linkedInContent}
@@ -414,6 +520,13 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
           </Button>
         </form>
       </CardContent>
+
+      {/* Template Picker Modal */}
+      <TemplatePickerModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onSelectTemplate={handleTemplateSelect}
+      />
     </Card>
   );
 }

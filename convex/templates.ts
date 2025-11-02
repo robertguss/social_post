@@ -189,3 +189,40 @@ export const getTemplates = query({
     return templates;
   },
 });
+
+/**
+ * Increment template usage count and update last used timestamp
+ */
+export const incrementTemplateUsage = mutation({
+  args: {
+    templateId: v.id("templates"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    // Verify user authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const clerkUserId = identity.subject;
+
+    // Get the template to verify ownership
+    const template = await ctx.db.get(args.templateId);
+    if (!template) {
+      throw new Error("Template not found");
+    }
+
+    // Verify user owns the template
+    if (template.clerkUserId !== clerkUserId) {
+      throw new Error("Unauthorized: You do not own this template");
+    }
+
+    // Update lastUsedAt and increment usageCount
+    await ctx.db.patch(args.templateId, {
+      lastUsedAt: Date.now(),
+      usageCount: template.usageCount + 1,
+    });
+
+    return true;
+  },
+});
