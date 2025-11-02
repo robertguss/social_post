@@ -1,6 +1,7 @@
 # Setting Up Encryption for OAuth Tokens
 
 ## Overview
+
 Your OAuth tokens need to be encrypted before being stored in the database. The encryption system uses AES-256-GCM encryption, which requires a 32-byte base64-encoded encryption key.
 
 ## Step 1: Your Encryption Key
@@ -12,6 +13,7 @@ etLK6SlRbfUlQpSzcsa2u+0juNWW0qHFZSHkMwrFe+Y=
 ```
 
 **IMPORTANT: Treat this key like a password!**
+
 - Never commit it to version control
 - Never share it publicly
 - Store it securely (password manager, secure notes, etc.)
@@ -22,10 +24,12 @@ etLK6SlRbfUlQpSzcsa2u+0juNWW0qHFZSHkMwrFe+Y=
 ### Option A: Via Convex Dashboard (Recommended)
 
 1. Open your Convex Dashboard:
+
    ```bash
    npx convex dashboard
    ```
-   Or visit: https://dashboard.convex.dev/d/deafening-gazelle-331
+
+   Or visit: <https://dashboard.convex.dev/d/deafening-gazelle-331>
 
 2. Navigate to "Settings" → "Environment Variables"
 
@@ -55,7 +59,7 @@ After adding the environment variable:
 
 ## Step 4: Test OAuth Flow
 
-1. Go to your app: http://localhost:3000/settings
+1. Go to your app: <http://localhost:3000/settings>
 2. Click "Connect X/Twitter"
 3. Authorize the app
 4. You should be redirected back with "Twitter connected successfully"
@@ -63,26 +67,31 @@ After adding the environment variable:
 ## How Encryption Works
 
 Your implementation uses:
+
 - **Algorithm**: AES-256-GCM
 - **Key Size**: 32 bytes (256 bits)
 - **IV**: 12 bytes (randomly generated per encryption)
 - **Auth Tag**: 16 bytes (for authenticated encryption)
 
 Each encrypted token is stored as:
+
 ```
 [IV (12 bytes)][Auth Tag (16 bytes)][Ciphertext]
 ```
+
 All base64-encoded as a single string.
 
 ## Security Best Practices
 
 ✅ **DO**:
+
 - Store the encryption key in Convex environment variables only
 - Use different keys for dev/staging/production environments
 - Rotate the key periodically (requires re-encrypting all tokens)
 - Back up the key securely
 
 ❌ **DON'T**:
+
 - Commit the key to git
 - Store the key in .env.local (that's for Next.js, not Convex)
 - Share the key in Slack/email/etc.
@@ -91,17 +100,21 @@ All base64-encoded as a single string.
 ## Troubleshooting
 
 ### Error: "ENCRYPTION_KEY not configured"
+
 - Make sure you added the key to Convex (not .env.local)
 - Verify the environment variable name is exactly `ENCRYPTION_KEY`
 - Check the Convex dashboard to confirm the variable exists
 
 ### Error: "Invalid encryption key length"
+
 - The key must be exactly 32 bytes when decoded from base64
 - Use the key generated above - don't modify it
 - Don't add/remove any characters from the key
 
 ### Need to Generate a New Key?
+
 Run this command:
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
@@ -111,11 +124,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 When deploying to production:
 
 1. Generate a **different** encryption key for production:
+
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
    ```
 
 2. Add it to your production Convex deployment:
+
    ```bash
    npx convex env set ENCRYPTION_KEY "YOUR_PRODUCTION_KEY" --prod
    ```

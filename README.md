@@ -90,14 +90,17 @@ pnpm dlx convex dev
 
 1. Create a new application at [clerk.com](https://clerk.com/)
 2. Configure Clerk in your Convex deployment:
+
    ```bash
    # Follow the Clerk + Convex setup guide:
    # https://docs.convex.dev/auth/clerk
    ```
+
 3. Create a JWT template in Clerk Dashboard:
    - Name: "convex"
    - Copy the Issuer URL
 4. Add to Convex environment variables:
+
    ```
    CLERK_JWT_ISSUER_DOMAIN=your-clerk-issuer-url
    ```
@@ -105,6 +108,7 @@ pnpm dlx convex dev
 ### 4. Configure OAuth Applications
 
 **X/Twitter OAuth 2.0:**
+
 1. Create an app at [developer.twitter.com](https://developer.twitter.com/en/portal/dashboard)
 2. Enable OAuth 2.0 with these scopes:
    - `tweet.read`
@@ -114,6 +118,7 @@ pnpm dlx convex dev
 3. Add callback URL: `http://localhost:3000/api/auth/twitter/callback`
 
 **LinkedIn OAuth 2.0:**
+
 1. Create an app at [linkedin.com/developers](https://www.linkedin.com/developers/apps)
 2. Request these permissions:
    - `openid`
@@ -267,6 +272,7 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 ```
 
 **Security:**
+
 - OAuth tokens encrypted with AES-256-GCM before database storage
 - All Convex functions verify user authentication
 - Data scoped to `clerkUserId` for single-user isolation
@@ -274,14 +280,17 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 ### Data Models
 
 **posts** - Stores scheduled and published content
+
 - Fields: `status`, `twitterContent`, `linkedInContent`, `scheduledTimes`, `url`, `errorMessage`, `retryCount`
 - Index: `by_user` on `[clerkUserId]`
 
 **user_connections** - Stores encrypted OAuth tokens
+
 - Fields: `platform`, `accessToken`, `refreshToken`, `expiresAt`
 - Index: `by_user_platform` on `[clerkUserId, platform]`
 
 **templates** - Stores reusable content templates
+
 - Fields: `name`, `content`, `tags`, `lastUsedAt`, `usageCount`
 - Index: `by_user` on `[clerkUserId]`
 
@@ -345,6 +354,7 @@ pnpm dlx convex deploy
 ```
 
 **Post-Deployment:**
+
 1. Update OAuth callback URLs to production domain
 2. Test OAuth flows in production
 3. Verify scheduled posts are publishing
@@ -367,29 +377,34 @@ pnpm dlx convex deploy
 ### Common Issues
 
 **Posts Not Publishing:**
+
 1. Check Convex logs in dashboard
 2. Verify OAuth tokens are not expired (check Settings page)
 3. Check scheduled function status in Convex dashboard
 4. Review error messages in Post History
 
 **OAuth Connection Fails:**
+
 1. Verify callback URLs match exactly
 2. Check client ID and secret in Convex environment variables
 3. Ensure scopes are correctly configured
 4. Check browser console for errors
 
 **Encryption Errors:**
+
 1. Verify `ENCRYPTION_KEY` is set in Convex environment variables
 2. Ensure key is exactly 32 bytes (base64-encoded)
 3. Run migration if upgrading from plain-text tokens:
+
    ```typescript
    // In Convex dashboard console
    await ctx.runAction(internal.encryption.migrateTokensToEncrypted, {
-     dryRun: true // Test first
+     dryRun: true, // Test first
    });
    ```
 
 **Rate Limiting:**
+
 - X/Twitter: Space out posts, retry logic handles 429 errors
 - LinkedIn: Built-in retry with exponential backoff
 
