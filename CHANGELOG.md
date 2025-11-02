@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
+
 - Image and video attachment support
 - Post analytics and insights
 - Bulk scheduling from CSV import
@@ -17,11 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2025-01-15
+## [1.0.0] - 2025-11-01
 
 ### Added - Initial Release
 
 #### Core Features
+
 - **Multi-Platform Scheduling**: Schedule posts to X/Twitter and LinkedIn with platform-specific content
 - **Staggered Posting**: Set different publish times for each platform
 - **URL Auto-Posting**: Automatically post URLs as replies (Twitter) or comments (LinkedIn)
@@ -29,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Real-Time Updates**: Reactive UI updates powered by Convex subscriptions
 
 #### Template System
+
 - Create and manage reusable content templates
 - Tag-based template organization
 - Template usage tracking (usage count, last used date)
@@ -36,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Alphabetically sorted template library
 
 #### OAuth Integration
+
 - X/Twitter OAuth 2.0 connection with token management
 - LinkedIn OAuth 2.0 connection with OpenID Connect
 - Automatic LinkedIn token refresh (60-day validity)
@@ -43,12 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure token storage with AES-256-GCM encryption
 
 #### Dashboard & Analytics
+
 - Dashboard metrics: Total posts, Scheduled, Published, Failed, Connected platforms
 - Recent activity feed (10 most recent posts)
 - Post history with filtering by platform and date range
 - Visual post activity charts with platform breakdown
 
 #### Publishing Infrastructure
+
 - Convex scheduled functions for timed publishing
 - Twitter API v2 integration with thread support
 - LinkedIn UGC API integration with comment support
@@ -57,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Telegram failure notifications with detailed error messages
 
 #### Security
+
 - AES-256-GCM encryption for OAuth tokens
 - Clerk authentication integration
 - User data isolation via `clerkUserId`
@@ -64,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Token migration utility for existing plain-text tokens
 
 #### User Interface
+
 - Mobile-responsive design with Tailwind CSS 4
 - shadcn/ui component library integration
 - Dark mode support
@@ -73,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications for user feedback
 
 #### Developer Experience
+
 - TypeScript throughout (Next.js 15.5.4 + React 19)
 - Convex backend with type-safe functions
 - Comprehensive test suite (Jest + Vitest)
@@ -81,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed logging in Convex functions
 
 #### Documentation
+
 - Comprehensive README with quick start guide
 - Complete API Reference for all Convex functions
 - Architecture diagrams with Mermaid
@@ -92,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 
 #### Database Schema
+
 - **posts**: Scheduled and published content with status tracking
   - Index: `by_user` on `[clerkUserId]`
 - **user_connections**: Encrypted OAuth tokens per platform
@@ -100,11 +111,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Index: `by_user` on `[clerkUserId]`
 
 #### API Endpoints
+
 - OAuth callback routes for Twitter and LinkedIn
 - Health check endpoint for monitoring
 - Clerk webhook support (infrastructure)
 
 #### Environment Configuration
+
 - Clerk authentication (development and production)
 - Convex deployment URLs
 - Twitter OAuth credentials
@@ -114,9 +127,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.3.0] - 2024-11-01
+## [0.3.0] - 2025-10-31
 
 ### Added
+
 - Template library feature (Epic 3.0)
 - Template CRUD operations (create, read, update, delete)
 - Template picker modal in post scheduler
@@ -125,11 +139,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Template form validation
 
 ### Changed
+
 - Enhanced post scheduler UI with template integration
 - Improved database schema with templates table
 - Updated test suite with template coverage
 
 ### Fixed
+
 - Template name uniqueness validation
 - Character counting edge cases
 - Template insertion cursor position
@@ -139,6 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2024-10-15
 
 ### Added
+
 - LinkedIn publishing support
 - Token refresh mechanism for LinkedIn (60-day validity)
 - LinkedIn-specific content field (3,000 character limit)
@@ -146,11 +163,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection status monitoring
 
 ### Changed
+
 - Updated schema to support dual-platform posts
 - Enhanced publishing workflow to handle both platforms
 - Improved error messages for platform-specific failures
 
 ### Fixed
+
 - LinkedIn token expiration handling
 - Person ID retrieval using OpenID Connect
 - Comment posting on LinkedIn UGC posts
@@ -162,6 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - MVP Release
 
 #### Initial Features
+
 - Twitter post scheduling with OAuth 2.0
 - Basic post CRUD operations
 - Post status tracking (Scheduled, Publishing, Published, Failed)
@@ -172,6 +192,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard with basic metrics
 
 #### Infrastructure
+
 - Next.js 15.5.4 with App Router
 - Convex backend setup
 - Clerk authentication integration
@@ -179,11 +200,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Environment variable management
 
 #### Security
+
 - Token encryption implementation
 - User authentication via Clerk
 - Data isolation per user
 
 #### Developer Setup
+
 - Development environment configuration
 - Testing framework setup (Jest)
 - ESLint and Prettier configuration
@@ -194,12 +217,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
-| Version | Release Date | Key Features |
-|---------|-------------|--------------|
-| **1.0.0** | 2025-01-15 | Full production release with templates, dual-platform support, comprehensive docs |
-| **0.3.0** | 2024-11-01 | Template library system |
-| **0.2.0** | 2024-10-15 | LinkedIn integration and token refresh |
-| **0.1.0** | 2024-10-01 | MVP with Twitter scheduling |
+| Version   | Release Date | Key Features                                                                      |
+| --------- | ------------ | --------------------------------------------------------------------------------- |
+| **1.0.0** | 2025-11-01   | Full production release with templates, dual-platform support, comprehensive docs |
+| **0.3.0** | 2025-10-31   | Template library system                                                           |
+| **0.2.0** | 2025-10-31   | LinkedIn integration and token refresh                                            |
+| **0.1.0** | 2025-10-31   | MVP with Twitter scheduling                                                       |
 
 ---
 
@@ -223,6 +246,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migration Guides
 
 When upgrading between major versions, refer to:
+
 - Migration guides in `/docs/migrations/`
 - Breaking changes section in release notes
 - API compatibility matrix
@@ -232,6 +256,7 @@ When upgrading between major versions, refer to:
 ## Contributing
 
 When contributing, please:
+
 1. Update this CHANGELOG.md with your changes under `[Unreleased]`
 2. Follow the Keep a Changelog format
 3. Include issue/PR references where applicable
@@ -239,11 +264,14 @@ When contributing, please:
 5. Categorize changes appropriately
 
 Example:
+
 ```markdown
 ### Added
+
 - New feature description (#123)
 
 ### Fixed
+
 - Bug fix description (#124)
 ```
 
@@ -261,6 +289,7 @@ Example:
 ## Support
 
 For questions or support:
+
 - Open an issue on GitHub
 - Check the documentation in `/docs`
 - Join discussions in GitHub Discussions
