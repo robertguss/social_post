@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { CharacterCounter } from "@/components/ui/CharacterCounter";
+import { LinkedInFormattingHints } from "@/components/features/LinkedInFormattingHints";
 import { IconChevronDown, IconChevronUp, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
 import {
   getTwitterCharacterCount,
@@ -95,6 +96,15 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
     // Pre-fill button state
     const [showPreFillButton, setShowPreFillButton] = useState(false);
 
+    // LinkedIn hints visibility state with localStorage persistence
+    const [showLinkedInHints, setShowLinkedInHints] = useState(() => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("linkedin-hints-visible");
+        return stored === null ? true : stored === "true";
+      }
+      return true;
+    });
+
     // Debounce twitter content (2 second delay)
     const [debouncedTwitterContent] = useDebounce(twitterContent, 2000);
 
@@ -148,6 +158,12 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
       setTimeout(() => {
         linkedInTextareaRef.current?.focus();
       }, 0);
+    };
+
+    // Handle dismissing LinkedIn hints
+    const handleDismissLinkedInHints = () => {
+      setShowLinkedInHints(false);
+      localStorage.setItem("linkedin-hints-visible", "false");
     };
 
     return (
@@ -357,6 +373,13 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
                   platform="linkedin"
                 />
               </div>
+
+              {/* LinkedIn Formatting Hints */}
+              <LinkedInFormattingHints
+                content={linkedInContent}
+                isVisible={showLinkedInHints}
+                onDismiss={handleDismissLinkedInHints}
+              />
             </div>
           )}
         </div>

@@ -686,4 +686,199 @@ describe("DualPlatformTextFields Component", () => {
       });
     });
   });
+
+  describe("LinkedIn Formatting Hints Integration", () => {
+    // Mock localStorage
+    let localStorageMock: { [key: string]: string } = {};
+
+    beforeEach(() => {
+      localStorageMock = {};
+      global.Storage.prototype.getItem = jest.fn((key) => localStorageMock[key] || null);
+      global.Storage.prototype.setItem = jest.fn((key, value) => {
+        localStorageMock[key] = value;
+      });
+    });
+
+    it("should show LinkedIn hints by default on first render", () => {
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      expect(screen.getByText("Formatting Tips")).toBeInTheDocument();
+    });
+
+    it("should restore hint visibility from localStorage on mount", () => {
+      // Set localStorage to hide hints
+      localStorageMock["linkedin-hints-visible"] = "false";
+
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      expect(screen.queryByText("Formatting Tips")).not.toBeInTheDocument();
+    });
+
+    it("should show hints when localStorage preference is true", () => {
+      localStorageMock["linkedin-hints-visible"] = "true";
+
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      expect(screen.getByText("Formatting Tips")).toBeInTheDocument();
+    });
+
+    it("should persist hint dismissal to localStorage", async () => {
+      const user = userEvent.setup();
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      const dismissButton = screen.getByLabelText("Dismiss hints");
+      await user.click(dismissButton);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith("linkedin-hints-visible", "false");
+    });
+
+    it("should hide hints after dismissal", async () => {
+      const user = userEvent.setup();
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      expect(screen.getByText("Formatting Tips")).toBeInTheDocument();
+
+      const dismissButton = screen.getByLabelText("Dismiss hints");
+      await user.click(dismissButton);
+
+      expect(screen.queryByText("Formatting Tips")).not.toBeInTheDocument();
+    });
+
+    it("should update context-aware hints as user types in LinkedIn textarea", async () => {
+      const { rerender } = render(<DualPlatformTextFields {...defaultProps} linkedInContent="" />);
+
+      // Initially, no context-aware hints
+      expect(screen.queryByText("Consider adding relevant hashtags")).not.toBeInTheDocument();
+
+      // Type 101 characters without hashtags
+      const longContent = "a".repeat(101);
+      rerender(<DualPlatformTextFields {...defaultProps} linkedInContent={longContent} />);
+
+      // Context-aware hashtag hint should appear
+      expect(screen.getByText("Consider adding relevant hashtags")).toBeInTheDocument();
+    });
+
+    it("should show line break hint when typing long content without line breaks", async () => {
+      const { rerender } = render(<DualPlatformTextFields {...defaultProps} linkedInContent="" />);
+
+      // Initially, no line break hint
+      expect(screen.queryByText("Add line breaks to improve readability")).not.toBeInTheDocument();
+
+      // Type 201 characters without line breaks
+      const longContent = "a".repeat(201);
+      rerender(<DualPlatformTextFields {...defaultProps} linkedInContent={longContent} />);
+
+      // Context-aware line break hint should appear
+      expect(screen.getByText("Add line breaks to improve readability")).toBeInTheDocument();
+    });
+
+    it("should remove context-aware hints when conditions are no longer met", async () => {
+      const longContent = "a".repeat(101);
+      const { rerender } = render(
+        <DualPlatformTextFields {...defaultProps} linkedInContent={longContent} />
+      );
+
+      // Hashtag hint should be present
+      expect(screen.getByText("Consider adding relevant hashtags")).toBeInTheDocument();
+
+      // Add hashtag to content
+      const contentWithHashtag = longContent + " #test";
+      rerender(<DualPlatformTextFields {...defaultProps} linkedInContent={contentWithHashtag} />);
+
+      // Hashtag hint should disappear
+      expect(screen.queryByText("Consider adding relevant hashtags")).not.toBeInTheDocument();
+    });
+
+    it("should show multiple context-aware hints when multiple conditions are met", async () => {
+      const longContent = "a".repeat(250); // > 200 chars, no hashtags, no line breaks
+      render(<DualPlatformTextFields {...defaultProps} linkedInContent={longContent} />);
+
+      expect(screen.getByText("Consider adding relevant hashtags")).toBeInTheDocument();
+      expect(screen.getByText("Add line breaks to improve readability")).toBeInTheDocument();
+    });
+
+    it("should not modify LinkedIn content automatically", async () => {
+      const user = userEvent.setup();
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      const linkedInTextarea = screen.getByPlaceholderText("Share your professional insights...");
+      await user.type(linkedInTextarea, "Test content");
+
+      // onLinkedInChange should be called for each character typed
+      expect(mockLinkedInChange).toHaveBeenCalled();
+      // But the hint component should never call it
+      const callCount = mockLinkedInChange.mock.calls.length;
+      expect(callCount).toBe("Test content".length); // Only user typing, not hints
+    });
+
+    it("should not block LinkedIn textarea interaction when hints are visible", async () => {
+      const user = userEvent.setup();
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      // Hints should be visible
+      expect(screen.getByText("Formatting Tips")).toBeInTheDocument();
+
+      // Should still be able to type in LinkedIn textarea
+      const linkedInTextarea = screen.getByPlaceholderText("Share your professional insights...");
+      await user.click(linkedInTextarea);
+      await user.type(linkedInTextarea, "Test");
+
+      expect(mockLinkedInChange).toHaveBeenCalled();
+      expect(linkedInTextarea).toHaveFocus();
+    });
+
+    it("should not show hints when LinkedIn section is collapsed", async () => {
+      const user = userEvent.setup();
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      // Initially hints should be visible
+      expect(screen.getByText("Formatting Tips")).toBeInTheDocument();
+
+      // Collapse LinkedIn section
+      const linkedInCollapseButton = screen.getByRole("button", {
+        name: "Collapse LinkedIn section",
+      });
+      await user.click(linkedInCollapseButton);
+
+      // Hints should not be visible when section is collapsed
+      expect(screen.queryByText("Formatting Tips")).not.toBeInTheDocument();
+    });
+
+    it("should show static formatting hints at all times (when visible and not dismissed)", () => {
+      render(<DualPlatformTextFields {...defaultProps} linkedInContent="" />);
+
+      // Static hints should always be present
+      expect(screen.getByText("Use line breaks for readability")).toBeInTheDocument();
+      expect(screen.getByText("Add emojis for engagement")).toBeInTheDocument();
+      expect(screen.getByText("Include hashtags at the end")).toBeInTheDocument();
+    });
+
+    it("should show hints only in LinkedIn section, not Twitter section", () => {
+      render(<DualPlatformTextFields {...defaultProps} />);
+
+      // Hints should appear only once (in LinkedIn section)
+      const formattingTips = screen.getByText("Formatting Tips");
+      expect(formattingTips).toBeInTheDocument();
+
+      // Should not be duplicated in Twitter section
+      const allFormattingTips = screen.getAllByText("Formatting Tips");
+      expect(allFormattingTips).toHaveLength(1);
+    });
+
+    it("should not interfere with character counter display", () => {
+      const { container } = render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          linkedInContent="Test content"
+        />
+      );
+
+      // Both hints and character counter should be visible
+      expect(screen.getByText("Formatting Tips")).toBeInTheDocument();
+      // Character counter should still be present in LinkedIn section
+      const linkedInSection = container.querySelector('#linkedin-char-count');
+      expect(linkedInSection).toBeInTheDocument();
+      expect(linkedInSection).toHaveTextContent("12");
+    });
+  });
 });
