@@ -3,10 +3,10 @@
 import * as React from "react"
 import {
   IconCalendarEvent,
-  IconChartBar,
   IconClock,
   IconDashboard,
   IconHelp,
+  IconRepeat,
   IconSettings,
   IconShare3,
   IconTemplate,
@@ -47,6 +47,11 @@ const data = {
       title: "Templates",
       url: "/templates",
       icon: IconTemplate,
+    },
+    {
+      title: "Queues",
+      url: "/queues",
+      icon: IconRepeat,
     },
   ],
   navSecondary: [
