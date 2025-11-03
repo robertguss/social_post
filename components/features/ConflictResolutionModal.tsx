@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useMutation } from "convex/react";
@@ -75,6 +75,15 @@ export function ConflictResolutionModal({
     new Date(queue.nextScheduledTime)
   );
   const updateQueue = useMutation(api.queues.updateQueue);
+
+  // Reset newScheduledTime when the queue changes
+  useEffect(() => {
+    if (queue.nextScheduledTime) {
+      setNewScheduledTime(new Date(queue.nextScheduledTime));
+    } else {
+      setNewScheduledTime(undefined);
+    }
+  }, [queue.nextScheduledTime]);
 
   // Filter conflicts for this queue
   const queueConflicts = conflicts.filter((c) => c.queueId === queue._id);

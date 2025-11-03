@@ -801,21 +801,15 @@ export const processQueues = internalMutation({
 /**
  * Cron job configuration for recurring queue processing
  *
- * This cron job runs daily at midnight UTC to process due recurring queues.
- * For more frequent processing, switch to crons.hourly().
+ * This cron job runs every 5 minutes to process due recurring queues.
+ * This ensures queues scheduled throughout the day are picked up promptly
+ * instead of waiting until the next daily run.
  */
 export const crons = cronJobs();
 
-// Run processQueues daily at midnight UTC (12:00 AM)
-crons.daily(
+// Run processQueues every 5 minutes
+crons.interval(
   "process-recurring-queues",
-  { hourUTC: 0, minuteUTC: 0 },
+  { minutes: 5 },
   internal.queues.processQueues
 );
-
-// Alternative: Hourly processing (uncomment to use)
-// crons.hourly(
-//   "process-recurring-queues",
-//   { minuteUTC: 0 },
-//   internal.queues.processQueues
-// );

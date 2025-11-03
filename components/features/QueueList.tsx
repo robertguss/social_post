@@ -63,9 +63,14 @@ export function QueueList() {
     if (highlight) {
       setHighlightedQueueId(highlight);
       // Clear highlight after 2 seconds
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setHighlightedQueueId(null);
       }, 2000);
+
+      // Cleanup: clear timeout on unmount or when searchParams changes
+      return () => {
+        clearTimeout(timer);
+      };
     }
   }, [searchParams]);
 
