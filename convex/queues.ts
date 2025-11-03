@@ -1,4 +1,4 @@
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -19,7 +19,7 @@ import { cronJobs } from "convex/server";
  * @returns true if exact conflict exists, false otherwise
  */
 async function checkExactConflict(
-  ctx: any,
+  ctx: MutationCtx,
   originalPostId: Id<"posts">,
   scheduledTime: number,
   clerkUserId: string
@@ -39,8 +39,9 @@ async function checkExactConflict(
   // Fetch all scheduled posts for user
   const scheduledPosts = await ctx.db
     .query("posts")
-    .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
-    .filter((q) => q.eq(q.field("status"), "Scheduled"))
+    .withIndex("by_user_status", (q) =>
+      q.eq("clerkUserId", clerkUserId).eq("status", "Scheduled")
+    )
     .collect();
 
   // Check for exact conflicts
@@ -121,19 +122,26 @@ export const createQueue = mutation({
 
     // Check for duplicate queues unless force is true
     if (!args.force) {
-      const duplicateQueues = await ctx.db
+      // Query for active queues
+      const activeQueues = await ctx.db
         .query("recurring_queues")
-        .withIndex("by_user_status", (q) => q.eq("clerkUserId", clerkUserId))
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("originalPostId"), args.originalPostId),
-            q.or(
-              q.eq(q.field("status"), "active"),
-              q.eq(q.field("status"), "paused")
-            )
-          )
+        .withIndex("by_user_status", (q) =>
+          q.eq("clerkUserId", clerkUserId).eq("status", "active")
         )
         .collect();
+
+      // Query for paused queues
+      const pausedQueues = await ctx.db
+        .query("recurring_queues")
+        .withIndex("by_user_status", (q) =>
+          q.eq("clerkUserId", clerkUserId).eq("status", "paused")
+        )
+        .collect();
+
+      // Combine and filter for matching originalPostId
+      const duplicateQueues = [...activeQueues, ...pausedQueues].filter(
+        (queue) => queue.originalPostId === args.originalPostId
+      );
 
       if (duplicateQueues.length > 0) {
         // Throw error with duplicate queue details
@@ -404,20 +412,28 @@ export const checkDuplicateQueue = query({
     const clerkUserId = identity.subject;
 
     // Query recurring_queues for queues matching originalPostId and clerkUserId
-    // Filter results to include only "active" and "paused" queues (exclude "completed")
-    const queues = await ctx.db
+    // Query results to include only "active" and "paused" queues (exclude "completed")
+
+    // Query for active queues
+    const activeQueues = await ctx.db
       .query("recurring_queues")
-      .withIndex("by_user_status", (q) => q.eq("clerkUserId", clerkUserId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("originalPostId"), args.originalPostId),
-          q.or(
-            q.eq(q.field("status"), "active"),
-            q.eq(q.field("status"), "paused")
-          )
-        )
+      .withIndex("by_user_status", (q) =>
+        q.eq("clerkUserId", clerkUserId).eq("status", "active")
       )
       .collect();
+
+    // Query for paused queues
+    const pausedQueues = await ctx.db
+      .query("recurring_queues")
+      .withIndex("by_user_status", (q) =>
+        q.eq("clerkUserId", clerkUserId).eq("status", "paused")
+      )
+      .collect();
+
+    // Combine and filter for matching originalPostId
+    const queues = [...activeQueues, ...pausedQueues].filter(
+      (queue) => queue.originalPostId === args.originalPostId
+    );
 
     return queues;
   },
@@ -470,8 +486,9 @@ export const detectSchedulingConflicts = query({
     // Fetch all scheduled posts for user (status "Scheduled")
     const scheduledPosts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
-      .filter((q) => q.eq(q.field("status"), "Scheduled"))
+      .withIndex("by_user_status", (q) =>
+        q.eq("clerkUserId", clerkUserId).eq("status", "Scheduled")
+      )
       .collect();
 
     const conflicts: Array<{
@@ -614,7 +631,7 @@ export const getQueues = query({
  * @returns New post ID
  */
 async function cloneAndSchedulePost(
-  ctx: any,
+  ctx: MutationCtx,
   originalPostId: Id<"posts">,
   queueId: Id<"recurring_queues">,
   nextScheduledTime: number
@@ -720,8 +737,9 @@ export const processQueues = internalMutation({
     // Query all active queues where nextScheduledTime <= now
     const dueQueues = await ctx.db
       .query("recurring_queues")
-      .withIndex("by_next_scheduled")
-      .filter((q) => q.and(q.lte(q.field("nextScheduledTime"), now), q.eq(q.field("status"), "active")))
+      .withIndex("by_status_next_scheduled", (q) =>
+        q.eq("status", "active").lte("nextScheduledTime", now)
+      )
       .collect();
 
     console.log(`[processQueues] Found ${dueQueues.length} due queues to process`);

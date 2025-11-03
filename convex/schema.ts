@@ -20,7 +20,9 @@ export default defineSchema({
     linkedInPostId: v.optional(v.string()),
     clonedFromPostId: v.optional(v.id("posts")), // References original post ID if this post was cloned
     createdByQueueId: v.optional(v.id("recurring_queues")), // References queue ID if this post was created by a recurring queue
-  }).index("by_user", ["clerkUserId"]),
+  })
+    .index("by_user", ["clerkUserId"])
+    .index("by_user_status", ["clerkUserId", "status"]),
 
   // Stores encrypted OAuth tokens for external platforms
   user_connections: defineTable({
@@ -53,5 +55,6 @@ export default defineSchema({
     maxExecutions: v.optional(v.number()), // Max executions before auto-completion (null for infinite)
   })
     .index("by_user_status", ["clerkUserId", "status"])
-    .index("by_next_scheduled", ["nextScheduledTime"]),
+    .index("by_next_scheduled", ["nextScheduledTime"])
+    .index("by_status_next_scheduled", ["status", "nextScheduledTime"]),
 });
