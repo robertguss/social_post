@@ -68,6 +68,22 @@ export default defineSchema({
     // Future preference fields can be added here
   }).index("by_user", ["clerkUserId"]),
 
+  // Stores user-defined custom posting time preferences that override research-based recommendations
+  // Times are stored in user's local timezone (unlike posting_time_recommendations which uses UTC)
+  posting_preferences: defineTable({
+    clerkUserId: v.string(), // Clerk user ID (for data scoping)
+    platform: v.string(), // "twitter" | "linkedin"
+    dayOfWeek: v.number(), // 0-6 (Sunday=0, Saturday=6)
+    customTimeRanges: v.array(
+      v.object({
+        startHour: v.number(), // 0-23 in user's local timezone
+        endHour: v.number(), // 0-23 in user's local timezone
+      })
+    ),
+  })
+    .index("by_user_platform", ["clerkUserId", "platform"])
+    .index("by_user_platform_day", ["clerkUserId", "platform", "dayOfWeek"]),
+
   // Stores optimal posting time recommendations based on industry research
   // System-wide data (not user-scoped) - provides intelligent time suggestions
   posting_time_recommendations: defineTable({

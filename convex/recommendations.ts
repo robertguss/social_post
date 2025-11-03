@@ -35,7 +35,18 @@ export const getRecommendedTimes = query({
     const dateObj = new Date(args.date);
     const dayOfWeek = dateObj.getUTCDay();
 
-    // Query posting_time_recommendations using the by_platform_day index
+    // 1. Check for user custom preferences first (Story 6.5)
+    const userPreferences = await ctx.db
+      .query("posting_preferences")
+      .withIndex("by_user_platform_day", (q) =>
+        q
+          .eq("clerkUserId", clerkUserId)
+          .eq("platform", args.platform)
+          .eq("dayOfWeek", dayOfWeek)
+      )
+      .collect();
+
+    // 2. Query posting_time_recommendations using the by_platform_day index
     const recommendations = await ctx.db
       .query("posting_time_recommendations")
       .withIndex("by_platform_day", (q) =>
@@ -43,8 +54,27 @@ export const getRecommendedTimes = query({
       )
       .collect();
 
+    // 3. Combine user preferences (high priority) with research-based recommendations
+    let combinedRecommendations = [];
+
+    // Add custom preferences as top recommendations with high engagement score
+    if (userPreferences.length > 0) {
+      for (const pref of userPreferences) {
+        for (const timeRange of pref.customTimeRanges) {
+          combinedRecommendations.push({
+            hourRanges: [{ startHour: timeRange.startHour, endHour: timeRange.endHour }],
+            engagementScore: 95, // High score to prioritize user preferences
+            source: "user preference",
+          });
+        }
+      }
+    }
+
+    // Add research-based recommendations
+    combinedRecommendations.push(...recommendations);
+
     // Sort by engagement score (highest first) and take top 3
-    const sortedRecommendations = recommendations
+    const sortedRecommendations = combinedRecommendations
       .sort((a, b) => b.engagementScore - a.engagementScore)
       .slice(0, 3);
 
