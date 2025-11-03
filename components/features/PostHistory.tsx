@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { IconCopy } from "@tabler/icons-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { PostScheduler } from "./PostScheduler";
 
@@ -44,6 +46,9 @@ type Post = {
  * - Real-time updates via Convex reactive queries
  */
 export function PostHistory() {
+  // Router for navigation
+  const router = useRouter();
+
   // Date range state
   type DateRangeOption = "7days" | "30days" | "90days" | "all";
   const [dateRange, setDateRange] = useState<DateRangeOption>("30days");
@@ -62,8 +67,12 @@ export function PostHistory() {
   // Edit state
   const [editPostId, setEditPostId] = useState<Id<"posts"> | null>(null);
 
+  // Clone state
+  const [cloningPostId, setCloningPostId] = useState<Id<"posts"> | null>(null);
+
   // Mutations
   const deletePost = useMutation(api.posts.deletePost);
+  const clonePost = useMutation(api.posts.clonePost);
 
   // Calculate date range timestamps
   const { startDate, endDate } = useMemo(() => {
@@ -126,6 +135,27 @@ export function PostHistory() {
   const handleDeleteClick = (postId: Id<"posts">, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent modal from opening
     setDeleteConfirmId(postId);
+  };
+
+  /**
+   * Handle clone button click
+   */
+  const handleClone = async (postId: Id<"posts">, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
+
+    setCloningPostId(postId);
+    try {
+      // Call clonePost mutation and get new post ID
+      const newPostId = await clonePost({ postId });
+
+      // Navigate to PostScheduler with new draft post pre-loaded
+      router.push(`/schedule?postId=${newPostId}`);
+    } catch (error) {
+      console.error("Failed to clone post:", error);
+      alert(`Failed to clone post: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setCloningPostId(null);
+    }
   };
 
   /**
@@ -476,6 +506,22 @@ export function PostHistory() {
                         onClick={(e) => handleDeleteClick(post._id, e)}
                       >
                         Delete
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Clone Action - Only show for Published or Failed posts */}
+                  {(post.status === "Published" || post.status === "Failed") && (
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => handleClone(post._id, e)}
+                        disabled={cloningPostId === post._id}
+                        aria-label="Clone this post"
+                      >
+                        <IconCopy className="w-4 h-4 mr-2" />
+                        {cloningPostId === post._id ? "Cloning..." : "Clone"}
                       </Button>
                     </div>
                   )}

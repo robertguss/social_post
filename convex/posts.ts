@@ -331,6 +331,65 @@ export const deletePost = mutation({
 });
 
 /**
+ * PUBLIC MUTATION: Clone an existing post
+ *
+ * This mutation creates a new draft post with content copied from an existing post
+ * (published or failed). Scheduled times are cleared, and the user must set new times.
+ * The cloned post references the original post ID via clonedFromPostId field.
+ *
+ * @param postId - The ID of the post to clone
+ * @returns The ID of the newly created draft post
+ */
+export const clonePost = mutation({
+  args: {
+    postId: v.id("posts"),
+  },
+  handler: async (ctx, args): Promise<Id<"posts">> => {
+    // Verify user authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const clerkUserId = identity.subject;
+
+    // Fetch original post by ID
+    const originalPost = await ctx.db.get(args.postId);
+    if (!originalPost) {
+      throw new Error("Post not found");
+    }
+
+    // Verify original post belongs to authenticated user (security check)
+    if (originalPost.clerkUserId !== clerkUserId) {
+      throw new Error("Unauthorized: You can only clone your own posts");
+    }
+
+    // Create new post object with cloned content fields
+    const newPostId = await ctx.db.insert("posts", {
+      clerkUserId, // Use authenticated user's ID
+      status: "draft", // New post starts as draft
+      twitterContent: originalPost.twitterContent || "",
+      linkedInContent: originalPost.linkedInContent || "",
+      url: originalPost.url || "",
+      // Clear scheduling fields (user must set new times)
+      twitterScheduledTime: undefined,
+      linkedInScheduledTime: undefined,
+      twitterSchedulerId: undefined,
+      linkedInSchedulerId: undefined,
+      // Clear publishing fields
+      twitterPostId: undefined,
+      linkedInPostId: undefined,
+      errorMessage: undefined,
+      retryCount: 0,
+      // Set reference to original post
+      clonedFromPostId: originalPost._id,
+    });
+
+    return newPostId;
+  },
+});
+
+/**
  * INTERNAL MUTATION: Update post status and related fields
  *
  * This mutation is used by publishing actions to update post status during the
@@ -382,6 +441,43 @@ export const updatePostStatus = internalMutation({
 
     // Update the post record
     await ctx.db.patch(args.postId, updates);
+  },
+});
+
+/**
+ * PUBLIC QUERY: Get a post by ID for the authenticated user
+ *
+ * This query is used to load draft posts for editing or cloning.
+ * Only returns posts that belong to the authenticated user.
+ *
+ * @param postId - The ID of the post to retrieve
+ * @returns The post record or null if not found or unauthorized
+ */
+export const getPost = query({
+  args: {
+    postId: v.id("posts"),
+  },
+  handler: async (ctx, args) => {
+    // Verify authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const clerkUserId = identity.subject;
+
+    // Fetch post
+    const post = await ctx.db.get(args.postId);
+    if (!post) {
+      return null;
+    }
+
+    // Verify ownership
+    if (post.clerkUserId !== clerkUserId) {
+      throw new Error("Unauthorized: You can only access your own posts");
+    }
+
+    return post;
   },
 });
 

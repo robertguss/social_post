@@ -1,3 +1,5 @@
+"use client";
+
 import { PostScheduler } from "@/components/features/PostScheduler";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -5,8 +7,25 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import { useSearchParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function SchedulePage() {
+  const searchParams = useSearchParams();
+  const postId = searchParams.get("postId");
+
+  // Fetch post if postId exists (for cloning or editing drafts)
+  const post = useQuery(
+    api.posts.getPost,
+    postId ? { postId: postId as Id<"posts"> } : "skip"
+  );
+
+  // Determine if we're loading a draft post
+  const isDraftLoading = postId && post === undefined;
+  const draftPost = postId && post ? post : null;
+
   return (
     <SidebarProvider
       style={
@@ -24,10 +43,33 @@ export default function SchedulePage() {
             <div className="mb-8">
               <h1 className="text-3xl font-bold tracking-tight">Schedule Post</h1>
               <p className="text-muted-foreground mt-2">
-                Create and schedule content for X/Twitter
+                {draftPost
+                  ? "Edit your draft post"
+                  : "Create and schedule content for X/Twitter and LinkedIn"}
               </p>
             </div>
-            <PostScheduler />
+            {isDraftLoading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading draft post...</p>
+              </div>
+            ) : (
+              <PostScheduler
+                mode={draftPost ? "edit" : "create"}
+                postData={
+                  draftPost
+                    ? {
+                        _id: draftPost._id,
+                        twitterContent: draftPost.twitterContent,
+                        linkedInContent: draftPost.linkedInContent,
+                        twitterScheduledTime: draftPost.twitterScheduledTime,
+                        linkedInScheduledTime: draftPost.linkedInScheduledTime,
+                        url: draftPost.url || undefined,
+                        clonedFromPostId: draftPost.clonedFromPostId,
+                      }
+                    : undefined
+                }
+              />
+            )}
           </div>
         </div>
       </SidebarInset>

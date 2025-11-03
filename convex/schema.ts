@@ -18,7 +18,11 @@ export default defineSchema({
     retryCount: v.optional(v.number()),
     twitterPostId: v.optional(v.string()),
     linkedInPostId: v.optional(v.string()),
-  }).index("by_user", ["clerkUserId"]),
+    clonedFromPostId: v.optional(v.id("posts")), // References original post ID if this post was cloned
+    createdByQueueId: v.optional(v.id("recurring_queues")), // References queue ID if this post was created by a recurring queue
+  })
+    .index("by_user", ["clerkUserId"])
+    .index("by_user_status", ["clerkUserId", "status"]),
 
   // Stores encrypted OAuth tokens for external platforms
   user_connections: defineTable({
@@ -38,4 +42,19 @@ export default defineSchema({
     lastUsedAt: v.optional(v.number()), // Timestamp, null until first use
     usageCount: v.number(), // Default 0
   }).index("by_user", ["clerkUserId"]),
+
+  // Stores recurring post queues for automated content recycling
+  recurring_queues: defineTable({
+    clerkUserId: v.string(), // Clerk user ID for user scoping
+    originalPostId: v.id("posts"), // Reference to the post to clone
+    status: v.string(), // "active" | "paused" | "completed"
+    interval: v.number(), // Number of days between executions
+    nextScheduledTime: v.number(), // Unix timestamp (ms) of next execution
+    lastExecutedTime: v.optional(v.number()), // Unix timestamp (ms) of last execution
+    executionCount: v.number(), // Total number of times queue has executed
+    maxExecutions: v.optional(v.number()), // Max executions before auto-completion (null for infinite)
+  })
+    .index("by_user_status", ["clerkUserId", "status"])
+    .index("by_next_scheduled", ["nextScheduledTime"])
+    .index("by_status_next_scheduled", ["status", "nextScheduledTime"]),
 });
