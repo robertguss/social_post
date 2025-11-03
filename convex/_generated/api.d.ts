@@ -15,6 +15,7 @@ import type * as encryptionHelpers from "../encryptionHelpers.js";
 import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as publishing from "../publishing.js";
+import type * as templates from "../templates.js";
 import type * as tokenRefresh from "../tokenRefresh.js";
 
 import type {
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   posts: typeof posts;
   publishing: typeof publishing;
+  templates: typeof templates;
   tokenRefresh: typeof tokenRefresh;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

@@ -18,6 +18,7 @@ export default defineSchema({
     retryCount: v.optional(v.number()),
     twitterPostId: v.optional(v.string()),
     linkedInPostId: v.optional(v.string()),
+    clonedFromPostId: v.optional(v.id("posts")), // References original post ID if this post was cloned
   }).index("by_user", ["clerkUserId"]),
 
   // Stores encrypted OAuth tokens for external platforms

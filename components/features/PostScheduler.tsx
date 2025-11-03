@@ -12,7 +12,7 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Id, Doc } from "@/convex/_generated/dataModel";
 import { TemplatePickerModal } from "./TemplatePickerModal";
-import { IconTemplate } from "@tabler/icons-react";
+import { IconTemplate, IconInfoCircle, IconX } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 /**
@@ -34,6 +34,7 @@ interface PostData {
   twitterScheduledTime?: number;
   linkedInScheduledTime?: number;
   url?: string;
+  clonedFromPostId?: Id<"posts">;
 }
 
 interface PostSchedulerProps {
@@ -69,6 +70,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Template picker modal state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"twitter" | "linkedin" | null>(null);
+
+  // Clone indicator state
+  const [showCloneBadge, setShowCloneBadge] = useState(!!postData?.clonedFromPostId);
 
   // Textarea refs for cursor position
   const twitterTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -324,6 +328,26 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Clone Indicator - Show if post is cloned and not dismissed */}
+          {showCloneBadge && postData?.clonedFromPostId && (
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+              <IconInfoCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  This is a draft cloned from a previous post
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCloneBadge(false)}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                <IconX className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Platform Selection */}
           <div className="space-y-4">
             <Label>Select Platforms <span className="text-destructive">*</span></Label>

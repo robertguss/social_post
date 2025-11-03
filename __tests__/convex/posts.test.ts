@@ -1465,3 +1465,232 @@ describe("getPosts query", () => {
     await expect(getPostsMock(mockQueryContext, args)).rejects.toThrow("Not authenticated");
   });
 });
+
+// Mock implementation of clonePost mutation logic
+async function clonePostMock(
+  ctx: any,
+  args: {
+    postId: string;
+  }
+) {
+  // Verify user authentication
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+
+  const clerkUserId = identity.subject;
+
+  // Fetch original post by ID
+  const originalPost = await ctx.db.get(args.postId);
+  if (!originalPost) {
+    throw new Error("Post not found");
+  }
+
+  // Verify original post belongs to authenticated user (security check)
+  if (originalPost.clerkUserId !== clerkUserId) {
+    throw new Error("Unauthorized: You can only clone your own posts");
+  }
+
+  // Create new post object with cloned content fields
+  const newPostId = await ctx.db.insert("posts", {
+    clerkUserId, // Use authenticated user's ID
+    status: "draft", // New post starts as draft
+    twitterContent: originalPost.twitterContent || "",
+    linkedInContent: originalPost.linkedInContent || "",
+    url: originalPost.url || "",
+    // Clear scheduling fields (user must set new times)
+    twitterScheduledTime: undefined,
+    linkedInScheduledTime: undefined,
+    twitterSchedulerId: undefined,
+    linkedInSchedulerId: undefined,
+    // Clear publishing fields
+    twitterPostId: undefined,
+    linkedInPostId: undefined,
+    errorMessage: undefined,
+    retryCount: 0,
+    // Set reference to original post
+    clonedFromPostId: originalPost._id,
+  });
+
+  return newPostId;
+}
+
+describe("clonePost mutation", () => {
+  beforeEach(() => {
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+
+    // Set up default auth mock
+    mockContext.auth.getUserIdentity.mockResolvedValue({
+      subject: "test-user-123",
+    });
+  });
+
+  it("should create a new draft post with cloned content", async () => {
+    // Mock original post
+    const originalPost = {
+      _id: "original-post-id",
+      clerkUserId: "test-user-123",
+      status: "Published",
+      twitterContent: "This is a test tweet",
+      linkedInContent: "This is a test LinkedIn post",
+      url: "https://example.com",
+      twitterScheduledTime: 1234567890000,
+      linkedInScheduledTime: 1234567890000,
+      twitterSchedulerId: "scheduler-1",
+      linkedInSchedulerId: "scheduler-2",
+      twitterPostId: "tweet-123",
+      linkedInPostId: "post-456",
+      errorMessage: "Some error",
+      retryCount: 2,
+    };
+
+    mockContext.db.get.mockResolvedValue(originalPost);
+    mockContext.db.insert.mockResolvedValue("new-post-id");
+
+    const args = {
+      postId: "original-post-id",
+    };
+
+    const result = await clonePostMock(mockContext, args);
+
+    // Verify new post was created
+    expect(mockContext.db.insert).toHaveBeenCalledWith("posts", {
+      clerkUserId: "test-user-123",
+      status: "draft",
+      twitterContent: "This is a test tweet",
+      linkedInContent: "This is a test LinkedIn post",
+      url: "https://example.com",
+      twitterScheduledTime: undefined,
+      linkedInScheduledTime: undefined,
+      twitterSchedulerId: undefined,
+      linkedInSchedulerId: undefined,
+      twitterPostId: undefined,
+      linkedInPostId: undefined,
+      errorMessage: undefined,
+      retryCount: 0,
+      clonedFromPostId: "original-post-id",
+    });
+
+    // Verify new post ID is returned
+    expect(result).toBe("new-post-id");
+  });
+
+  it("should set clonedFromPostId to original post ID", async () => {
+    const originalPost = {
+      _id: "original-123",
+      clerkUserId: "test-user-123",
+      status: "Published",
+      twitterContent: "Content",
+      linkedInContent: "Content",
+      url: "https://example.com",
+    };
+
+    mockContext.db.get.mockResolvedValue(originalPost);
+    mockContext.db.insert.mockResolvedValue("new-id");
+
+    await clonePostMock(mockContext, { postId: "original-123" });
+
+    const insertCall = mockContext.db.insert.mock.calls[0][1];
+    expect(insertCall.clonedFromPostId).toBe("original-123");
+  });
+
+  it("should clear all scheduling fields", async () => {
+    const originalPost = {
+      _id: "original-id",
+      clerkUserId: "test-user-123",
+      status: "Published",
+      twitterContent: "Content",
+      twitterScheduledTime: 1234567890000,
+      linkedInScheduledTime: 9876543210000,
+      twitterSchedulerId: "scheduler-1",
+      linkedInSchedulerId: "scheduler-2",
+    };
+
+    mockContext.db.get.mockResolvedValue(originalPost);
+    mockContext.db.insert.mockResolvedValue("new-id");
+
+    await clonePostMock(mockContext, { postId: "original-id" });
+
+    const insertCall = mockContext.db.insert.mock.calls[0][1];
+    expect(insertCall.twitterScheduledTime).toBeUndefined();
+    expect(insertCall.linkedInScheduledTime).toBeUndefined();
+    expect(insertCall.twitterSchedulerId).toBeUndefined();
+    expect(insertCall.linkedInSchedulerId).toBeUndefined();
+  });
+
+  it("should clear all publishing fields", async () => {
+    const originalPost = {
+      _id: "original-id",
+      clerkUserId: "test-user-123",
+      status: "Published",
+      twitterContent: "Content",
+      twitterPostId: "tweet-123",
+      linkedInPostId: "post-456",
+      errorMessage: "Some error",
+      retryCount: 3,
+    };
+
+    mockContext.db.get.mockResolvedValue(originalPost);
+    mockContext.db.insert.mockResolvedValue("new-id");
+
+    await clonePostMock(mockContext, { postId: "original-id" });
+
+    const insertCall = mockContext.db.insert.mock.calls[0][1];
+    expect(insertCall.twitterPostId).toBeUndefined();
+    expect(insertCall.linkedInPostId).toBeUndefined();
+    expect(insertCall.errorMessage).toBeUndefined();
+    expect(insertCall.retryCount).toBe(0);
+  });
+
+  it("should throw error if post not found", async () => {
+    mockContext.db.get.mockResolvedValue(null);
+
+    await expect(clonePostMock(mockContext, { postId: "non-existent" })).rejects.toThrow(
+      "Post not found"
+    );
+  });
+
+  it("should throw error if user tries to clone another user's post", async () => {
+    const originalPost = {
+      _id: "original-id",
+      clerkUserId: "different-user",
+      status: "Published",
+      twitterContent: "Content",
+    };
+
+    mockContext.db.get.mockResolvedValue(originalPost);
+
+    await expect(clonePostMock(mockContext, { postId: "original-id" })).rejects.toThrow(
+      "Unauthorized: You can only clone your own posts"
+    );
+  });
+
+  it("should throw error if not authenticated", async () => {
+    mockContext.auth.getUserIdentity.mockResolvedValue(null);
+
+    await expect(clonePostMock(mockContext, { postId: "any-id" })).rejects.toThrow(
+      "Not authenticated"
+    );
+  });
+
+  it("should not modify the original post", async () => {
+    const originalPost = {
+      _id: "original-id",
+      clerkUserId: "test-user-123",
+      status: "Published",
+      twitterContent: "Original content",
+      linkedInContent: "Original LinkedIn content",
+    };
+
+    mockContext.db.get.mockResolvedValue(originalPost);
+    mockContext.db.insert.mockResolvedValue("new-id");
+
+    await clonePostMock(mockContext, { postId: "original-id" });
+
+    // Verify no patch/delete operations on original post
+    expect(mockContext.db.patch).not.toHaveBeenCalled();
+    expect(mockContext.db.delete).not.toHaveBeenCalled();
+  });
+});
