@@ -15,9 +15,20 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { IconCopy } from "@tabler/icons-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { IconCopy, IconEdit, IconTrash } from "@tabler/icons-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { PostScheduler } from "./PostScheduler";
+import { formatDistanceToNow } from "date-fns";
 
 // Post type definition
 type Post = {
@@ -57,6 +68,10 @@ export function PostHistory() {
   type PlatformOption = "all" | "twitter" | "linkedin";
   const [platform, setPlatform] = useState<PlatformOption>("all");
 
+  // Status filter state
+  type StatusOption = "all" | "draft" | "scheduled" | "published" | "failed";
+  const [statusFilter, setStatusFilter] = useState<StatusOption>("all");
+
   // Modal state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
@@ -70,9 +85,14 @@ export function PostHistory() {
   // Clone state
   const [cloningPostId, setCloningPostId] = useState<Id<"posts"> | null>(null);
 
+  // Delete draft confirmation state
+  const [deleteDraftConfirmId, setDeleteDraftConfirmId] = useState<Id<"posts"> | null>(null);
+  const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+
   // Mutations
   const deletePost = useMutation(api.posts.deletePost);
   const clonePost = useMutation(api.posts.clonePost);
+  const deleteDraft = useMutation(api.drafts.deleteDraft);
 
   // Calculate date range timestamps
   const { startDate, endDate } = useMemo(() => {
@@ -90,12 +110,21 @@ export function PostHistory() {
     };
   }, [dateRange]);
 
-  // Query posts with filters
-  const posts = useQuery(api.posts.getPosts, {
-    startDate,
-    endDate,
-    platform,
-  });
+  // Query regular posts with filters (excludes drafts)
+  const posts = useQuery(
+    api.posts.getPosts,
+    statusFilter !== "draft" ? {
+      startDate,
+      endDate,
+      platform,
+    } : "skip"
+  );
+
+  // Query drafts separately
+  const drafts = useQuery(api.drafts.getDrafts, statusFilter === "draft" ? {} : "skip");
+
+  // Combine results based on status filter
+  const displayPosts = statusFilter === "draft" ? (drafts || []) : (posts || []);
 
   // Find selected post for modal
   const selectedPost = posts?.find((p) => p._id === selectedPostId);
@@ -119,6 +148,40 @@ export function PostHistory() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  /**
+   * Handle draft delete confirmation
+   */
+  const handleDeleteDraftConfirm = async () => {
+    if (!deleteDraftConfirmId) return;
+
+    setIsDeletingDraft(true);
+    try {
+      await deleteDraft({ draftId: deleteDraftConfirmId });
+      setDeleteDraftConfirmId(null);
+    } catch (error) {
+      console.error("Failed to delete draft:", error);
+      alert(`Failed to delete draft: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsDeletingDraft(false);
+    }
+  };
+
+  /**
+   * Handle draft edit button click
+   */
+  const handleEditDraft = (draftId: Id<"posts">, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
+    router.push(`/schedule?postId=${draftId}`);
+  };
+
+  /**
+   * Handle draft delete button click
+   */
+  const handleDeleteDraft = (draftId: Id<"posts">, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
+    setDeleteDraftConfirmId(draftId);
   };
 
   /**
@@ -273,7 +336,7 @@ export function PostHistory() {
   };
 
   // Loading state
-  if (posts === undefined) {
+  if (displayPosts === undefined) {
     return (
       <div className="w-full max-w-4xl mx-auto p-4 space-y-4">
         <Card>
@@ -294,7 +357,7 @@ export function PostHistory() {
   }
 
   // Empty state
-  if (posts.length === 0) {
+  if (displayPosts.length === 0) {
     return (
       <div className="w-full max-w-4xl mx-auto p-4">
         <Card>
@@ -303,20 +366,22 @@ export function PostHistory() {
             <CardDescription>View your scheduled and published posts</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Date Range Filter */}
+            {/* Status Filter */}
             <div className="mb-6">
+              <h3 className="text-sm font-medium mb-2">Status</h3>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { value: "7days", label: "Last 7 Days" },
-                  { value: "30days", label: "Last 30 Days" },
-                  { value: "90days", label: "Last 90 Days" },
-                  { value: "all", label: "All Time" },
+                  { value: "all", label: "All" },
+                  { value: "draft", label: "Drafts" },
+                  { value: "scheduled", label: "Scheduled" },
+                  { value: "published", label: "Published" },
+                  { value: "failed", label: "Failed" },
                 ].map((option) => (
                   <Button
                     key={option.value}
-                    variant={dateRange === option.value ? "default" : "outline"}
+                    variant={statusFilter === option.value ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setDateRange(option.value as DateRangeOption)}
+                    onClick={() => setStatusFilter(option.value as StatusOption)}
                   >
                     {option.label}
                   </Button>
@@ -324,32 +389,59 @@ export function PostHistory() {
               </div>
             </div>
 
-            {/* Platform Filter */}
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={platform === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPlatform("all")}
-                >
-                  All Platforms
-                </Button>
-                <Button
-                  variant={platform === "twitter" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPlatform("twitter")}
-                >
-                  X/Twitter
-                </Button>
-                <Button
-                  variant={platform === "linkedin" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPlatform("linkedin")}
-                >
-                  LinkedIn
-                </Button>
+            {/* Date Range Filter - Hide for drafts */}
+            {statusFilter !== "draft" && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium mb-2">Date Range</h3>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "7days", label: "Last 7 Days" },
+                    { value: "30days", label: "Last 30 Days" },
+                    { value: "90days", label: "Last 90 Days" },
+                    { value: "all", label: "All Time" },
+                  ].map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={dateRange === option.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDateRange(option.value as DateRangeOption)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Platform Filter - Hide for drafts */}
+            {statusFilter !== "draft" && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium mb-2">Platform</h3>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={platform === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPlatform("all")}
+                  >
+                    All Platforms
+                  </Button>
+                  <Button
+                    variant={platform === "twitter" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPlatform("twitter")}
+                  >
+                    X/Twitter
+                  </Button>
+                  <Button
+                    variant={platform === "linkedin" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPlatform("linkedin")}
+                  >
+                    LinkedIn
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Empty State */}
             <div className="text-center py-12">
@@ -377,20 +469,22 @@ export function PostHistory() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Date Range Filter */}
+          {/* Status Filter */}
           <div className="mb-6">
+            <h3 className="text-sm font-medium mb-2">Status</h3>
             <div className="flex flex-wrap gap-2">
               {[
-                { value: "7days", label: "Last 7 Days" },
-                { value: "30days", label: "Last 30 Days" },
-                { value: "90days", label: "Last 90 Days" },
-                { value: "all", label: "All Time" },
+                { value: "all", label: "All" },
+                { value: "draft", label: "Drafts" },
+                { value: "scheduled", label: "Scheduled" },
+                { value: "published", label: "Published" },
+                { value: "failed", label: "Failed" },
               ].map((option) => (
                 <Button
                   key={option.value}
-                  variant={dateRange === option.value ? "default" : "outline"}
+                  variant={statusFilter === option.value ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setDateRange(option.value as DateRangeOption)}
+                  onClick={() => setStatusFilter(option.value as StatusOption)}
                 >
                   {option.label}
                 </Button>
@@ -398,116 +492,189 @@ export function PostHistory() {
             </div>
           </div>
 
-          {/* Platform Filter */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={platform === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPlatform("all")}
-              >
-                All Platforms
-              </Button>
-              <Button
-                variant={platform === "twitter" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPlatform("twitter")}
-              >
-                X/Twitter
-              </Button>
-              <Button
-                variant={platform === "linkedin" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPlatform("linkedin")}
-              >
-                LinkedIn
-              </Button>
+          {/* Date Range Filter - Hide for drafts */}
+          {statusFilter !== "draft" && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium mb-2">Date Range</h3>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "7days", label: "Last 7 Days" },
+                  { value: "30days", label: "Last 30 Days" },
+                  { value: "90days", label: "Last 90 Days" },
+                  { value: "all", label: "All Time" },
+                ].map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={dateRange === option.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setDateRange(option.value as DateRangeOption)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Platform Filter - Hide for drafts */}
+          {statusFilter !== "draft" && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium mb-2">Platform</h3>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={platform === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPlatform("all")}
+                >
+                  All Platforms
+                </Button>
+                <Button
+                  variant={platform === "twitter" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPlatform("twitter")}
+                >
+                  X/Twitter
+                </Button>
+                <Button
+                  variant={platform === "linkedin" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPlatform("linkedin")}
+                >
+                  LinkedIn
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Posts List */}
           <div className="space-y-4">
-            {posts.map((post) => (
+            {displayPosts.map((post) => (
               <Card
                 key={post._id}
                 className="cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => setSelectedPostId(post._id)}
               >
                 <CardContent className="pt-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <PlatformStatusBadges post={post} />
-                      {/* Platform Badges */}
-                      <div className="flex gap-1">
-                        {post.twitterScheduledTime && (
-                          <Badge className="bg-blue-500 text-white">X</Badge>
-                        )}
-                        {post.linkedInScheduledTime && (
-                          <Badge className="bg-[#0A66C2] text-white">LinkedIn</Badge>
-                        )}
+                  {/* Draft-specific rendering */}
+                  {post.status === "draft" ? (
+                    <>
+                      <div className="flex justify-between items-start mb-3">
+                        <Badge className="bg-gray-500 text-white">Draft</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Last edited: {formatDistanceToNow(
+                            (post.lastEditedTime || post._creationTime),
+                            { addSuffix: true }
+                          )}
+                        </span>
                       </div>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDateTime(
-                        platform === "linkedin"
-                          ? post.linkedInScheduledTime || 0
-                          : platform === "twitter"
-                            ? post.twitterScheduledTime || 0
-                            : Math.min(
-                                post.twitterScheduledTime || Infinity,
-                                post.linkedInScheduledTime || Infinity
-                              ) === Infinity
-                              ? 0
-                              : Math.min(
-                                  post.twitterScheduledTime || Infinity,
-                                  post.linkedInScheduledTime || Infinity
-                                )
-                      )}
-                    </span>
-                  </div>
-                  <p className="text-sm mb-2">
-                    {truncateContent(
-                      platform === "linkedin"
-                        ? post.linkedInContent || ""
-                        : platform === "twitter"
-                          ? post.twitterContent || ""
-                          : (post.twitterScheduledTime || Infinity) <
-                              (post.linkedInScheduledTime || Infinity)
-                            ? post.twitterContent || ""
-                            : post.linkedInContent || ""
-                    )}
-                  </p>
-                  {post.url && (
-                    <p className="text-xs text-blue-500 truncate">
-                      {post.url}
-                    </p>
-                  )}
-                  {post.status === "Failed" && post.errorMessage && (
-                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-xs text-red-600 font-medium">
-                        Error: {post.errorMessage}
+                      <p className="text-sm mb-2">
+                        {truncateContent(
+                          post.twitterContent || post.linkedInContent || "Empty draft"
+                        )}
                       </p>
-                    </div>
-                  )}
+                      {post.url && (
+                        <p className="text-xs text-blue-500 truncate">
+                          {post.url}
+                        </p>
+                      )}
+                      {/* Draft Actions */}
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => handleEditDraft(post._id, e)}
+                        >
+                          <IconEdit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => handleDeleteDraft(post._id, e)}
+                        >
+                          <IconTrash className="w-4 h-4 mr-2" />
+                          Delete
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex gap-2 flex-wrap items-center">
+                          <PlatformStatusBadges post={post} />
+                          {/* Platform Badges */}
+                          <div className="flex gap-1">
+                            {post.twitterScheduledTime && (
+                              <Badge className="bg-blue-500 text-white">X</Badge>
+                            )}
+                            {post.linkedInScheduledTime && (
+                              <Badge className="bg-[#0A66C2] text-white">LinkedIn</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDateTime(
+                            platform === "linkedin"
+                              ? post.linkedInScheduledTime || 0
+                              : platform === "twitter"
+                                ? post.twitterScheduledTime || 0
+                                : Math.min(
+                                    post.twitterScheduledTime || Infinity,
+                                    post.linkedInScheduledTime || Infinity
+                                  ) === Infinity
+                                  ? 0
+                                  : Math.min(
+                                      post.twitterScheduledTime || Infinity,
+                                      post.linkedInScheduledTime || Infinity
+                                    )
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-sm mb-2">
+                        {truncateContent(
+                          platform === "linkedin"
+                            ? post.linkedInContent || ""
+                            : platform === "twitter"
+                              ? post.twitterContent || ""
+                              : (post.twitterScheduledTime || Infinity) <
+                                  (post.linkedInScheduledTime || Infinity)
+                                ? post.twitterContent || ""
+                                : post.linkedInContent || ""
+                        )}
+                      </p>
+                      {post.url && (
+                        <p className="text-xs text-blue-500 truncate">
+                          {post.url}
+                        </p>
+                      )}
+                      {post.status === "Failed" && post.errorMessage && (
+                        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-xs text-red-600 font-medium">
+                            Error: {post.errorMessage}
+                          </p>
+                        </div>
+                      )}
 
-                  {/* Edit/Delete Actions - Only show for Scheduled posts */}
-                  {post.status === "Scheduled" && (
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => handleEditClick(post._id, e)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => handleDeleteClick(post._id, e)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
+                      {/* Edit/Delete Actions - Only show for Scheduled posts */}
+                      {post.status === "Scheduled" && (
+                        <div className="mt-4 flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => handleEditClick(post._id, e)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => handleDeleteClick(post._id, e)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Clone Action - Only show for Published or Failed posts */}
@@ -715,6 +882,30 @@ export function PostHistory() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Draft Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteDraftConfirmId} onOpenChange={() => setDeleteDraftConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Draft</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this draft? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingDraft}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDraftConfirm}
+              disabled={isDeletingDraft}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeletingDraft ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

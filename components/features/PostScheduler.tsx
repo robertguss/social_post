@@ -13,8 +13,9 @@ import { TemplatePickerModal } from "./TemplatePickerModal";
 import { QuickReschedule } from "./QuickReschedule";
 import { DualPlatformTextFields, DualPlatformTextFieldsRef } from "./DualPlatformTextFields";
 import { PreviewModal } from "./PreviewModal";
-import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye } from "@tabler/icons-react";
+import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   getTwitterCharacterCount,
   getLinkedInCharacterCount,
@@ -40,6 +41,7 @@ interface PostData {
   linkedInScheduledTime?: number;
   url?: string;
   clonedFromPostId?: Id<"posts">;
+  status?: string;
 }
 
 interface PostSchedulerProps {
@@ -49,10 +51,14 @@ interface PostSchedulerProps {
 }
 
 export function PostScheduler({ mode = "create", postData, onSuccess }: PostSchedulerProps) {
+  // Router for navigation
+  const router = useRouter();
+
   // Convex mutations
   const createPost = useMutation(api.posts.createPost);
   const updatePost = useMutation(api.posts.updatePost);
   const incrementTemplateUsage = useMutation(api.templates.incrementTemplateUsage);
+  const saveDraft = useMutation(api.drafts.saveDraft);
 
   // Fetch original post if this is a cloned post
   const originalPost = useQuery(
@@ -75,8 +81,14 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Shared state
   const [url, setUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Draft ID for updating existing drafts
+  const [draftId, setDraftId] = useState<Id<"posts"> | undefined>(
+    postData?.status === "draft" ? postData._id : undefined
+  );
 
   // Template picker modal state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -236,6 +248,39 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     } catch (error) {
       // Log error but don't block insertion
       console.error("Failed to increment template usage:", error);
+    }
+  };
+
+  /**
+   * Handle save as draft
+   */
+  const handleSaveDraft = async () => {
+    try {
+      setIsSavingDraft(true);
+      setError(null);
+
+      // Save draft with current form state
+      const savedDraftId = await saveDraft({
+        draftId: draftId,
+        twitterContent: twitterContent,
+        linkedInContent: linkedInContent,
+        url: url.trim() || undefined,
+        twitterEnabled: enableTwitter,
+        linkedInEnabled: enableLinkedIn,
+      });
+
+      toast.success("Draft saved");
+
+      // Update URL to reflect draft ID (for subsequent saves)
+      if (!draftId) {
+        setDraftId(savedDraftId);
+        router.push(`/schedule?postId=${savedDraftId}`);
+      }
+    } catch (err) {
+      toast.error("Failed to save draft");
+      console.error("Error saving draft:", err);
+    } finally {
+      setIsSavingDraft(false);
     }
   };
 
@@ -585,8 +630,19 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
             </div>
           ) : null}
 
-          {/* Preview and Submit Buttons */}
+          {/* Action Buttons */}
           <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft || (!twitterContent.trim() && !linkedInContent.trim())}
+              aria-label="Save as draft"
+            >
+              <IconDeviceFloppy className="mr-2 h-4 w-4" />
+              {isSavingDraft ? "Saving..." : "Save as Draft"}
+            </Button>
             <Button
               type="button"
               variant="outline"

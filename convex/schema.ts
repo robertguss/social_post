@@ -20,6 +20,9 @@ export default defineSchema({
     linkedInPostId: v.optional(v.string()),
     clonedFromPostId: v.optional(v.id("posts")), // References original post ID if this post was cloned
     createdByQueueId: v.optional(v.id("recurring_queues")), // References queue ID if this post was created by a recurring queue
+    twitterEnabled: v.optional(v.boolean()), // Track which platforms are enabled for drafts
+    linkedInEnabled: v.optional(v.boolean()), // Track which platforms are enabled for drafts
+    lastEditedTime: v.optional(v.number()), // Timestamp for tracking draft updates
   })
     .index("by_user", ["clerkUserId"])
     .index("by_user_status", ["clerkUserId", "status"]),
