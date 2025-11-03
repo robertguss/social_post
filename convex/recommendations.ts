@@ -61,8 +61,16 @@ export const getRecommendedTimes = query({
     if (userPreferences.length > 0) {
       for (const pref of userPreferences) {
         for (const timeRange of pref.customTimeRanges) {
+          // Convert local time range to UTC before merging into recommendations
+          const utcRange = convertLocalRangeToUTC(
+            timeRange.startHour,
+            timeRange.endHour,
+            args.userTimezone,
+            dateObj
+          );
+
           combinedRecommendations.push({
-            hourRanges: [{ startHour: timeRange.startHour, endHour: timeRange.endHour }],
+            hourRanges: [{ startHour: utcRange.startHourUTC, endHour: utcRange.endHourUTC }],
             engagementScore: 95, // High score to prioritize user preferences
             source: "user preference",
           });
@@ -287,6 +295,65 @@ function getFallbackRecommendations(
     source: "default",
     conflictsWithPost: false, // Fallbacks don't check conflicts
   }));
+}
+
+/**
+ * Converts local timezone hour range to UTC hour range
+ *
+ * User preferences are stored in local time, but the recommendation system works in UTC.
+ * This function converts a local time range (e.g., "7:00-9:00 EST") to the equivalent
+ * UTC hours (e.g., "12:00-14:00 UTC"), accounting for timezone offset and DST.
+ *
+ * @param startHourLocal - Start hour in user's local timezone (0-23)
+ * @param endHourLocal - End hour in user's local timezone (0-23)
+ * @param timezone - IANA timezone string (e.g., "America/New_York")
+ * @param date - Date object for the scheduled date (needed for DST calculation)
+ * @returns Object with startHourUTC and endHourUTC in UTC timezone (0-23)
+ */
+function convertLocalRangeToUTC(
+  startHourLocal: number,
+  endHourLocal: number,
+  timezone: string,
+  date: Date
+): { startHourUTC: number; endHourUTC: number } {
+  // Helper to convert a single local hour to UTC
+  const convertHour = (localHour: number): number => {
+    // Create a reference date at midnight UTC for the target date
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    const referenceDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+    // Find what hour midnight UTC appears as in the user's local timezone
+    // This tells us the timezone offset for this specific date (accounts for DST)
+    const localParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "numeric",
+      hour12: false,
+      hourCycle: "h23",
+    }).formatToParts(referenceDate);
+
+    const midnightUTCInLocalTime = parseInt(
+      localParts.find((p) => p.type === "hour")?.value || "0"
+    );
+
+    // Calculate offset: if midnight UTC shows as 19:00 local (previous day), offset is -5 (UTC-5)
+    let offset = midnightUTCInLocalTime;
+    if (offset > 12) offset = offset - 24; // Handle previous day wraparound
+
+    // Convert local hour to UTC: subtract the offset
+    let utcHour = localHour - offset;
+
+    // Normalize to 0-23 range
+    utcHour = ((utcHour % 24) + 24) % 24;
+
+    return utcHour;
+  };
+
+  return {
+    startHourUTC: convertHour(startHourLocal),
+    endHourUTC: convertHour(endHourLocal),
+  };
 }
 
 /**

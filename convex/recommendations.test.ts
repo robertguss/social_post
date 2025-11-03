@@ -528,3 +528,297 @@ describe("Query authentication logic validation", () => {
     expect(identity.subject.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * Tests for convertLocalRangeToUTC helper function
+ *
+ * This function is critical for Story 6.5 - it ensures that user custom preferences
+ * stored in local time are properly converted to UTC before being merged with
+ * research-based recommendations (which are in UTC).
+ *
+ * The function must:
+ * 1. Correctly calculate timezone offset for the specific date (accounting for DST)
+ * 2. Convert local hours to UTC hours
+ * 3. Handle wraparound when conversion crosses midnight
+ * 4. Work correctly across different timezones
+ */
+describe("convertLocalRangeToUTC - timezone conversion logic", () => {
+  // Helper function to replicate the conversion logic from recommendations.ts
+  function convertLocalRangeToUTC(
+    startHourLocal: number,
+    endHourLocal: number,
+    timezone: string,
+    date: Date
+  ): { startHourUTC: number; endHourUTC: number } {
+    const convertHour = (localHour: number): number => {
+      const year = date.getUTCFullYear();
+      const month = date.getUTCMonth();
+      const day = date.getUTCDate();
+      const referenceDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+      const localParts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "numeric",
+        hour12: false,
+        hourCycle: "h23",
+      }).formatToParts(referenceDate);
+
+      const midnightUTCInLocalTime = parseInt(
+        localParts.find((p) => p.type === "hour")?.value || "0"
+      );
+
+      let offset = midnightUTCInLocalTime;
+      if (offset > 12) offset = offset - 24;
+
+      let utcHour = localHour - offset;
+      utcHour = ((utcHour % 24) + 24) % 24;
+
+      return utcHour;
+    };
+
+    return {
+      startHourUTC: convertHour(startHourLocal),
+      endHourUTC: convertHour(endHourLocal),
+    };
+  }
+
+  describe("EST/EDT timezone (America/New_York)", () => {
+    it("should convert 7AM-9AM EST to 12:00-14:00 UTC (winter)", () => {
+      // January 15, 2025 - during standard time (EST = UTC-5)
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(12); // 7 AM EST = 12 PM UTC
+      expect(result.endHourUTC).toBe(14); // 9 AM EST = 2 PM UTC
+    });
+
+    it("should convert 7AM-9AM EDT to 11:00-13:00 UTC (summer)", () => {
+      // July 15, 2025 - during daylight time (EDT = UTC-4)
+      const date = new Date("2025-07-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(11); // 7 AM EDT = 11 AM UTC
+      expect(result.endHourUTC).toBe(13); // 9 AM EDT = 1 PM UTC
+    });
+
+    it("should convert 9PM-11PM EST to 2:00-4:00 UTC next day (winter)", () => {
+      // January 15, 2025 - EST
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(21, 23, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(2); // 9 PM EST = 2 AM UTC (next day)
+      expect(result.endHourUTC).toBe(4); // 11 PM EST = 4 AM UTC (next day)
+    });
+  });
+
+  describe("PST/PDT timezone (America/Los_Angeles)", () => {
+    it("should convert 7AM-9AM PST to 15:00-17:00 UTC (winter)", () => {
+      // January 15, 2025 - during standard time (PST = UTC-8)
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/Los_Angeles", date);
+
+      expect(result.startHourUTC).toBe(15); // 7 AM PST = 3 PM UTC
+      expect(result.endHourUTC).toBe(17); // 9 AM PST = 5 PM UTC
+    });
+
+    it("should convert 7AM-9AM PDT to 14:00-16:00 UTC (summer)", () => {
+      // July 15, 2025 - during daylight time (PDT = UTC-7)
+      const date = new Date("2025-07-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/Los_Angeles", date);
+
+      expect(result.startHourUTC).toBe(14); // 7 AM PDT = 2 PM UTC
+      expect(result.endHourUTC).toBe(16); // 9 AM PDT = 4 PM UTC
+    });
+  });
+
+  describe("GMT/BST timezone (Europe/London)", () => {
+    it("should convert 7AM-9AM GMT to 7:00-9:00 UTC (winter)", () => {
+      // January 15, 2025 - during standard time (GMT = UTC+0)
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "Europe/London", date);
+
+      expect(result.startHourUTC).toBe(7); // 7 AM GMT = 7 AM UTC
+      expect(result.endHourUTC).toBe(9); // 9 AM GMT = 9 AM UTC
+    });
+
+    it("should convert 7AM-9AM BST to 6:00-8:00 UTC (summer)", () => {
+      // July 15, 2025 - during daylight time (BST = UTC+1)
+      const date = new Date("2025-07-15");
+      const result = convertLocalRangeToUTC(7, 9, "Europe/London", date);
+
+      expect(result.startHourUTC).toBe(6); // 7 AM BST = 6 AM UTC
+      expect(result.endHourUTC).toBe(8); // 9 AM BST = 8 AM UTC
+    });
+  });
+
+  describe("JST timezone (Asia/Tokyo)", () => {
+    it("should convert 7AM-9AM JST to 22:00-0:00 UTC previous day", () => {
+      // January 15, 2025 - JST = UTC+9 (no DST)
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "Asia/Tokyo", date);
+
+      expect(result.startHourUTC).toBe(22); // 7 AM JST = 10 PM UTC (prev day)
+      expect(result.endHourUTC).toBe(0); // 9 AM JST = midnight UTC
+    });
+
+    it("should convert 1AM-3AM JST to 16:00-18:00 UTC previous day", () => {
+      // January 15, 2025
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(1, 3, "Asia/Tokyo", date);
+
+      expect(result.startHourUTC).toBe(16); // 1 AM JST = 4 PM UTC (prev day)
+      expect(result.endHourUTC).toBe(18); // 3 AM JST = 6 PM UTC (prev day)
+    });
+  });
+
+  describe("Edge cases - midnight wraparound", () => {
+    it("should handle midnight local time (0:00) correctly", () => {
+      // EST: midnight = 5 AM UTC
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(0, 2, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(5); // midnight EST = 5 AM UTC
+      expect(result.endHourUTC).toBe(7); // 2 AM EST = 7 AM UTC
+    });
+
+    it("should handle 11PM-1AM wraparound in EST", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(23, 1, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(4); // 11 PM EST = 4 AM UTC (next day)
+      expect(result.endHourUTC).toBe(6); // 1 AM EST = 6 AM UTC (next day)
+      // Note: Both hours wrap independently, so the range is still valid
+    });
+
+    it("should handle late evening hours that cross into next day UTC", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(20, 22, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(1); // 8 PM EST = 1 AM UTC (next day)
+      expect(result.endHourUTC).toBe(3); // 10 PM EST = 3 AM UTC (next day)
+    });
+  });
+
+  describe("Edge cases - full day ranges", () => {
+    it("should handle noon (12:00) correctly in EST", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(12, 14, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(17); // noon EST = 5 PM UTC
+      expect(result.endHourUTC).toBe(19); // 2 PM EST = 7 PM UTC
+    });
+
+    it("should handle early morning hours correctly", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(5, 7, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(10); // 5 AM EST = 10 AM UTC
+      expect(result.endHourUTC).toBe(12); // 7 AM EST = noon UTC
+    });
+  });
+
+  describe("DST transition dates", () => {
+    it("should handle dates just before DST transition in spring", () => {
+      // March 8, 2025 - one day before DST (still EST)
+      const date = new Date("2025-03-08");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(12); // Still EST (UTC-5)
+      expect(result.endHourUTC).toBe(14);
+    });
+
+    it("should handle dates just after DST transition in spring", () => {
+      // March 10, 2025 - one day after DST (now EDT)
+      const date = new Date("2025-03-10");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(11); // Now EDT (UTC-4)
+      expect(result.endHourUTC).toBe(13);
+    });
+
+    it("should handle dates just before DST ends in fall", () => {
+      // November 1, 2025 - one day before DST ends (still EDT)
+      const date = new Date("2025-11-01");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(11); // Still EDT (UTC-4)
+      expect(result.endHourUTC).toBe(13);
+    });
+
+    it("should handle dates just after DST ends in fall", () => {
+      // November 3, 2025 - one day after DST ends (now EST)
+      const date = new Date("2025-11-03");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBe(12); // Now EST (UTC-5)
+      expect(result.endHourUTC).toBe(14);
+    });
+  });
+
+  describe("Return value structure", () => {
+    it("should return object with startHourUTC and endHourUTC", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result).toHaveProperty("startHourUTC");
+      expect(result).toHaveProperty("endHourUTC");
+    });
+
+    it("should return hours within 0-23 range", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(result.startHourUTC).toBeGreaterThanOrEqual(0);
+      expect(result.startHourUTC).toBeLessThanOrEqual(23);
+      expect(result.endHourUTC).toBeGreaterThanOrEqual(0);
+      expect(result.endHourUTC).toBeLessThanOrEqual(23);
+    });
+
+    it("should return integer hours", () => {
+      const date = new Date("2025-01-15");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      expect(Number.isInteger(result.startHourUTC)).toBe(true);
+      expect(Number.isInteger(result.endHourUTC)).toBe(true);
+    });
+  });
+
+  describe("Real-world scenario validation", () => {
+    it("should correctly handle user preference: 7-9 AM EST on a Wednesday", () => {
+      // Scenario: User in New York sets preference for Wednesday 7-9 AM
+      // November 12, 2025 is a Wednesday in EST
+      const date = new Date("2025-11-12");
+      const result = convertLocalRangeToUTC(7, 9, "America/New_York", date);
+
+      // This should convert to 12:00-14:00 UTC
+      // When displayed back to user, it should show 7-9 AM EST again
+      expect(result.startHourUTC).toBe(12);
+      expect(result.endHourUTC).toBe(14);
+
+      // Verify roundtrip: Convert UTC back to local time
+      const utcDate = new Date(date);
+      utcDate.setUTCHours(result.startHourUTC, 0, 0, 0);
+
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        hour12: false,
+        hourCycle: "h23",
+        timeZone: "America/New_York",
+      });
+
+      const localHourString = formatter.format(utcDate);
+      expect(parseInt(localHourString)).toBe(7); // Should round-trip back to 7 AM
+    });
+
+    it("should correctly handle user preference: 2-4 PM PST on a Monday", () => {
+      // Scenario: User in LA sets preference for Monday 2-4 PM
+      // January 13, 2025 is a Monday in PST
+      const date = new Date("2025-01-13");
+      const result = convertLocalRangeToUTC(14, 16, "America/Los_Angeles", date);
+
+      // 2 PM PST = 10 PM UTC, 4 PM PST = midnight UTC
+      expect(result.startHourUTC).toBe(22);
+      expect(result.endHourUTC).toBe(0);
+    });
+  });
+});
