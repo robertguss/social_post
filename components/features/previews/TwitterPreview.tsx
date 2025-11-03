@@ -74,7 +74,7 @@ export function TwitterPreview({
                 <button
                   type="button"
                   className="flex items-center gap-2 hover:text-[#1DA1F2] transition-colors cursor-default"
-                  aria-label="Like (preview only)"
+                  aria-label="Reply (preview only)"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span className="text-xs">0</span>
