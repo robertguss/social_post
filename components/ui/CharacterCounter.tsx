@@ -29,7 +29,7 @@ export function CharacterCounter({
   // platform param is kept in props for semantic clarity and future enhancements
   // but not currently used in the implementation
   const isWarning = currentCount >= warningThreshold && currentCount < maxCount;
-  const isError = currentCount >= maxCount;
+  const isError = currentCount > maxCount;
 
   // Determine color classes based on state
   const colorClass = isError
