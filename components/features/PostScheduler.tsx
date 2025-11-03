@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,8 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Id, Doc } from "@/convex/_generated/dataModel";
 import { TemplatePickerModal } from "./TemplatePickerModal";
-import { IconTemplate, IconInfoCircle, IconX } from "@tabler/icons-react";
+import { QuickReschedule } from "./QuickReschedule";
+import { IconTemplate, IconInfoCircle, IconX, IconCalendar } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 /**
@@ -48,6 +49,12 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const createPost = useMutation(api.posts.createPost);
   const updatePost = useMutation(api.posts.updatePost);
   const incrementTemplateUsage = useMutation(api.templates.incrementTemplateUsage);
+
+  // Fetch original post if this is a cloned post
+  const originalPost = useQuery(
+    api.posts.getPost,
+    postData?.clonedFromPostId ? { postId: postData.clonedFromPostId } : "skip"
+  );
 
   // Platform selection state
   const [enableTwitter, setEnableTwitter] = useState(true);
@@ -130,6 +137,38 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const handleOpenTemplatePicker = (field: "twitter" | "linkedin") => {
     setActiveField(field);
     setIsTemplateModalOpen(true);
+  };
+
+  /**
+   * Format timestamp to user-friendly date/time string with timezone
+   * Example: "Monday, Feb 15, 2024 at 10:00 AM (Local time)"
+   */
+  const formatScheduledTime = (date: Date): string => {
+    const formatted = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+
+    return `${formatted} (Local time)`;
+  };
+
+  /**
+   * Handle QuickReschedule time selection for Twitter
+   */
+  const handleTwitterTimeSelect = (timestamp: number) => {
+    setTwitterScheduledTime(new Date(timestamp));
+  };
+
+  /**
+   * Handle QuickReschedule time selection for LinkedIn
+   */
+  const handleLinkedInTimeSelect = (timestamp: number) => {
+    setLinkedInScheduledTime(new Date(timestamp));
   };
 
   /**
@@ -284,6 +323,23 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
       // Success - show message and callback
       setSuccess(true);
 
+      // Build success message with platform names and date/time
+      const platforms: string[] = [];
+      if (enableTwitter && twitterScheduledTime) {
+        platforms.push("Twitter");
+      }
+      if (enableLinkedIn && linkedInScheduledTime) {
+        platforms.push("LinkedIn");
+      }
+      const platformText = platforms.join(" and ");
+
+      // Show success toast
+      toast.success(
+        mode === "edit"
+          ? `Post updated successfully for ${platformText}`
+          : `Post scheduled successfully for ${platformText}`
+      );
+
       if (mode === "create") {
         // Clear form on create
         setTwitterContent("");
@@ -429,6 +485,16 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                 <Label htmlFor="twitter-scheduled-time">
                   Scheduled Time <span className="text-destructive">*</span>
                 </Label>
+
+                {/* Quick Reschedule Suggestions for Twitter */}
+                {postData?.clonedFromPostId && originalPost?.twitterScheduledTime && (
+                  <QuickReschedule
+                    originalScheduledTime={originalPost.twitterScheduledTime}
+                    platform="twitter"
+                    onSelectTime={handleTwitterTimeSelect}
+                  />
+                )}
+
                 <DateTimePicker
                   date={twitterScheduledTime}
                   setDate={setTwitterScheduledTime}
@@ -489,6 +555,16 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                 <Label htmlFor="linkedin-scheduled-time">
                   Scheduled Time <span className="text-destructive">*</span>
                 </Label>
+
+                {/* Quick Reschedule Suggestions for LinkedIn */}
+                {postData?.clonedFromPostId && originalPost?.linkedInScheduledTime && (
+                  <QuickReschedule
+                    originalScheduledTime={originalPost.linkedInScheduledTime}
+                    platform="linkedin"
+                    onSelectTime={handleLinkedInTimeSelect}
+                  />
+                )}
+
                 <DateTimePicker
                   date={linkedInScheduledTime}
                   setDate={setLinkedInScheduledTime}
@@ -517,6 +593,34 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               URL will be posted as a reply on X/Twitter and as the first comment on LinkedIn
             </p>
           </div>
+
+          {/* Scheduling Preview */}
+          {(enableTwitter && twitterScheduledTime) || (enableLinkedIn && linkedInScheduledTime) ? (
+            <div
+              className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md space-y-2"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-center gap-2">
+                <IconCalendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  Scheduled for:
+                </p>
+              </div>
+              <div className="space-y-1 ml-7">
+                {enableTwitter && twitterScheduledTime && (
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <span className="font-medium">Twitter:</span> {formatScheduledTime(twitterScheduledTime)}
+                  </p>
+                )}
+                {enableLinkedIn && linkedInScheduledTime && (
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <span className="font-medium">LinkedIn:</span> {formatScheduledTime(linkedInScheduledTime)}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
 
           {/* Error Message */}
           {error && (
