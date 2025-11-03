@@ -13,6 +13,7 @@ import { TemplatePickerModal } from "./TemplatePickerModal";
 import { QuickReschedule } from "./QuickReschedule";
 import { DualPlatformTextFields, DualPlatformTextFieldsRef } from "./DualPlatformTextFields";
 import { PreviewModal } from "./PreviewModal";
+import { RecommendedTimes } from "./RecommendedTimes";
 import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -520,6 +521,13 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               <p className="text-sm text-muted-foreground">
                 Time is in your local timezone
               </p>
+
+              {/* Recommended Times for Twitter */}
+              <RecommendedTimes
+                selectedDate={twitterScheduledTime}
+                platform="twitter"
+                onTimeSelect={handleTwitterTimeSelect}
+              />
             </div>
           )}
 
@@ -547,6 +555,13 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               <p className="text-sm text-muted-foreground">
                 Time is in your local timezone
               </p>
+
+              {/* Recommended Times for LinkedIn */}
+              <RecommendedTimes
+                selectedDate={linkedInScheduledTime}
+                platform="linkedin"
+                onTimeSelect={handleLinkedInTimeSelect}
+              />
             </div>
           )}
 

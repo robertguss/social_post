@@ -187,7 +187,10 @@ export const seedRecommendationsAdmin = mutation({
     message: v.string(),
     recordsInserted: v.number(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ success: boolean; message: string; recordsInserted: number }> => {
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
