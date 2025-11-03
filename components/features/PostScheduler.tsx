@@ -12,7 +12,8 @@ import { Id, Doc } from "@/convex/_generated/dataModel";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { QuickReschedule } from "./QuickReschedule";
 import { DualPlatformTextFields, DualPlatformTextFieldsRef } from "./DualPlatformTextFields";
-import { IconTemplate, IconInfoCircle, IconX, IconCalendar } from "@tabler/icons-react";
+import { PreviewModal } from "./PreviewModal";
+import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye } from "@tabler/icons-react";
 import { toast } from "sonner";
 import {
   getTwitterCharacterCount,
@@ -80,6 +81,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Template picker modal state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"twitter" | "linkedin" | null>(null);
+
+  // Preview modal state
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Clone indicator state
   const [showCloneBadge, setShowCloneBadge] = useState(!!postData?.clonedFromPostId);
@@ -581,17 +585,30 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
             </div>
           ) : null}
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitDisabled}
-            aria-label={isSubmitDisabled && (isTwitterOverLimit || isLinkedInOverLimit) ? "Cannot submit: Character limit exceeded" : undefined}
-          >
-            {isSubmitting
-              ? (mode === "edit" ? "Updating..." : "Scheduling...")
-              : (mode === "edit" ? "Update Post" : "Schedule Post")}
-          </Button>
+          {/* Preview and Submit Buttons */}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setIsPreviewModalOpen(true)}
+              disabled={!twitterContent.trim() && !linkedInContent.trim()}
+              aria-label="Preview post"
+            >
+              <IconEye className="mr-2 h-4 w-4" />
+              Preview
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1"
+              disabled={isSubmitDisabled}
+              aria-label={isSubmitDisabled && (isTwitterOverLimit || isLinkedInOverLimit) ? "Cannot submit: Character limit exceeded" : undefined}
+            >
+              {isSubmitting
+                ? (mode === "edit" ? "Updating..." : "Scheduling...")
+                : (mode === "edit" ? "Update Post" : "Schedule Post")}
+            </Button>
+          </div>
         </form>
       </CardContent>
 
@@ -600,6 +617,18 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         onSelectTemplate={handleTemplateSelect}
+      />
+
+      {/* Preview Modal */}
+      <PreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        twitterContent={twitterContent}
+        linkedInContent={linkedInContent}
+        url={url}
+        twitterEnabled={enableTwitter}
+        linkedInEnabled={enableLinkedIn}
+        twitterCharacterCount={twitterCharCount}
       />
     </Card>
   );
