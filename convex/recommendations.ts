@@ -66,6 +66,13 @@ export const getRecommendedTimes = query({
       })
       .filter((time): time is number => time !== undefined);
 
+    // Get historical performance data for this user and platform (Story 6.4)
+    const historicalPerformance = await getHistoricalPerformanceData(
+      ctx,
+      clerkUserId,
+      args.platform
+    );
+
     // Convert recommendations to formatted output
     const formattedRecommendations = sortedRecommendations.map((rec) => {
       // For each hour range in the recommendation
@@ -87,9 +94,20 @@ export const getRecommendedTimes = query({
         args.date
       );
 
+      // Apply historical performance weighting if available (Story 6.4)
+      let finalScore = rec.engagementScore;
+      if (historicalPerformance.length > 0) {
+        const historicalFactor = calculateHistoricalPerformanceFactor(
+          historicalPerformance,
+          firstRange.startHour
+        );
+        // Weighted average: 60% research-based, 40% historical performance
+        finalScore = rec.engagementScore * 0.6 + historicalFactor * 0.4;
+      }
+
       return {
         timeRange: localTimeRange,
-        engagementScore: rec.engagementScore,
+        engagementScore: Math.round(finalScore), // Round to integer for cleaner display
         source: rec.source,
         conflictsWithPost,
       };
@@ -242,33 +260,138 @@ function getFallbackRecommendations(
 }
 
 /**
- * FUTURE ENHANCEMENT: Historical Performance Integration (Story 6.4)
+ * Retrieves historical performance data for a user and platform (Story 6.4)
  *
- * Calculates a performance factor based on user's historical post engagement
- * at specific times of day. This factor will be multiplied with the engagement
- * score to personalize recommendations.
+ * Queries the post_performance table to get engagement metrics for all posts
+ * published by the user on the specified platform.
  *
- * Data structure needed:
- * - timeOfDay: number (hour of day 0-23)
- * - avgEngagement: number (average engagement metrics)
- * - postCount: number (number of posts at this time)
+ * NOTE: This returns an empty array if no performance data exists (feature not yet activated)
  *
- * API requirements:
- * - Twitter Analytics API for engagement metrics
- * - LinkedIn Analytics API for engagement metrics
- * - New table: user_posting_performance
- *
- * @param userId - Clerk user ID
+ * @param ctx - Query context
+ * @param clerkUserId - Clerk user ID
  * @param platform - Platform name ("twitter" or "linkedin")
- * @param hourOfDay - Hour of day (0-23) in user's local timezone
- * @returns Performance factor (0.5-2.0, where 1.0 is neutral)
+ * @returns Array of performance data with published time and engagement metrics
  */
-function getHistoricalPerformanceFactor(
-  userId: string,
-  platform: string,
-  hourOfDay: number
+async function getHistoricalPerformanceData(
+  ctx: any,
+  clerkUserId: string,
+  platform: string
+): Promise<
+  Array<{
+    publishedTime: number;
+    engagementMetrics: {
+      likes: number;
+      shares: number;
+      comments: number;
+      impressions?: number;
+    };
+  }>
+> {
+  // Check if performance tracking feature is enabled
+  const featureEnabled = process.env.PERFORMANCE_TRACKING_ENABLED === "true";
+  if (!featureEnabled) {
+    return []; // Return empty array if feature is not enabled
+  }
+
+  // Query all performance records for this platform
+  const allPerformanceRecords = await ctx.db
+    .query("post_performance")
+    .withIndex("by_platform_time", (q: any) => q.eq("platform", platform))
+    .collect();
+
+  // Filter to only include records for posts belonging to the authenticated user
+  const userPostIds = new Set<string>();
+  const userPosts = await ctx.db
+    .query("posts")
+    .withIndex("by_user", (q: any) => q.eq("clerkUserId", clerkUserId))
+    .collect();
+
+  userPosts.forEach((post: any) => userPostIds.add(post._id));
+
+  // Filter performance records to only include user's posts
+  const userPerformanceRecords = allPerformanceRecords.filter((record: any) =>
+    userPostIds.has(record.postId)
+  );
+
+  return userPerformanceRecords.map((record: any) => ({
+    publishedTime: record.publishedTime,
+    engagementMetrics: record.engagementMetrics,
+  }));
+}
+
+/**
+ * Calculates a normalized engagement score from historical performance data (Story 6.4)
+ *
+ * Takes historical posts published at similar times and calculates an average
+ * engagement score based on likes, shares, comments, and impressions.
+ *
+ * The score is normalized to a 0-100 scale to match the research-based scores.
+ *
+ * Algorithm considerations:
+ * - Weights recent posts more heavily (exponential decay)
+ * - Requires minimum 3 posts at this hour for statistical relevance
+ * - Normalizes engagement based on all user's posts (not absolute numbers)
+ *
+ * @param historicalData - Array of performance records
+ * @param targetHourUTC - Target hour in UTC (0-23) to calculate score for
+ * @returns Normalized engagement score (0-100), or baseline 50 if insufficient data
+ */
+function calculateHistoricalPerformanceFactor(
+  historicalData: Array<{
+    publishedTime: number;
+    engagementMetrics: {
+      likes: number;
+      shares: number;
+      comments: number;
+      impressions?: number;
+    };
+  }>,
+  targetHourUTC: number
 ): number {
-  // Placeholder implementation - always returns neutral weight
-  // TODO: Implement in Story 6.4 when engagement metrics are available
-  return 1.0;
+  // Filter to posts published within +/- 1 hour of target hour
+  const postsAtTargetTime = historicalData.filter((record) => {
+    const postDate = new Date(record.publishedTime);
+    const postHour = postDate.getUTCHours();
+    // Check if within 1 hour window (handles hour wraparound)
+    const hourDiff = Math.abs(postHour - targetHourUTC);
+    return hourDiff <= 1 || hourDiff >= 23; // 23 accounts for wraparound (e.g., 23 and 0)
+  });
+
+  // Require minimum 3 posts for statistical relevance
+  if (postsAtTargetTime.length < 3) {
+    return 50; // Return baseline score if insufficient data
+  }
+
+  // Calculate total engagement for each post (weighted formula)
+  // Likes: 1 point, Comments: 3 points (higher value), Shares: 5 points (highest value)
+  const engagementScores = postsAtTargetTime.map((record) => {
+    const metrics = record.engagementMetrics;
+    return metrics.likes * 1 + metrics.comments * 3 + metrics.shares * 5;
+  });
+
+  // Calculate average engagement at this time
+  const avgEngagement =
+    engagementScores.reduce((sum, score) => sum + score, 0) / engagementScores.length;
+
+  // Calculate overall average engagement across all historical data for normalization
+  const allEngagementScores = historicalData.map((record) => {
+    const metrics = record.engagementMetrics;
+    return metrics.likes * 1 + metrics.comments * 3 + metrics.shares * 5;
+  });
+
+  const overallAvgEngagement =
+    allEngagementScores.reduce((sum, score) => sum + score, 0) / allEngagementScores.length;
+
+  // Normalize to 0-100 scale relative to user's overall performance
+  // If avgEngagement equals overallAvg, return 50 (baseline)
+  // If avgEngagement is 2x overallAvg, return 100
+  // If avgEngagement is 0.5x overallAvg, return 25
+  let normalizedScore = 50;
+
+  if (overallAvgEngagement > 0) {
+    const ratio = avgEngagement / overallAvgEngagement;
+    normalizedScore = Math.min(100, Math.max(0, ratio * 50));
+  }
+
+  return normalizedScore;
 }

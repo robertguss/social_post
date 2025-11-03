@@ -82,4 +82,22 @@ export default defineSchema({
     engagementScore: v.number(), // Normalized 0-100 indicating expected engagement level
     source: v.string(), // "industry research" | "user data" - tracks recommendation origin
   }).index("by_platform_day", ["platform", "dayOfWeek"]),
+
+  // Stores historical engagement metrics for published posts
+  // Used for learning and improving posting time recommendations based on actual performance
+  // NOTE: This feature is inactive until API access to Twitter/LinkedIn engagement metrics is configured
+  post_performance: defineTable({
+    postId: v.id("posts"), // Reference to the original post
+    platform: v.string(), // "twitter" | "linkedin" - which platform this performance data is for
+    publishedTime: v.number(), // Unix timestamp (ms) when post was published
+    engagementMetrics: v.object({
+      likes: v.number(), // Number of likes/reactions
+      shares: v.number(), // Number of shares/retweets
+      comments: v.number(), // Number of comments/replies
+      impressions: v.optional(v.number()), // Number of impressions/views (if available from API)
+    }),
+    fetchedAt: v.number(), // Unix timestamp (ms) when metrics were fetched from API
+  })
+    .index("by_post", ["postId"]) // Lookup metrics for a specific post
+    .index("by_platform_time", ["platform", "publishedTime"]), // Aggregate metrics by time of day for analysis
 });
