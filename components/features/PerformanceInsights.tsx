@@ -44,7 +44,13 @@ export function PerformanceInsights() {
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const getPerformanceInsights = useMutation(api.analytics.default);
+import { useAction } from "convex/react";
+
+// ... other imports and code ...
+
+  const getPerformanceInsights = useAction(
+    api.analytics.getPerformanceInsights
+  );
 
   // Fetch insights when filters change
   useEffect(() => {
