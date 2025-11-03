@@ -5,13 +5,83 @@ import { Id } from "./_generated/dataModel";
 import { cronJobs } from "convex/server";
 
 /**
+ * HELPER FUNCTION: Check for exact scheduling conflicts
+ *
+ * An exact conflict is defined as:
+ * - Same post (originalPostId or clonedFromPostId match)
+ * - Same platform (Twitter or LinkedIn)
+ * - Same exact timestamp (within 1 second tolerance)
+ *
+ * @param ctx - Convex context
+ * @param originalPostId - ID of the post being queued
+ * @param scheduledTime - Timestamp to check for conflicts
+ * @param clerkUserId - User ID for scoping
+ * @returns true if exact conflict exists, false otherwise
+ */
+async function checkExactConflict(
+  ctx: any,
+  originalPostId: Id<"posts">,
+  scheduledTime: number,
+  clerkUserId: string
+): Promise<boolean> {
+  const EXACT_TOLERANCE = 1000; // 1 second in milliseconds
+
+  const isExactConflict = (time1: number, time2: number) => {
+    return Math.abs(time1 - time2) <= EXACT_TOLERANCE;
+  };
+
+  // Fetch the original post to determine which platforms it uses
+  const originalPost = await ctx.db.get(originalPostId);
+  if (!originalPost) {
+    return false; // If post doesn't exist, no conflict
+  }
+
+  // Fetch all scheduled posts for user
+  const scheduledPosts = await ctx.db
+    .query("posts")
+    .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+    .filter((q) => q.eq(q.field("status"), "Scheduled"))
+    .collect();
+
+  // Check for exact conflicts
+  for (const post of scheduledPosts) {
+    // Check if posts are related (same originalPostId or cloned from same post)
+    const isRelatedPost =
+      post._id === originalPostId ||
+      post.clonedFromPostId === originalPostId ||
+      post.clonedFromPostId === originalPost.clonedFromPostId;
+
+    if (isRelatedPost) {
+      // Check Twitter conflict
+      if (originalPost.twitterContent && post.twitterScheduledTime !== undefined) {
+        if (isExactConflict(scheduledTime, post.twitterScheduledTime)) {
+          return true; // Exact conflict found
+        }
+      }
+
+      // Check LinkedIn conflict
+      if (originalPost.linkedInContent && post.linkedInScheduledTime !== undefined) {
+        if (isExactConflict(scheduledTime, post.linkedInScheduledTime)) {
+          return true; // Exact conflict found
+        }
+      }
+    }
+  }
+
+  return false; // No exact conflict
+}
+
+/**
  * Create a new recurring queue for a post
  *
  * @param originalPostId - ID of the post to clone and repost
  * @param interval - Number of days between executions (must be >= 1)
  * @param nextScheduledTime - Unix timestamp (ms) of first execution
  * @param maxExecutions - Optional limit on total executions
+ * @param force - Optional boolean to bypass duplicate queue check (default: false)
  * @returns New queue ID
+ * @throws Error with code "DUPLICATE_QUEUE_EXISTS" if duplicate exists and force is false
+ * @throws Error with code "EXACT_CONFLICT" if exact scheduling conflict exists
  */
 export const createQueue = mutation({
   args: {
@@ -19,6 +89,7 @@ export const createQueue = mutation({
     interval: v.number(),
     nextScheduledTime: v.number(),
     maxExecutions: v.optional(v.number()),
+    force: v.optional(v.boolean()),
   },
   returns: v.id("recurring_queues"),
   handler: async (ctx, args) => {
@@ -46,6 +117,53 @@ export const createQueue = mutation({
     }
     if (originalPost.clerkUserId !== clerkUserId) {
       throw new Error("Unauthorized: You do not own this post");
+    }
+
+    // Check for duplicate queues unless force is true
+    if (!args.force) {
+      const duplicateQueues = await ctx.db
+        .query("recurring_queues")
+        .withIndex("by_user_status", (q) => q.eq("clerkUserId", clerkUserId))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("originalPostId"), args.originalPostId),
+            q.or(
+              q.eq(q.field("status"), "active"),
+              q.eq(q.field("status"), "paused")
+            )
+          )
+        )
+        .collect();
+
+      if (duplicateQueues.length > 0) {
+        // Throw error with duplicate queue details
+        const duplicate = duplicateQueues[0];
+        const error: any = new Error("A queue for this post already exists");
+        error.code = "DUPLICATE_QUEUE_EXISTS";
+        error.data = {
+          queueId: duplicate._id,
+          status: duplicate.status,
+          interval: duplicate.interval,
+          nextScheduledTime: duplicate.nextScheduledTime,
+        };
+        throw error;
+      }
+    }
+
+    // Check for exact scheduling conflicts (hard block, cannot be overridden)
+    const hasExactConflict = await checkExactConflict(
+      ctx,
+      args.originalPostId,
+      args.nextScheduledTime,
+      clerkUserId
+    );
+
+    if (hasExactConflict) {
+      const error: any = new Error(
+        "Cannot schedule: a post is already scheduled for this exact time and platform"
+      );
+      error.code = "EXACT_CONFLICT";
+      throw error;
     }
 
     // Create queue record with status "active" and executionCount 0
@@ -112,6 +230,24 @@ export const updateQueue = mutation({
     // Validate interval if provided
     if (args.interval !== undefined && args.interval < 1) {
       throw new Error("Interval must be at least 1 day");
+    }
+
+    // Check for exact conflict if nextScheduledTime is being updated
+    if (args.nextScheduledTime !== undefined) {
+      const hasExactConflict = await checkExactConflict(
+        ctx,
+        queue.originalPostId,
+        args.nextScheduledTime,
+        clerkUserId
+      );
+
+      if (hasExactConflict) {
+        const error: any = new Error(
+          "Cannot schedule: a post is already scheduled for this exact time and platform"
+        );
+        error.code = "EXACT_CONFLICT";
+        throw error;
+      }
     }
 
     // Build update object
@@ -232,6 +368,152 @@ export const resumeQueue = mutation({
       status: "active",
       nextScheduledTime,
     });
+  },
+});
+
+/**
+ * Check for duplicate queues for a specific post
+ *
+ * @param originalPostId - ID of the post to check for duplicate queues
+ * @returns Array of duplicate queues (active or paused) or empty array if none found
+ */
+export const checkDuplicateQueue = query({
+  args: {
+    originalPostId: v.id("posts"),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("recurring_queues"),
+      _creationTime: v.number(),
+      clerkUserId: v.string(),
+      originalPostId: v.id("posts"),
+      status: v.string(),
+      interval: v.number(),
+      nextScheduledTime: v.number(),
+      lastExecutedTime: v.optional(v.number()),
+      executionCount: v.number(),
+      maxExecutions: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Verify user authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const clerkUserId = identity.subject;
+
+    // Query recurring_queues for queues matching originalPostId and clerkUserId
+    // Filter results to include only "active" and "paused" queues (exclude "completed")
+    const queues = await ctx.db
+      .query("recurring_queues")
+      .withIndex("by_user_status", (q) => q.eq("clerkUserId", clerkUserId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("originalPostId"), args.originalPostId),
+          q.or(
+            q.eq(q.field("status"), "active"),
+            q.eq(q.field("status"), "paused")
+          )
+        )
+      )
+      .collect();
+
+    return queues;
+  },
+});
+
+/**
+ * Detect scheduling conflicts between queues and scheduled posts
+ *
+ * A conflict is defined as:
+ * - Queue's nextScheduledTime and post's scheduled time are within 1 hour (3600000 ms)
+ * - Both target the same platform (Twitter or LinkedIn)
+ *
+ * @returns Array of conflicts with queue and post details
+ */
+export const detectSchedulingConflicts = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      queueId: v.id("recurring_queues"),
+      postId: v.id("posts"),
+      queueTime: v.number(),
+      postTime: v.number(),
+      platform: v.string(),
+    })
+  ),
+  handler: async (ctx) => {
+    // Verify user authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const clerkUserId = identity.subject;
+
+    const ONE_HOUR = 3600000; // 1 hour in milliseconds
+
+    // Helper function to check if times conflict
+    const isConflict = (queueTime: number, postTime: number) => {
+      const timeDiff = Math.abs(queueTime - postTime);
+      return timeDiff <= ONE_HOUR;
+    };
+
+    // Fetch all active queues for user
+    const activeQueues = await ctx.db
+      .query("recurring_queues")
+      .withIndex("by_user_status", (q) =>
+        q.eq("clerkUserId", clerkUserId).eq("status", "active")
+      )
+      .collect();
+
+    // Fetch all scheduled posts for user (status "Scheduled")
+    const scheduledPosts = await ctx.db
+      .query("posts")
+      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+      .filter((q) => q.eq(q.field("status"), "Scheduled"))
+      .collect();
+
+    const conflicts: Array<{
+      queueId: Id<"recurring_queues">;
+      postId: Id<"posts">;
+      queueTime: number;
+      postTime: number;
+      platform: string;
+    }> = [];
+
+    // Check each queue against each scheduled post
+    for (const queue of activeQueues) {
+      for (const post of scheduledPosts) {
+        // Check Twitter conflict
+        if (post.twitterScheduledTime !== undefined) {
+          if (isConflict(queue.nextScheduledTime, post.twitterScheduledTime)) {
+            conflicts.push({
+              queueId: queue._id,
+              postId: post._id,
+              queueTime: queue.nextScheduledTime,
+              postTime: post.twitterScheduledTime,
+              platform: "twitter",
+            });
+          }
+        }
+
+        // Check LinkedIn conflict
+        if (post.linkedInScheduledTime !== undefined) {
+          if (isConflict(queue.nextScheduledTime, post.linkedInScheduledTime)) {
+            conflicts.push({
+              queueId: queue._id,
+              postId: post._id,
+              queueTime: queue.nextScheduledTime,
+              postTime: post.linkedInScheduledTime,
+              platform: "linkedin",
+            });
+          }
+        }
+      }
+    }
+
+    return conflicts;
   },
 });
 

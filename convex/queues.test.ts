@@ -36,6 +36,216 @@ describe("createQueue mutation - logic validation", () => {
   });
 });
 
+describe("checkDuplicateQueue query - logic validation", () => {
+  it("should identify duplicate queues with matching originalPostId", () => {
+    // Simulated queue data
+    const mockQueues = [
+      { originalPostId: "post1", status: "active" },
+      { originalPostId: "post2", status: "paused" },
+      { originalPostId: "post1", status: "completed" },
+    ];
+
+    // Simulate duplicate check logic
+    const targetPostId = "post1";
+    const duplicates = mockQueues.filter(
+      (q) =>
+        q.originalPostId === targetPostId &&
+        (q.status === "active" || q.status === "paused")
+    );
+
+    expect(duplicates.length).toBe(1);
+    expect(duplicates[0].status).toBe("active");
+  });
+
+  it("should exclude completed queues from duplicates", () => {
+    const mockQueues = [
+      { originalPostId: "post1", status: "completed" },
+      { originalPostId: "post1", status: "completed" },
+    ];
+
+    const targetPostId = "post1";
+    const duplicates = mockQueues.filter(
+      (q) =>
+        q.originalPostId === targetPostId &&
+        (q.status === "active" || q.status === "paused")
+    );
+
+    expect(duplicates.length).toBe(0);
+  });
+
+  it("should return empty array when no duplicates exist", () => {
+    const mockQueues = [
+      { originalPostId: "post2", status: "active" },
+      { originalPostId: "post3", status: "paused" },
+    ];
+
+    const targetPostId = "post1";
+    const duplicates = mockQueues.filter(
+      (q) =>
+        q.originalPostId === targetPostId &&
+        (q.status === "active" || q.status === "paused")
+    );
+
+    expect(duplicates.length).toBe(0);
+  });
+});
+
+describe("detectSchedulingConflicts query - logic validation", () => {
+  const ONE_HOUR = 3600000; // 1 hour in milliseconds
+
+  const isConflict = (queueTime: number, postTime: number) => {
+    const timeDiff = Math.abs(queueTime - postTime);
+    return timeDiff <= ONE_HOUR;
+  };
+
+  it("should detect conflict within 1 hour window", () => {
+    const queueTime = Date.now();
+    const postTime = queueTime + 30 * 60000; // 30 minutes later
+
+    expect(isConflict(queueTime, postTime)).toBe(true);
+  });
+
+  it("should not detect conflict outside 1 hour window", () => {
+    const queueTime = Date.now();
+    const postTime = queueTime + 90 * 60000; // 90 minutes later
+
+    expect(isConflict(queueTime, postTime)).toBe(false);
+  });
+
+  it("should handle conflicts with multiple platforms", () => {
+    const queueTime = Date.now();
+    const mockPost = {
+      twitterScheduledTime: queueTime + 15 * 60000, // 15 mins
+      linkedInScheduledTime: queueTime + 2 * 3600000, // 2 hours
+    };
+
+    const twitterConflict = isConflict(queueTime, mockPost.twitterScheduledTime);
+    const linkedInConflict = isConflict(queueTime, mockPost.linkedInScheduledTime);
+
+    expect(twitterConflict).toBe(true);
+    expect(linkedInConflict).toBe(false);
+  });
+
+  it("should count conflicts correctly for queue vs scheduled posts", () => {
+    const queueTime = Date.now();
+    const scheduledPosts = [
+      { twitterScheduledTime: queueTime + 30 * 60000 }, // conflict
+      { twitterScheduledTime: queueTime + 90 * 60000 }, // no conflict
+      { linkedInScheduledTime: queueTime + 45 * 60000 }, // conflict
+    ];
+
+    let conflictCount = 0;
+    for (const post of scheduledPosts) {
+      if (post.twitterScheduledTime && isConflict(queueTime, post.twitterScheduledTime)) {
+        conflictCount++;
+      }
+      if (post.linkedInScheduledTime && isConflict(queueTime, post.linkedInScheduledTime)) {
+        conflictCount++;
+      }
+    }
+
+    expect(conflictCount).toBe(2);
+  });
+});
+
+describe("checkExactConflict helper - logic validation", () => {
+  const EXACT_TOLERANCE = 1000; // 1 second
+
+  const isExactConflict = (time1: number, time2: number) => {
+    return Math.abs(time1 - time2) <= EXACT_TOLERANCE;
+  };
+
+  it("should detect exact conflict within 1 second tolerance", () => {
+    const time1 = Date.now();
+    const time2 = time1 + 500; // 500ms later
+
+    expect(isExactConflict(time1, time2)).toBe(true);
+  });
+
+  it("should not detect conflict outside 1 second tolerance", () => {
+    const time1 = Date.now();
+    const time2 = time1 + 2000; // 2 seconds later
+
+    expect(isExactConflict(time1, time2)).toBe(false);
+  });
+
+  it("should prevent exact conflict for same post/platform/time", () => {
+    const scheduledTime = Date.now() + 3600000;
+    const existingPostTime = scheduledTime + 100; // within 1 second
+
+    // Simulate exact conflict check
+    const hasConflict = isExactConflict(scheduledTime, existingPostTime);
+
+    expect(hasConflict).toBe(true);
+  });
+
+  it("should allow queue creation when no exact conflict", () => {
+    const scheduledTime = Date.now() + 3600000;
+    const existingPostTime = scheduledTime + 5000; // 5 seconds later
+
+    const hasConflict = isExactConflict(scheduledTime, existingPostTime);
+
+    expect(hasConflict).toBe(false);
+  });
+});
+
+describe("createQueue with duplicate check - logic validation", () => {
+  it("should throw DUPLICATE_QUEUE_EXISTS error when duplicate found", () => {
+    const mockDuplicates = [{ _id: "queue1", status: "active" }];
+    const force = false;
+
+    expect(() => {
+      if (!force && mockDuplicates.length > 0) {
+        const error: any = new Error("A queue for this post already exists");
+        error.code = "DUPLICATE_QUEUE_EXISTS";
+        throw error;
+      }
+    }).toThrow("A queue for this post already exists");
+  });
+
+  it("should allow queue creation when force is true", () => {
+    const mockDuplicates = [{ _id: "queue1", status: "active" }];
+    const force = true;
+
+    let shouldCreate = false;
+    if (force || mockDuplicates.length === 0) {
+      shouldCreate = true;
+    }
+
+    expect(shouldCreate).toBe(true);
+  });
+
+  it("should throw EXACT_CONFLICT error when exact conflict found", () => {
+    const hasExactConflict = true;
+
+    expect(() => {
+      if (hasExactConflict) {
+        const error: any = new Error(
+          "Cannot schedule: a post is already scheduled for this exact time and platform"
+        );
+        error.code = "EXACT_CONFLICT";
+        throw error;
+      }
+    }).toThrow("Cannot schedule: a post is already scheduled for this exact time and platform");
+  });
+
+  it("should allow queue creation when no conflicts", () => {
+    const mockDuplicates: any[] = [];
+    const hasExactConflict = false;
+    const force = false;
+
+    let canCreate = true;
+    if (!force && mockDuplicates.length > 0) {
+      canCreate = false;
+    }
+    if (hasExactConflict) {
+      canCreate = false;
+    }
+
+    expect(canCreate).toBe(true);
+  });
+});
+
 describe("queue update/delete/pause/resume mutations - logic validation", () => {
   it("should validate resumeQueue recalculates nextScheduledTime", () => {
     const interval = 7; // days

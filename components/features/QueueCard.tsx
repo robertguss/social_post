@@ -21,6 +21,7 @@ import {
   IconRepeat,
   IconCalendar,
   IconCheck,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { QueueEditModal } from "./QueueEditModal";
@@ -35,6 +36,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+type Conflict = {
+  queueId: Id<"recurring_queues">;
+  postId: Id<"posts">;
+  queueTime: number;
+  postTime: number;
+  platform: string;
+};
 
 type QueueCardProps = {
   queue: {
@@ -55,6 +70,8 @@ type QueueCardProps = {
       status: string;
     };
   };
+  conflicts?: Conflict[];
+  onConflictClick?: () => void;
 };
 
 /**
@@ -67,12 +84,16 @@ type QueueCardProps = {
  * - Next scheduled time
  * - Execution count / max executions
  * - Action buttons (Pause/Resume/Edit/Delete) based on status
+ * - Conflict indicator if conflicts exist (optional)
  */
-export function QueueCard({ queue }: QueueCardProps) {
+export function QueueCard({ queue, conflicts = [], onConflictClick }: QueueCardProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPausing, setIsPausing] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Filter conflicts for this specific queue
+  const queueConflicts = conflicts.filter((c) => c.queueId === queue._id);
 
   const pauseQueue = useMutation(api.queues.pauseQueue);
   const resumeQueue = useMutation(api.queues.resumeQueue);
@@ -154,14 +175,47 @@ export function QueueCard({ queue }: QueueCardProps) {
     }
   };
 
+  // Format conflict tooltip text
+  const getConflictTooltip = () => {
+    if (queueConflicts.length === 0) return "";
+    if (queueConflicts.length === 1) {
+      const conflict = queueConflicts[0];
+      const conflictDate = format(new Date(conflict.postTime), "PPpp");
+      return `Conflicts with scheduled ${conflict.platform} post on ${conflictDate}`;
+    }
+    return `${queueConflicts.length} scheduling conflicts detected`;
+  };
+
   return (
     <>
       <Card className="flex flex-col h-full">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <Badge variant={statusVariant} className="capitalize">
-              {queue.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={statusVariant} className="capitalize">
+                {queue.status}
+              </Badge>
+              {queueConflicts.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 p-0"
+                        onClick={onConflictClick}
+                        aria-label="This queue has scheduling conflicts"
+                      >
+                        <IconAlertTriangle className="h-4 w-4 text-orange-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{getConflictTooltip()}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div className="flex gap-1">
               <Button
                 variant="ghost"
