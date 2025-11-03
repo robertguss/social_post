@@ -67,4 +67,19 @@ export default defineSchema({
     enableContentPrePopulation: v.boolean(), // Default: true - Smart content pre-fill from Twitter to LinkedIn
     // Future preference fields can be added here
   }).index("by_user", ["clerkUserId"]),
+
+  // Stores optimal posting time recommendations based on industry research
+  // System-wide data (not user-scoped) - provides intelligent time suggestions
+  posting_time_recommendations: defineTable({
+    platform: v.string(), // "twitter" | "linkedin"
+    dayOfWeek: v.number(), // 0-6 (Sunday=0, Saturday=6) for JavaScript Date compatibility
+    hourRanges: v.array(
+      v.object({
+        startHour: v.number(), // 0-23 in UTC
+        endHour: v.number(), // 0-23 in UTC
+      })
+    ), // Array of time windows in UTC format
+    engagementScore: v.number(), // Normalized 0-100 indicating expected engagement level
+    source: v.string(), // "industry research" | "user data" - tracks recommendation origin
+  }).index("by_platform_day", ["platform", "dayOfWeek"]),
 });
