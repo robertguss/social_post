@@ -18,4 +18,7 @@ export const api = {
   userPreferences: {
     getUserPreferences: "userPreferences:getUserPreferences",
   },
+  recommendations: {
+    getRecommendedTimes: "recommendations:getRecommendedTimes",
+  },
 };

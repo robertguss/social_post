@@ -67,4 +67,53 @@ export default defineSchema({
     enableContentPrePopulation: v.boolean(), // Default: true - Smart content pre-fill from Twitter to LinkedIn
     // Future preference fields can be added here
   }).index("by_user", ["clerkUserId"]),
+
+  // Stores user-defined custom posting time preferences that override research-based recommendations
+  // Times are stored in user's local timezone (unlike posting_time_recommendations which uses UTC)
+  posting_preferences: defineTable({
+    clerkUserId: v.string(), // Clerk user ID (for data scoping)
+    platform: v.string(), // "twitter" | "linkedin"
+    dayOfWeek: v.number(), // 0-6 (Sunday=0, Saturday=6)
+    customTimeRanges: v.array(
+      v.object({
+        startHour: v.number(), // 0-23 in user's local timezone
+        endHour: v.number(), // 0-23 in user's local timezone
+      })
+    ),
+  })
+    .index("by_user_platform", ["clerkUserId", "platform"])
+    .index("by_user_platform_day", ["clerkUserId", "platform", "dayOfWeek"]),
+
+  // Stores optimal posting time recommendations based on industry research
+  // System-wide data (not user-scoped) - provides intelligent time suggestions
+  posting_time_recommendations: defineTable({
+    platform: v.string(), // "twitter" | "linkedin"
+    dayOfWeek: v.number(), // 0-6 (Sunday=0, Saturday=6) for JavaScript Date compatibility
+    hourRanges: v.array(
+      v.object({
+        startHour: v.number(), // 0-23 in UTC
+        endHour: v.number(), // 0-23 in UTC
+      })
+    ), // Array of time windows in UTC format
+    engagementScore: v.number(), // Normalized 0-100 indicating expected engagement level
+    source: v.string(), // "industry research" | "user data" - tracks recommendation origin
+  }).index("by_platform_day", ["platform", "dayOfWeek"]),
+
+  // Stores historical engagement metrics for published posts
+  // Used for learning and improving posting time recommendations based on actual performance
+  // NOTE: This feature is inactive until API access to Twitter/LinkedIn engagement metrics is configured
+  post_performance: defineTable({
+    postId: v.id("posts"), // Reference to the original post
+    platform: v.string(), // "twitter" | "linkedin" - which platform this performance data is for
+    publishedTime: v.number(), // Unix timestamp (ms) when post was published
+    engagementMetrics: v.object({
+      likes: v.number(), // Number of likes/reactions
+      shares: v.number(), // Number of shares/retweets
+      comments: v.number(), // Number of comments/replies
+      impressions: v.optional(v.number()), // Number of impressions/views (if available from API)
+    }),
+    fetchedAt: v.number(), // Unix timestamp (ms) when metrics were fetched from API
+  })
+    .index("by_post", ["postId"]) // Lookup metrics for a specific post
+    .index("by_platform_time", ["platform", "publishedTime"]), // Aggregate metrics by time of day for analysis
 });

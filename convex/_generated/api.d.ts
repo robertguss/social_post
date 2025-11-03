@@ -8,15 +8,20 @@
  * @module
  */
 
+import type * as analytics from "../analytics.js";
+import type * as analyticsQueries from "../analyticsQueries.js";
 import type * as connections from "../connections.js";
 import type * as dashboard from "../dashboard.js";
 import type * as drafts from "../drafts.js";
 import type * as encryption from "../encryption.js";
 import type * as encryptionHelpers from "../encryptionHelpers.js";
 import type * as notifications from "../notifications.js";
+import type * as postingPreferences from "../postingPreferences.js";
 import type * as posts from "../posts.js";
 import type * as publishing from "../publishing.js";
 import type * as queues from "../queues.js";
+import type * as recommendations from "../recommendations.js";
+import type * as seedRecommendations from "../seedRecommendations.js";
 import type * as templates from "../templates.js";
 import type * as tokenRefresh from "../tokenRefresh.js";
 import type * as userPreferences from "../userPreferences.js";
@@ -36,15 +41,20 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
+  analyticsQueries: typeof analyticsQueries;
   connections: typeof connections;
   dashboard: typeof dashboard;
   drafts: typeof drafts;
   encryption: typeof encryption;
   encryptionHelpers: typeof encryptionHelpers;
   notifications: typeof notifications;
+  postingPreferences: typeof postingPreferences;
   posts: typeof posts;
   publishing: typeof publishing;
   queues: typeof queues;
+  recommendations: typeof recommendations;
+  seedRecommendations: typeof seedRecommendations;
   templates: typeof templates;
   tokenRefresh: typeof tokenRefresh;
   userPreferences: typeof userPreferences;
