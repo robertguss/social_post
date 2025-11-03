@@ -14,6 +14,10 @@ import { QuickReschedule } from "./QuickReschedule";
 import { DualPlatformTextFields, DualPlatformTextFieldsRef } from "./DualPlatformTextFields";
 import { IconTemplate, IconInfoCircle, IconX, IconCalendar } from "@tabler/icons-react";
 import { toast } from "sonner";
+import {
+  getTwitterCharacterCount,
+  getLinkedInCharacterCount,
+} from "@/lib/utils/characterCount";
 
 /**
  * PostScheduler Component
@@ -83,14 +87,14 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Ref for DualPlatformTextFields component (to access textarea refs)
   const dualFieldsRef = useRef<DualPlatformTextFieldsRef>(null);
 
-  // Twitter character count (280 max, warning at 260)
-  const twitterCharCount = twitterContent.length;
+  // Twitter character count (280 max, warning at 260) using platform-specific rules
+  const twitterCharCount = getTwitterCharacterCount(twitterContent);
   const TWITTER_MAX_CHARS = 280;
   const TWITTER_WARNING_THRESHOLD = 260;
   const isTwitterOverLimit = twitterCharCount > TWITTER_MAX_CHARS;
 
-  // LinkedIn character count (3,000 max, warning at 2,900)
-  const linkedInCharCount = linkedInContent.length;
+  // LinkedIn character count (3,000 max, warning at 2,900) using platform-specific rules
+  const linkedInCharCount = getLinkedInCharacterCount(linkedInContent);
   const LINKEDIN_MAX_CHARS = 3000;
   const LINKEDIN_WARNING_THRESHOLD = 2900;
   const isLinkedInOverLimit = linkedInCharCount > LINKEDIN_MAX_CHARS;
@@ -556,11 +560,33 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
             </div>
           )}
 
+          {/* Character Limit Exceeded Warning */}
+          {(enableTwitter && isTwitterOverLimit) || (enableLinkedIn && isLinkedInOverLimit) ? (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2">
+              <IconInfoCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Character limit exceeded</p>
+                <p className="mt-1 text-xs">
+                  {enableTwitter && isTwitterOverLimit && (
+                    <span>Twitter: {twitterCharCount}/{TWITTER_MAX_CHARS} characters</span>
+                  )}
+                  {enableTwitter && isTwitterOverLimit && enableLinkedIn && isLinkedInOverLimit && (
+                    <span> • </span>
+                  )}
+                  {enableLinkedIn && isLinkedInOverLimit && (
+                    <span>LinkedIn: {linkedInCharCount}/{LINKEDIN_MAX_CHARS} characters</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {/* Submit Button */}
           <Button
             type="submit"
             className="w-full"
             disabled={isSubmitDisabled}
+            aria-label={isSubmitDisabled && (isTwitterOverLimit || isLinkedInOverLimit) ? "Cannot submit: Character limit exceeded" : undefined}
           >
             {isSubmitting
               ? (mode === "edit" ? "Updating..." : "Scheduling...")

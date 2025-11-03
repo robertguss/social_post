@@ -9,7 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { IconChevronDown, IconChevronUp, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
+import {
+  getTwitterCharacterCount,
+  getLinkedInCharacterCount,
+} from "@/lib/utils/characterCount";
 
 /**
  * DualPlatformTextFields Component
@@ -106,15 +111,13 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
       linkedInTextareaRef,
     }));
 
-    // Calculate character counts
-    const actualTwitterCharCount = twitterCharCount ?? twitterContent.length;
-    const actualLinkedInCharCount = linkedInCharCount ?? linkedInContent.length;
+    // Calculate character counts using platform-specific rules
+    const actualTwitterCharCount = twitterCharCount ?? getTwitterCharacterCount(twitterContent);
+    const actualLinkedInCharCount = linkedInCharCount ?? getLinkedInCharacterCount(linkedInContent);
 
     // Character count validation states
     const isTwitterOverLimit = actualTwitterCharCount > twitterMaxChars;
-    const isTwitterNearLimit = actualTwitterCharCount >= twitterWarningThreshold && !isTwitterOverLimit;
     const isLinkedInOverLimit = actualLinkedInCharCount > linkedInMaxChars;
-    const isLinkedInNearLimit = actualLinkedInCharCount >= linkedInWarningThreshold && !isLinkedInOverLimit;
 
     // Toggle expand/collapse
     const toggleTwitterExpanded = () => setTwitterExpanded(!twitterExpanded);
@@ -233,17 +236,13 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
               />
 
               {/* Character Counter */}
-              <div
-                id="twitter-char-count"
-                className={`text-sm text-right ${
-                  isTwitterOverLimit
-                    ? "text-destructive font-semibold"
-                    : isTwitterNearLimit
-                    ? "text-yellow-600 font-medium"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {actualTwitterCharCount}/{twitterMaxChars}
+              <div id="twitter-char-count" className="flex justify-end">
+                <CharacterCounter
+                  currentCount={actualTwitterCharCount}
+                  maxCount={twitterMaxChars}
+                  warningThreshold={twitterWarningThreshold}
+                  platform="twitter"
+                />
               </div>
             </div>
           )}
@@ -350,17 +349,13 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
               />
 
               {/* Character Counter */}
-              <div
-                id="linkedin-char-count"
-                className={`text-sm text-right ${
-                  isLinkedInOverLimit
-                    ? "text-destructive font-semibold"
-                    : isLinkedInNearLimit
-                    ? "text-yellow-600 font-medium"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {actualLinkedInCharCount}/{linkedInMaxChars}
+              <div id="linkedin-char-count" className="flex justify-end">
+                <CharacterCounter
+                  currentCount={actualLinkedInCharCount}
+                  maxCount={linkedInMaxChars}
+                  warningThreshold={linkedInWarningThreshold}
+                  platform="linkedin"
+                />
               </div>
             </div>
           )}
