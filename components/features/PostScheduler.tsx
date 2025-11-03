@@ -5,14 +5,13 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Id, Doc } from "@/convex/_generated/dataModel";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { QuickReschedule } from "./QuickReschedule";
+import { DualPlatformTextFields, DualPlatformTextFieldsRef } from "./DualPlatformTextFields";
 import { IconTemplate, IconInfoCircle, IconX, IconCalendar } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -81,23 +80,20 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Clone indicator state
   const [showCloneBadge, setShowCloneBadge] = useState(!!postData?.clonedFromPostId);
 
-  // Textarea refs for cursor position
-  const twitterTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const linkedInTextareaRef = useRef<HTMLTextAreaElement>(null);
+  // Ref for DualPlatformTextFields component (to access textarea refs)
+  const dualFieldsRef = useRef<DualPlatformTextFieldsRef>(null);
 
   // Twitter character count (280 max, warning at 260)
   const twitterCharCount = twitterContent.length;
   const TWITTER_MAX_CHARS = 280;
   const TWITTER_WARNING_THRESHOLD = 260;
   const isTwitterOverLimit = twitterCharCount > TWITTER_MAX_CHARS;
-  const isTwitterNearLimit = twitterCharCount >= TWITTER_WARNING_THRESHOLD && !isTwitterOverLimit;
 
   // LinkedIn character count (3,000 max, warning at 2,900)
   const linkedInCharCount = linkedInContent.length;
   const LINKEDIN_MAX_CHARS = 3000;
   const LINKEDIN_WARNING_THRESHOLD = 2900;
   const isLinkedInOverLimit = linkedInCharCount > LINKEDIN_MAX_CHARS;
-  const isLinkedInNearLimit = linkedInCharCount >= LINKEDIN_WARNING_THRESHOLD && !isLinkedInOverLimit;
 
   /**
    * Pre-fill form when in edit mode
@@ -180,7 +176,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     const templateContent = template.content;
     const isTwitter = activeField === "twitter";
     const existingContent = isTwitter ? twitterContent : linkedInContent;
-    const textareaRef = isTwitter ? twitterTextareaRef : linkedInTextareaRef;
+    const textareaRef = isTwitter
+      ? dualFieldsRef.current?.twitterTextareaRef
+      : dualFieldsRef.current?.linkedInTextareaRef;
     const maxChars = isTwitter ? TWITTER_MAX_CHARS : LINKEDIN_MAX_CHARS;
 
     // Check if insertion would exceed character limit
@@ -193,7 +191,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     }
 
     // Get cursor position from textarea
-    const textarea = textareaRef.current;
+    const textarea = textareaRef?.current;
     const cursorPos = textarea?.selectionStart;
 
     let newContent: string;
@@ -404,176 +402,98 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
             </div>
           )}
 
-          {/* Platform Selection */}
-          <div className="space-y-4">
-            <Label>Select Platforms <span className="text-destructive">*</span></Label>
-            <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-6 sm:space-y-0">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="enable-twitter"
-                  checked={enableTwitter}
-                  onCheckedChange={(checked) => setEnableTwitter(checked === true)}
-                />
-                <label
-                  htmlFor="enable-twitter"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Post to X/Twitter
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="enable-linkedin"
-                  checked={enableLinkedIn}
-                  onCheckedChange={(checked) => setEnableLinkedIn(checked === true)}
-                />
-                <label
-                  htmlFor="enable-linkedin"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Post to LinkedIn
-                </label>
-              </div>
-            </div>
-          </div>
+          {/* Dual Platform Text Fields */}
+          <DualPlatformTextFields
+            ref={dualFieldsRef}
+            twitterContent={twitterContent}
+            onTwitterChange={setTwitterContent}
+            twitterEnabled={enableTwitter}
+            onTwitterEnabledChange={setEnableTwitter}
+            twitterCharCount={twitterCharCount}
+            twitterMaxChars={TWITTER_MAX_CHARS}
+            twitterWarningThreshold={TWITTER_WARNING_THRESHOLD}
+            linkedInContent={linkedInContent}
+            onLinkedInChange={setLinkedInContent}
+            linkedInEnabled={enableLinkedIn}
+            onLinkedInEnabledChange={setEnableLinkedIn}
+            linkedInCharCount={linkedInCharCount}
+            linkedInMaxChars={LINKEDIN_MAX_CHARS}
+            linkedInWarningThreshold={LINKEDIN_WARNING_THRESHOLD}
+            twitterActions={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenTemplatePicker("twitter")}
+              >
+                <IconTemplate className="mr-2 h-4 w-4" />
+                Insert Template
+              </Button>
+            }
+            linkedInActions={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenTemplatePicker("linkedin")}
+              >
+                <IconTemplate className="mr-2 h-4 w-4" />
+                Insert Template
+              </Button>
+            }
+          />
 
-          {/* Twitter Section */}
+          {/* Twitter Date/Time Selector */}
           {enableTwitter && (
-            <div className="space-y-4 p-4 border rounded-lg">
-              <h3 className="text-sm font-semibold text-foreground">X/Twitter Post</h3>
+            <div className="space-y-2">
+              <Label htmlFor="twitter-scheduled-time">
+                Twitter Scheduled Time <span className="text-destructive">*</span>
+              </Label>
 
-              {/* Twitter Content */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="twitter-content">
-                    Content <span className="text-destructive">*</span>
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenTemplatePicker("twitter")}
-                  >
-                    <IconTemplate className="mr-2 h-4 w-4" />
-                    Insert Template
-                  </Button>
-                </div>
-                <Textarea
-                  ref={twitterTextareaRef}
-                  id="twitter-content"
-                  placeholder="What's happening?"
-                  value={twitterContent}
-                  onChange={(e) => setTwitterContent(e.target.value)}
-                  className="min-h-[120px] resize-none"
-                  aria-describedby="twitter-char-count"
-                  aria-invalid={isTwitterOverLimit}
+              {/* Quick Reschedule Suggestions for Twitter */}
+              {postData?.clonedFromPostId && originalPost?.twitterScheduledTime && (
+                <QuickReschedule
+                  originalScheduledTime={originalPost.twitterScheduledTime}
+                  platform="twitter"
+                  onSelectTime={handleTwitterTimeSelect}
                 />
-                <div
-                  id="twitter-char-count"
-                  className={`text-sm text-right ${
-                    isTwitterOverLimit ? 'text-destructive font-semibold' :
-                    isTwitterNearLimit ? 'text-yellow-600 font-medium' :
-                    'text-muted-foreground'
-                  }`}
-                >
-                  {twitterCharCount}/{TWITTER_MAX_CHARS}
-                </div>
-              </div>
+              )}
 
-              {/* Twitter Date/Time Selector */}
-              <div className="space-y-2">
-                <Label htmlFor="twitter-scheduled-time">
-                  Scheduled Time <span className="text-destructive">*</span>
-                </Label>
-
-                {/* Quick Reschedule Suggestions for Twitter */}
-                {postData?.clonedFromPostId && originalPost?.twitterScheduledTime && (
-                  <QuickReschedule
-                    originalScheduledTime={originalPost.twitterScheduledTime}
-                    platform="twitter"
-                    onSelectTime={handleTwitterTimeSelect}
-                  />
-                )}
-
-                <DateTimePicker
-                  date={twitterScheduledTime}
-                  setDate={setTwitterScheduledTime}
-                  placeholder="Select date and time"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Time is in your local timezone
-                </p>
-              </div>
+              <DateTimePicker
+                date={twitterScheduledTime}
+                setDate={setTwitterScheduledTime}
+                placeholder="Select date and time"
+              />
+              <p className="text-sm text-muted-foreground">
+                Time is in your local timezone
+              </p>
             </div>
           )}
 
-          {/* LinkedIn Section */}
+          {/* LinkedIn Date/Time Selector */}
           {enableLinkedIn && (
-            <div className="space-y-4 p-4 border rounded-lg">
-              <h3 className="text-sm font-semibold text-foreground">LinkedIn Post</h3>
+            <div className="space-y-2">
+              <Label htmlFor="linkedin-scheduled-time">
+                LinkedIn Scheduled Time <span className="text-destructive">*</span>
+              </Label>
 
-              {/* LinkedIn Content */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="linkedin-content">
-                    Content <span className="text-destructive">*</span>
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenTemplatePicker("linkedin")}
-                  >
-                    <IconTemplate className="mr-2 h-4 w-4" />
-                    Insert Template
-                  </Button>
-                </div>
-                <Textarea
-                  ref={linkedInTextareaRef}
-                  id="linkedin-content"
-                  placeholder="Share your professional insights..."
-                  value={linkedInContent}
-                  onChange={(e) => setLinkedInContent(e.target.value)}
-                  className="min-h-[120px] resize-none"
-                  aria-describedby="linkedin-char-count"
-                  aria-invalid={isLinkedInOverLimit}
+              {/* Quick Reschedule Suggestions for LinkedIn */}
+              {postData?.clonedFromPostId && originalPost?.linkedInScheduledTime && (
+                <QuickReschedule
+                  originalScheduledTime={originalPost.linkedInScheduledTime}
+                  platform="linkedin"
+                  onSelectTime={handleLinkedInTimeSelect}
                 />
-                <div
-                  id="linkedin-char-count"
-                  className={`text-sm text-right ${
-                    isLinkedInOverLimit ? 'text-destructive font-semibold' :
-                    isLinkedInNearLimit ? 'text-yellow-600 font-medium' :
-                    'text-muted-foreground'
-                  }`}
-                >
-                  {linkedInCharCount}/{LINKEDIN_MAX_CHARS}
-                </div>
-              </div>
+              )}
 
-              {/* LinkedIn Date/Time Selector */}
-              <div className="space-y-2">
-                <Label htmlFor="linkedin-scheduled-time">
-                  Scheduled Time <span className="text-destructive">*</span>
-                </Label>
-
-                {/* Quick Reschedule Suggestions for LinkedIn */}
-                {postData?.clonedFromPostId && originalPost?.linkedInScheduledTime && (
-                  <QuickReschedule
-                    originalScheduledTime={originalPost.linkedInScheduledTime}
-                    platform="linkedin"
-                    onSelectTime={handleLinkedInTimeSelect}
-                  />
-                )}
-
-                <DateTimePicker
-                  date={linkedInScheduledTime}
-                  setDate={setLinkedInScheduledTime}
-                  placeholder="Select date and time"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Time is in your local timezone
-                </p>
-              </div>
+              <DateTimePicker
+                date={linkedInScheduledTime}
+                setDate={setLinkedInScheduledTime}
+                placeholder="Select date and time"
+              />
+              <p className="text-sm text-muted-foreground">
+                Time is in your local timezone
+              </p>
             </div>
           )}
 
