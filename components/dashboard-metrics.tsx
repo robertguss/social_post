@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { IconTrendingUp, IconCalendarEvent, IconCheck, IconAlertCircle, IconLink } from "@tabler/icons-react";
+import { IconTrendingUp, IconCalendarEvent, IconCheck, IconLink } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import {

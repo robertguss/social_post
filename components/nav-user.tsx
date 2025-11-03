@@ -4,7 +4,6 @@ import {
   IconDotsVertical,
   IconLogout,
   IconSettings,
-  IconUserCircle,
 } from "@tabler/icons-react"
 import { useClerk } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"

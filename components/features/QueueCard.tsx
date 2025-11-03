@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  IconPause,
+  IconPlayerPause,
   IconPlayerPlay,
   IconEdit,
   IconTrash,
@@ -285,7 +285,7 @@ export function QueueCard({ queue, conflicts = [], onConflictClick }: QueueCardP
               disabled={isPausing}
               aria-label="Pause queue"
             >
-              <IconPause className="h-4 w-4 mr-2" />
+              <IconPlayerPause className="h-4 w-4 mr-2" />
               {isPausing ? "Pausing..." : "Pause"}
             </Button>
           )}

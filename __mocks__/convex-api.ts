@@ -1,6 +1,8 @@
 export const api = {
   posts: {
     createPost: "posts:createPost",
+    updatePost: "posts:updatePost",
+    getPost: "posts:getPost",
   },
   connections: {
     getConnectionStatus: "connections:getConnectionStatus",
@@ -11,5 +13,9 @@ export const api = {
     createTemplate: "templates:createTemplate",
     updateTemplate: "templates:updateTemplate",
     deleteTemplate: "templates:deleteTemplate",
+    incrementTemplateUsage: "templates:incrementTemplateUsage",
+  },
+  userPreferences: {
+    getUserPreferences: "userPreferences:getUserPreferences",
   },
 };

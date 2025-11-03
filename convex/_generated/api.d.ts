@@ -10,6 +10,7 @@
 
 import type * as connections from "../connections.js";
 import type * as dashboard from "../dashboard.js";
+import type * as drafts from "../drafts.js";
 import type * as encryption from "../encryption.js";
 import type * as encryptionHelpers from "../encryptionHelpers.js";
 import type * as notifications from "../notifications.js";
@@ -18,6 +19,7 @@ import type * as publishing from "../publishing.js";
 import type * as queues from "../queues.js";
 import type * as templates from "../templates.js";
 import type * as tokenRefresh from "../tokenRefresh.js";
+import type * as userPreferences from "../userPreferences.js";
 
 import type {
   ApiFromModules,
@@ -36,6 +38,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   connections: typeof connections;
   dashboard: typeof dashboard;
+  drafts: typeof drafts;
   encryption: typeof encryption;
   encryptionHelpers: typeof encryptionHelpers;
   notifications: typeof notifications;
@@ -44,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   queues: typeof queues;
   templates: typeof templates;
   tokenRefresh: typeof tokenRefresh;
+  userPreferences: typeof userPreferences;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
