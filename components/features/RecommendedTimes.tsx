@@ -32,7 +32,13 @@ export function RecommendedTimes({ selectedDate, platform, onTimeSelect }: Recom
   const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Format date to ISO string (YYYY-MM-DD) or undefined if no date selected
-  const dateString = selectedDate ? selectedDate.toISOString().split("T")[0] : undefined;
+  const dateString = selectedDate
+    ? [
+        selectedDate.getFullYear(),
+        String(selectedDate.getMonth() + 1).padStart(2, "0"),
+        String(selectedDate.getDate()).padStart(2, "0"),
+      ].join("-")
+    : undefined;
 
   // Fetch recommendations from Convex (skip if no date selected)
   const recommendations = useQuery(
