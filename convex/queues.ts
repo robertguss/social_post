@@ -643,8 +643,8 @@ async function cloneAndSchedulePost(
   }
 
   // Determine which platforms are enabled based on original post
-  const hasTwitter = originalPost.twitterContent && originalPost.twitterScheduledTime !== undefined;
-  const hasLinkedIn = originalPost.linkedInContent && originalPost.linkedInScheduledTime !== undefined;
+  const hasTwitter = Boolean(originalPost.twitterContent?.trim());
+  const hasLinkedIn = Boolean(originalPost.linkedInContent?.trim());
 
   if (!hasTwitter && !hasLinkedIn) {
     throw new Error("Original post has no platform content to clone");
@@ -654,7 +654,6 @@ async function cloneAndSchedulePost(
   // Use the queue's nextScheduledTime as the base, and preserve the original time-of-day
   const twitterScheduledTime = hasTwitter ? nextScheduledTime : undefined;
   const linkedInScheduledTime = hasLinkedIn ? nextScheduledTime : undefined;
-
   // Create new post record with cloned content
   const newPostId = await ctx.db.insert("posts", {
     clerkUserId: originalPost.clerkUserId,
