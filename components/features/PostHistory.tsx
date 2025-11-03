@@ -124,7 +124,11 @@ export function PostHistory() {
   const drafts = useQuery(api.drafts.getDrafts, statusFilter === "draft" ? {} : "skip");
 
   // Combine results based on status filter
-  const displayPosts = statusFilter === "draft" ? (drafts || []) : (posts || []);
+  const displayPosts = statusFilter === "draft"
+    ? (drafts || [])
+    : statusFilter === "all" || !statusFilter
+      ? (posts || [])
+      : (posts || []).filter(p => p.status.toLowerCase() === statusFilter.toLowerCase());
 
   // Find selected post for modal
   const selectedPost = posts?.find((p) => p._id === selectedPostId);

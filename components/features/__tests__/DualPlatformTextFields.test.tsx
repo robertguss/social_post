@@ -99,8 +99,8 @@ describe("DualPlatformTextFields Component", () => {
         />
       );
 
-      expect(screen.getByText("5/280")).toBeInTheDocument();
-      expect(screen.getByText("11/3000")).toBeInTheDocument();
+      expect(screen.getByText("5 / 280")).toBeInTheDocument();
+      expect(screen.getByText("11 / 3000")).toBeInTheDocument();
     });
 
     it("should render custom labels when provided", () => {
@@ -332,8 +332,13 @@ describe("DualPlatformTextFields Component", () => {
         />
       );
 
-      const charCounter = container.querySelector('[class*="text-yellow-600"]');
+      // Check for warning color class
+      const charCounter = container.querySelector('[class*="text-orange-500"]');
       expect(charCounter).toBeInTheDocument();
+
+      // Check for warning emoji indicator
+      const warningEmoji = screen.getByRole('img', { name: /Warning: Approaching character limit/i });
+      expect(warningEmoji).toBeInTheDocument();
     });
 
     it("should apply error styles when Twitter content exceeds limit", () => {
@@ -347,8 +352,13 @@ describe("DualPlatformTextFields Component", () => {
         />
       );
 
-      const charCounter = container.querySelector('[class*="text-destructive"]');
+      // Check for error color class
+      const charCounter = container.querySelector('[class*="text-red-600"]');
       expect(charCounter).toBeInTheDocument();
+
+      // Check for error emoji indicator
+      const errorEmoji = screen.getByRole('img', { name: /Error: Character limit exceeded/i });
+      expect(errorEmoji).toBeInTheDocument();
     });
 
     it("should apply warning styles when LinkedIn content nears limit", () => {
@@ -362,8 +372,13 @@ describe("DualPlatformTextFields Component", () => {
         />
       );
 
-      const charCounter = container.querySelector('[class*="text-yellow-600"]');
+      // Check for warning color class
+      const charCounter = container.querySelector('[class*="text-orange-500"]');
       expect(charCounter).toBeInTheDocument();
+
+      // Check for warning emoji indicator
+      const warningEmoji = screen.getByRole('img', { name: /Warning: Approaching character limit/i });
+      expect(warningEmoji).toBeInTheDocument();
     });
 
     it("should apply error styles when LinkedIn content exceeds limit", () => {
@@ -377,8 +392,13 @@ describe("DualPlatformTextFields Component", () => {
         />
       );
 
-      const charCounter = container.querySelector('[class*="text-destructive"]');
+      // Check for error color class
+      const charCounter = container.querySelector('[class*="text-red-600"]');
       expect(charCounter).toBeInTheDocument();
+
+      // Check for error emoji indicator
+      const errorEmoji = screen.getByRole('img', { name: /Error: Character limit exceeded/i });
+      expect(errorEmoji).toBeInTheDocument();
     });
   });
 
