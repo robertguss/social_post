@@ -57,4 +57,11 @@ export default defineSchema({
     .index("by_user_status", ["clerkUserId", "status"])
     .index("by_next_scheduled", ["nextScheduledTime"])
     .index("by_status_next_scheduled", ["status", "nextScheduledTime"]),
+
+  // Stores user-specific preferences and settings
+  user_preferences: defineTable({
+    clerkUserId: v.string(),
+    enableContentPrePopulation: v.boolean(), // Default: true - Smart content pre-fill from Twitter to LinkedIn
+    // Future preference fields can be added here
+  }).index("by_user", ["clerkUserId"]),
 });

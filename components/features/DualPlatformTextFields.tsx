@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "react";
+import { useDebounce } from "use-debounce";
+import { toast } from "sonner";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { IconChevronDown, IconChevronUp, IconBrandX, IconBrandLinkedin } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
 
 /**
  * DualPlatformTextFields Component
@@ -83,6 +87,15 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
     const [twitterExpanded, setTwitterExpanded] = useState(true);
     const [linkedInExpanded, setLinkedInExpanded] = useState(true);
 
+    // Pre-fill button state
+    const [showPreFillButton, setShowPreFillButton] = useState(false);
+
+    // Debounce twitter content (2 second delay)
+    const [debouncedTwitterContent] = useDebounce(twitterContent, 2000);
+
+    // Fetch user preferences
+    const userPreferences = useQuery(api.userPreferences.getUserPreferences);
+
     // Textarea refs
     const twitterTextareaRef = useRef<HTMLTextAreaElement>(null);
     const linkedInTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -106,6 +119,33 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
     // Toggle expand/collapse
     const toggleTwitterExpanded = () => setTwitterExpanded(!twitterExpanded);
     const toggleLinkedInExpanded = () => setLinkedInExpanded(!linkedInExpanded);
+
+    // Check if pre-fill button should be shown (after debounce)
+    useEffect(() => {
+      // Default to true if preferences haven't loaded yet or if preference not set
+      const isPrePopEnabled = userPreferences?.enableContentPrePopulation ?? true;
+
+      const shouldShow =
+        debouncedTwitterContent.trim().length > 0 &&
+        linkedInContent.trim().length === 0 &&
+        linkedInEnabled &&
+        isPrePopEnabled;
+      setShowPreFillButton(shouldShow);
+    }, [debouncedTwitterContent, linkedInContent, linkedInEnabled, userPreferences]);
+
+    // Handle pre-fill LinkedIn with Twitter content
+    const handlePreFillLinkedIn = () => {
+      onLinkedInChange(twitterContent);
+      // Show success toast
+      toast.success("Pre-filled from Twitter", {
+        description: "LinkedIn content has been populated with your Twitter content",
+        duration: 3000,
+      });
+      // Focus LinkedIn textarea after pre-fill for immediate editing
+      setTimeout(() => {
+        linkedInTextareaRef.current?.focus();
+      }, 0);
+    };
 
     return (
       <div className="space-y-4">
@@ -273,8 +313,25 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
           {/* Content (Collapsible) */}
           {linkedInExpanded && (
             <div className="px-4 pb-4 space-y-2">
-              {/* Action buttons (e.g., Insert Template) */}
-              {linkedInActions && <div className="flex justify-end">{linkedInActions}</div>}
+              {/* Action buttons (e.g., Insert Template) and Pre-fill button */}
+              <div className="flex justify-between items-center">
+                {/* Pre-fill LinkedIn button */}
+                {showPreFillButton && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreFillLinkedIn}
+                    className="border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/10"
+                    aria-label="Copy Twitter content to LinkedIn"
+                  >
+                    <IconCopy className="w-4 h-4 mr-2" />
+                    Pre-fill LinkedIn
+                  </Button>
+                )}
+                <div className="flex-1" />
+                {linkedInActions && <div className="flex justify-end">{linkedInActions}</div>}
+              </div>
 
               {/* Textarea */}
               <Textarea

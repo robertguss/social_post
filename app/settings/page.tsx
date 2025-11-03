@@ -7,8 +7,14 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
 
 /**
  * Settings Page
@@ -22,6 +28,10 @@ export default function SettingsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Fetch user preferences
+  const userPreferences = useQuery(api.userPreferences.getUserPreferences);
+  const updatePreferences = useMutation(api.userPreferences.updateUserPreferences);
 
   useEffect(() => {
     // Check for success/error messages from OAuth callback
@@ -40,6 +50,20 @@ export default function SettingsPage() {
       return () => clearTimeout(timer);
     }
   }, [searchParams]);
+
+  // Handle preference toggle
+  const handlePrePopToggle = async (enabled: boolean) => {
+    try {
+      await updatePreferences({ enableContentPrePopulation: enabled });
+      toast.success("Preference updated", {
+        description: `Smart content pre-fill ${enabled ? "enabled" : "disabled"}`,
+      });
+    } catch (error) {
+      toast.error("Failed to update preference", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
 
   return (
     <SidebarProvider
@@ -87,6 +111,45 @@ export default function SettingsPage() {
                 </div>
 
                 <ConnectionManager />
+              </div>
+
+              {/* Content Creation Preferences Section */}
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Content Creation</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Customize your content creation experience
+                  </p>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Smart Content Pre-fill</CardTitle>
+                    <CardDescription>
+                      Automatically pre-populate LinkedIn content with your Twitter content
+                      for easy expansion
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="enable-pre-pop" className="text-base">
+                          Enable Smart Content Pre-fill
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          When enabled, a button will appear to copy your Twitter content to
+                          LinkedIn after you finish typing
+                        </p>
+                      </div>
+                      <Switch
+                        id="enable-pre-pop"
+                        checked={userPreferences?.enableContentPrePopulation ?? true}
+                        onCheckedChange={handlePrePopToggle}
+                        aria-label="Toggle smart content pre-fill"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>

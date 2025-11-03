@@ -1,6 +1,32 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DualPlatformTextFields } from "../DualPlatformTextFields";
+import { toast } from "sonner";
+import * as convexReact from "convex/react";
+
+// Mock Convex useQuery hook
+jest.mock("convex/react", () => ({
+  useQuery: jest.fn(),
+}));
+
+// Mock Convex API
+jest.mock("@/convex/_generated/api", () => ({
+  api: {
+    userPreferences: {
+      getUserPreferences: "userPreferences:getUserPreferences",
+    },
+  },
+}));
+
+// Mock sonner toast
+jest.mock("sonner", () => ({
+  toast: {
+    success: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
+const mockUseQuery = convexReact.useQuery as jest.MockedFunction<typeof convexReact.useQuery>;
 
 describe("DualPlatformTextFields Component", () => {
   const mockTwitterChange = jest.fn();
@@ -19,8 +45,14 @@ describe("DualPlatformTextFields Component", () => {
     onLinkedInEnabledChange: mockLinkedInEnabledChange,
   };
 
+  beforeEach(() => {
+    // Set default mock return value for useQuery (preferences enabled)
+    mockUseQuery.mockReturnValue({ enableContentPrePopulation: true });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
+    jest.clearAllTimers();
   });
 
   describe("Rendering", () => {
@@ -447,6 +479,211 @@ describe("DualPlatformTextFields Component", () => {
 
       expect(twitterToggle).toBeInTheDocument();
       expect(linkedInToggle).toBeInTheDocument();
+    });
+  });
+
+  describe("Smart Content Pre-population (Story 5.2)", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    });
+
+    it("should show pre-fill button after 2 second debounce when Twitter has content and LinkedIn is empty", async () => {
+      const { rerender } = render(<DualPlatformTextFields {...defaultProps} />);
+
+      // Initially no button
+      expect(screen.queryByText("Pre-fill LinkedIn")).not.toBeInTheDocument();
+
+      // Add Twitter content
+      rerender(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+        />
+      );
+
+      // Button should not appear immediately
+      expect(screen.queryByText("Pre-fill LinkedIn")).not.toBeInTheDocument();
+
+      // Fast-forward 2 seconds for debounce
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      // Now button should appear
+      await waitFor(() => {
+        expect(screen.getByText("Pre-fill LinkedIn")).toBeInTheDocument();
+      });
+    });
+
+    it("should NOT show pre-fill button when LinkedIn has content", async () => {
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent="Already has content"
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Pre-fill LinkedIn")).not.toBeInTheDocument();
+      });
+    });
+
+    it("should NOT show pre-fill button when Twitter is empty", async () => {
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent=""
+          linkedInContent=""
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Pre-fill LinkedIn")).not.toBeInTheDocument();
+      });
+    });
+
+    it("should NOT show pre-fill button when LinkedIn is disabled", async () => {
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+          linkedInEnabled={false}
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Pre-fill LinkedIn")).not.toBeInTheDocument();
+      });
+    });
+
+    it("should copy Twitter content to LinkedIn when pre-fill button is clicked", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Pre-fill LinkedIn")).toBeInTheDocument();
+      });
+
+      const preFillButton = screen.getByText("Pre-fill LinkedIn");
+      await user.click(preFillButton);
+
+      expect(mockLinkedInChange).toHaveBeenCalledWith("Hello Twitter");
+    });
+
+    it("should show success toast after pre-fill", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Pre-fill LinkedIn")).toBeInTheDocument();
+      });
+
+      const preFillButton = screen.getByText("Pre-fill LinkedIn");
+      await user.click(preFillButton);
+
+      expect(toast.success).toHaveBeenCalledWith("Pre-filled from Twitter", {
+        description: "LinkedIn content has been populated with your Twitter content",
+        duration: 3000,
+      });
+    });
+
+    it("should NOT show pre-fill button when user preference is disabled", async () => {
+      mockUseQuery.mockReturnValue({ enableContentPrePopulation: false });
+
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Pre-fill LinkedIn")).not.toBeInTheDocument();
+      });
+    });
+
+    it("should default to showing button when preferences haven't loaded yet", async () => {
+      mockUseQuery.mockReturnValue(null);
+
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Pre-fill LinkedIn")).toBeInTheDocument();
+      });
+    });
+
+    it("should have proper aria-label on pre-fill button", async () => {
+      render(
+        <DualPlatformTextFields
+          {...defaultProps}
+          twitterContent="Hello Twitter"
+          linkedInContent=""
+        />
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: "Copy Twitter content to LinkedIn" });
+        expect(button).toBeInTheDocument();
+      });
     });
   });
 });

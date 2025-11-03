@@ -18,6 +18,7 @@ import type * as publishing from "../publishing.js";
 import type * as queues from "../queues.js";
 import type * as templates from "../templates.js";
 import type * as tokenRefresh from "../tokenRefresh.js";
+import type * as userPreferences from "../userPreferences.js";
 
 import type {
   ApiFromModules,
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   queues: typeof queues;
   templates: typeof templates;
   tokenRefresh: typeof tokenRefresh;
+  userPreferences: typeof userPreferences;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
