@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { QueueCard } from "./QueueCard";
 import { ConflictResolutionModal } from "./ConflictResolutionModal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,10 +13,10 @@ import { useSearchParams } from "next/navigation";
 type StatusFilter = "all" | "active" | "paused" | "completed";
 
 type Queue = {
-  _id: string;
+  _id: Id<"recurring_queues">;
   _creationTime: number;
   clerkUserId: string;
-  originalPostId: string;
+  originalPostId: Id<"posts">;
   status: string;
   interval: number;
   nextScheduledTime: number;
@@ -23,7 +24,7 @@ type Queue = {
   executionCount: number;
   maxExecutions?: number;
   originalPost: {
-    _id: string;
+    _id: Id<"posts">;
     twitterContent?: string;
     linkedInContent?: string;
     status: string;
@@ -45,7 +46,7 @@ type Queue = {
 export function QueueList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null);
-  const [highlightedQueueId, setHighlightedQueueId] = useState<string | null>(null);
+  const [highlightedQueueId, setHighlightedQueueId] = useState<Id<"recurring_queues"> | null>(null);
   const searchParams = useSearchParams();
 
   // Fetch queues with optional status filter
@@ -61,7 +62,7 @@ export function QueueList() {
   useEffect(() => {
     const highlight = searchParams?.get("highlight");
     if (highlight) {
-      setHighlightedQueueId(highlight);
+      setHighlightedQueueId(highlight as Id<"recurring_queues">);
       // Clear highlight after 2 seconds
       const timer = setTimeout(() => {
         setHighlightedQueueId(null);

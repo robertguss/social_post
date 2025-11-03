@@ -85,7 +85,6 @@ describe("PostScheduler - Character Count Validation", () => {
       // Need to set a scheduled time for button to be enabled
       // This is a simplified test - in reality we'd need to interact with the date picker
       // For now, we check that the button is not disabled due to character count
-      const submitButton = screen.getByRole("button", { name: /Schedule Post/i });
 
       // Button is disabled but not due to character count (it's due to missing scheduled time)
       // The important thing is that no character limit warning is shown

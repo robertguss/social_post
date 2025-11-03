@@ -96,8 +96,8 @@ describe("getDraftById query - logic validation", () => {
   });
 
   it("should verify user ownership", () => {
-    const draftOwnerId = "user123";
-    const requestingUserId = "user456";
+    const draftOwnerId: string = "user123";
+    const requestingUserId: string = "user456";
 
     const isOwner = draftOwnerId === requestingUserId;
     expect(isOwner).toBe(false);
@@ -118,7 +118,7 @@ describe("getDraftById query - logic validation", () => {
 
 describe("deleteDraft mutation - logic validation", () => {
   it("should prevent deletion of non-draft posts", () => {
-    const postStatus = "scheduled";
+    const postStatus: string = "scheduled";
 
     expect(postStatus !== "draft").toBe(true);
     expect(() => {
@@ -127,8 +127,8 @@ describe("deleteDraft mutation - logic validation", () => {
   });
 
   it("should verify user ownership before deletion", () => {
-    const draftOwnerId = "user123";
-    const requestingUserId = "user456";
+    const draftOwnerId: string = "user123";
+    const requestingUserId: string = "user456";
 
     const isOwner = draftOwnerId === requestingUserId;
     expect(isOwner).toBe(false);

@@ -84,8 +84,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       convex:
-        specifier: ^1.28.0
-        version: 1.28.0(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
+        specifier: ^1.28.2
+        version: 1.28.2(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -158,7 +158,7 @@ importers:
         version: 19.2.2(@types/react@19.2.2)
       convex-test:
         specifier: ^0.0.38
-        version: 0.0.38(convex@1.28.0(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0))
+        version: 0.0.38(convex@1.28.2(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0))
       eslint:
         specifier: ^9
         version: 9.38.0(jiti@2.6.1)
@@ -2555,8 +2555,8 @@ packages:
     peerDependencies:
       convex: ^1.16.4
 
-  convex@1.28.0:
-    resolution: {integrity: sha512-40FgeJ/LxP9TxnkDDztU/A5gcGTdq1klcTT5mM0Ak+kSlQiDktMpjNX1TfkWLxXaE3lI4qvawKH95v2RiYgFxA==}
+  convex@1.28.2:
+    resolution: {integrity: sha512-KzNsLbcVXb1OhpVQ+vHMgu+hjrsQ1ks5BZwJ2lR8O+nfbeJXE6tHbvsg1H17+ooUDvIDBSMT3vXS+AlodDhTnQ==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
@@ -7653,11 +7653,11 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.38(convex@1.28.0(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)):
+  convex-test@0.0.38(convex@1.28.2(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)):
     dependencies:
-      convex: 1.28.0(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
+      convex: 1.28.2(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
 
-  convex@1.28.0(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0):
+  convex@1.28.2(@clerk/clerk-react@5.53.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0):
     dependencies:
       esbuild: 0.25.4
       prettier: 3.6.2
