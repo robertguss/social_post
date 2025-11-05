@@ -4,17 +4,21 @@ import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Id, Doc } from "@/convex/_generated/dataModel";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { QuickReschedule } from "./QuickReschedule";
-import { DualPlatformTextFields, DualPlatformTextFieldsRef } from "./DualPlatformTextFields";
+import { LinkedInFormattingHints } from "./LinkedInFormattingHints";
 import { PreviewModal } from "./PreviewModal";
 import { RecommendedTimes } from "./RecommendedTimes";
-import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy } from "@tabler/icons-react";
+import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -101,8 +105,18 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Clone indicator state
   const [showCloneBadge, setShowCloneBadge] = useState(!!postData?.clonedFromPostId);
 
-  // Ref for DualPlatformTextFields component (to access textarea refs)
-  const dualFieldsRef = useRef<DualPlatformTextFieldsRef>(null);
+  // Textarea refs for template insertion
+  const twitterTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const linkedInTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // LinkedIn hints visibility state with localStorage persistence
+  const [showLinkedInHints, setShowLinkedInHints] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("linkedin-hints-visible");
+      return stored === null ? true : stored === "true";
+    }
+    return true;
+  });
 
   // Twitter character count (280 max, warning at 260) using platform-specific rules
   const twitterCharCount = getTwitterCharacterCount(twitterContent);
@@ -197,9 +211,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     const templateContent = template.content;
     const isTwitter = activeField === "twitter";
     const existingContent = isTwitter ? twitterContent : linkedInContent;
-    const textareaRef = isTwitter
-      ? dualFieldsRef.current?.twitterTextareaRef
-      : dualFieldsRef.current?.linkedInTextareaRef;
+    const textareaRef = isTwitter ? twitterTextareaRef : linkedInTextareaRef;
     const maxChars = isTwitter ? TWITTER_MAX_CHARS : LINKEDIN_MAX_CHARS;
 
     // Check if insertion would exceed character limit
@@ -250,6 +262,29 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
       // Log error but don't block insertion
       console.error("Failed to increment template usage:", error);
     }
+  };
+
+  /**
+   * Handle dismissing LinkedIn hints
+   */
+  const handleDismissLinkedInHints = () => {
+    setShowLinkedInHints(false);
+    localStorage.setItem("linkedin-hints-visible", "false");
+  };
+
+  /**
+   * Handle pre-fill LinkedIn with Twitter content
+   */
+  const handlePreFillLinkedIn = () => {
+    setLinkedInContent(twitterContent);
+    toast.success("Pre-filled from Twitter", {
+      description: "LinkedIn content has been populated with your Twitter content",
+      duration: 3000,
+    });
+    // Focus LinkedIn textarea after pre-fill
+    setTimeout(() => {
+      linkedInTextareaRef.current?.focus();
+    }, 0);
   };
 
   /**
@@ -456,116 +491,298 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
             </div>
           )}
 
-          {/* Dual Platform Text Fields */}
-          <DualPlatformTextFields
-            ref={dualFieldsRef}
-            twitterContent={twitterContent}
-            onTwitterChange={setTwitterContent}
-            twitterEnabled={enableTwitter}
-            onTwitterEnabledChange={setEnableTwitter}
-            twitterCharCount={twitterCharCount}
-            twitterMaxChars={TWITTER_MAX_CHARS}
-            twitterWarningThreshold={TWITTER_WARNING_THRESHOLD}
-            linkedInContent={linkedInContent}
-            onLinkedInChange={setLinkedInContent}
-            linkedInEnabled={enableLinkedIn}
-            onLinkedInEnabledChange={setEnableLinkedIn}
-            linkedInCharCount={linkedInCharCount}
-            linkedInMaxChars={LINKEDIN_MAX_CHARS}
-            linkedInWarningThreshold={LINKEDIN_WARNING_THRESHOLD}
-            twitterActions={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenTemplatePicker("twitter")}
-                disabled={!enableTwitter}
-              >
-                <IconTemplate className="mr-2 h-4 w-4" />
-                Insert Template
-              </Button>
-            }
-            linkedInActions={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenTemplatePicker("linkedin")}
-                disabled={!enableLinkedIn}
-              >
-                <IconTemplate className="mr-2 h-4 w-4" />
-                Insert Template
-              </Button>
-            }
-          />
+          {/* Tabbed Platform Interface */}
+          <Tabs defaultValue="twitter" className="w-full">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="twitter" className="gap-2">
+                <IconBrandX className="w-4 h-4" />
+                Twitter
+              </TabsTrigger>
+              <TabsTrigger value="linkedin" className="gap-2">
+                <IconBrandLinkedin className="w-4 h-4" />
+                LinkedIn
+              </TabsTrigger>
+              <TabsTrigger value="both" className="gap-2">
+                Both Platforms
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Twitter Date/Time Selector */}
-          {enableTwitter && (
-            <div className="space-y-2">
-              <Label htmlFor="twitter-scheduled-time">
-                Twitter Scheduled Time <span className="text-destructive">*</span>
-              </Label>
+            {/* Twitter Tab */}
+            <TabsContent value="twitter" className="space-y-4 mt-4">
+              <div className="border-2 border-[#1DA1F2] rounded-lg p-4 bg-[#1DA1F2]/5">
+                {/* Twitter Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <IconBrandX className="w-6 h-6 text-[#1DA1F2]" />
+                    <Label className="text-base font-semibold">Twitter/X Content</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="twitter-enabled"
+                      checked={enableTwitter}
+                      onCheckedChange={setEnableTwitter}
+                      aria-label="Enable Twitter posting"
+                    />
+                    <Label htmlFor="twitter-enabled" className="text-sm text-muted-foreground cursor-pointer">
+                      {enableTwitter ? "Enabled" : "Disabled"}
+                    </Label>
+                  </div>
+                </div>
 
-              {/* Quick Reschedule Suggestions for Twitter */}
-              {postData?.clonedFromPostId && originalPost?.twitterScheduledTime && (
-                <QuickReschedule
-                  originalScheduledTime={originalPost.twitterScheduledTime}
-                  platform="twitter"
-                  onSelectTime={handleTwitterTimeSelect}
-                />
+                {/* Twitter Content */}
+                <div className="space-y-2">
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenTemplatePicker("twitter")}
+                      disabled={!enableTwitter}
+                    >
+                      <IconTemplate className="mr-2 h-4 w-4" />
+                      Insert Template
+                    </Button>
+                  </div>
+                  <Textarea
+                    ref={twitterTextareaRef}
+                    placeholder="What's happening?"
+                    value={twitterContent}
+                    onChange={(e) => setTwitterContent(e.target.value)}
+                    disabled={!enableTwitter}
+                    className="min-h-[120px] resize-y"
+                  />
+                  <div className="flex justify-end">
+                    <CharacterCounter
+                      currentCount={twitterCharCount}
+                      maxCount={TWITTER_MAX_CHARS}
+                      warningThreshold={TWITTER_WARNING_THRESHOLD}
+                      platform="twitter"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Twitter Scheduling */}
+              {enableTwitter && (
+                <div className="space-y-2">
+                  <Label htmlFor="twitter-scheduled-time">
+                    Twitter Scheduled Time <span className="text-destructive">*</span>
+                  </Label>
+
+                  {postData?.clonedFromPostId && originalPost?.twitterScheduledTime && (
+                    <QuickReschedule
+                      originalScheduledTime={originalPost.twitterScheduledTime}
+                      platform="twitter"
+                      onSelectTime={handleTwitterTimeSelect}
+                    />
+                  )}
+
+                  <DateTimePicker
+                    date={twitterScheduledTime}
+                    setDate={setTwitterScheduledTime}
+                    placeholder="Select date and time"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Time is in your local timezone
+                  </p>
+
+                  <RecommendedTimes
+                    selectedDate={twitterScheduledTime}
+                    platform="twitter"
+                    onTimeSelect={handleTwitterTimeSelect}
+                  />
+                </div>
               )}
 
-              <DateTimePicker
-                date={twitterScheduledTime}
-                setDate={setTwitterScheduledTime}
-                placeholder="Select date and time"
-              />
-              <p className="text-sm text-muted-foreground">
-                Time is in your local timezone
-              </p>
-
-              {/* Recommended Times for Twitter */}
-              <RecommendedTimes
-                selectedDate={twitterScheduledTime}
-                platform="twitter"
-                onTimeSelect={handleTwitterTimeSelect}
-              />
-            </div>
-          )}
-
-          {/* LinkedIn Date/Time Selector */}
-          {enableLinkedIn && (
-            <div className="space-y-2">
-              <Label htmlFor="linkedin-scheduled-time">
-                LinkedIn Scheduled Time <span className="text-destructive">*</span>
-              </Label>
-
-              {/* Quick Reschedule Suggestions for LinkedIn */}
-              {postData?.clonedFromPostId && originalPost?.linkedInScheduledTime && (
-                <QuickReschedule
-                  originalScheduledTime={originalPost.linkedInScheduledTime}
-                  platform="linkedin"
-                  onSelectTime={handleLinkedInTimeSelect}
+              {/* Quick toggle for LinkedIn */}
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                <Switch
+                  id="also-linkedin"
+                  checked={enableLinkedIn}
+                  onCheckedChange={setEnableLinkedIn}
                 />
+                <Label htmlFor="also-linkedin" className="text-sm cursor-pointer">
+                  Also post to LinkedIn
+                </Label>
+              </div>
+            </TabsContent>
+
+            {/* LinkedIn Tab */}
+            <TabsContent value="linkedin" className="space-y-4 mt-4">
+              <div className="border-2 border-[#0A66C2] rounded-lg p-4 bg-[#0A66C2]/5">
+                {/* LinkedIn Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <IconBrandLinkedin className="w-6 h-6 text-[#0A66C2]" />
+                    <Label className="text-base font-semibold">LinkedIn Content</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="linkedin-enabled"
+                      checked={enableLinkedIn}
+                      onCheckedChange={setEnableLinkedIn}
+                      aria-label="Enable LinkedIn posting"
+                    />
+                    <Label htmlFor="linkedin-enabled" className="text-sm text-muted-foreground cursor-pointer">
+                      {enableLinkedIn ? "Enabled" : "Disabled"}
+                    </Label>
+                  </div>
+                </div>
+
+                {/* LinkedIn Content */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    {twitterContent.trim() && !linkedInContent.trim() && enableLinkedIn && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreFillLinkedIn}
+                        className="border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/10"
+                      >
+                        <IconCopy className="w-4 h-4 mr-2" />
+                        Pre-fill from Twitter
+                      </Button>
+                    )}
+                    <div className="flex-1" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenTemplatePicker("linkedin")}
+                      disabled={!enableLinkedIn}
+                    >
+                      <IconTemplate className="mr-2 h-4 w-4" />
+                      Insert Template
+                    </Button>
+                  </div>
+                  <Textarea
+                    ref={linkedInTextareaRef}
+                    placeholder="Share your professional insights..."
+                    value={linkedInContent}
+                    onChange={(e) => setLinkedInContent(e.target.value)}
+                    disabled={!enableLinkedIn}
+                    className="min-h-[120px] resize-y"
+                  />
+                  <div className="flex justify-end">
+                    <CharacterCounter
+                      currentCount={linkedInCharCount}
+                      maxCount={LINKEDIN_MAX_CHARS}
+                      warningThreshold={LINKEDIN_WARNING_THRESHOLD}
+                      platform="linkedin"
+                    />
+                  </div>
+
+                  {/* LinkedIn Formatting Hints */}
+                  <LinkedInFormattingHints
+                    content={linkedInContent}
+                    isVisible={showLinkedInHints}
+                    onDismiss={handleDismissLinkedInHints}
+                  />
+                </div>
+              </div>
+
+              {/* LinkedIn Scheduling */}
+              {enableLinkedIn && (
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin-scheduled-time">
+                    LinkedIn Scheduled Time <span className="text-destructive">*</span>
+                  </Label>
+
+                  {postData?.clonedFromPostId && originalPost?.linkedInScheduledTime && (
+                    <QuickReschedule
+                      originalScheduledTime={originalPost.linkedInScheduledTime}
+                      platform="linkedin"
+                      onSelectTime={handleLinkedInTimeSelect}
+                    />
+                  )}
+
+                  <DateTimePicker
+                    date={linkedInScheduledTime}
+                    setDate={setLinkedInScheduledTime}
+                    placeholder="Select date and time"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Time is in your local timezone
+                  </p>
+
+                  <RecommendedTimes
+                    selectedDate={linkedInScheduledTime}
+                    platform="linkedin"
+                    onTimeSelect={handleLinkedInTimeSelect}
+                  />
+                </div>
               )}
 
-              <DateTimePicker
-                date={linkedInScheduledTime}
-                setDate={setLinkedInScheduledTime}
-                placeholder="Select date and time"
-              />
-              <p className="text-sm text-muted-foreground">
-                Time is in your local timezone
-              </p>
+              {/* Quick toggle for Twitter */}
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                <Switch
+                  id="also-twitter"
+                  checked={enableTwitter}
+                  onCheckedChange={setEnableTwitter}
+                />
+                <Label htmlFor="also-twitter" className="text-sm cursor-pointer">
+                  Also post to Twitter
+                </Label>
+              </div>
+            </TabsContent>
 
-              {/* Recommended Times for LinkedIn */}
-              <RecommendedTimes
-                selectedDate={linkedInScheduledTime}
-                platform="linkedin"
-                onTimeSelect={handleLinkedInTimeSelect}
-              />
-            </div>
-          )}
+            {/* Both Platforms Tab */}
+            <TabsContent value="both" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Twitter Summary */}
+                  <div className="border-2 border-[#1DA1F2] rounded-lg p-4 bg-[#1DA1F2]/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <IconBrandX className="w-5 h-5 text-[#1DA1F2]" />
+                        <h3 className="font-semibold">Twitter</h3>
+                      </div>
+                      <Switch
+                        checked={enableTwitter}
+                        onCheckedChange={setEnableTwitter}
+                      />
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <p className={twitterContent.trim() ? "text-green-600" : "text-muted-foreground"}>
+                        {twitterContent.trim() ? "✓ Content set" : "○ No content"}
+                      </p>
+                      <p className={twitterScheduledTime ? "text-green-600" : "text-muted-foreground"}>
+                        {twitterScheduledTime ? `✓ ${formatScheduledTime(twitterScheduledTime)}` : "○ No time set"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* LinkedIn Summary */}
+                  <div className="border-2 border-[#0A66C2] rounded-lg p-4 bg-[#0A66C2]/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <IconBrandLinkedin className="w-5 h-5 text-[#0A66C2]" />
+                        <h3 className="font-semibold">LinkedIn</h3>
+                      </div>
+                      <Switch
+                        checked={enableLinkedIn}
+                        onCheckedChange={setEnableLinkedIn}
+                      />
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <p className={linkedInContent.trim() ? "text-green-600" : "text-muted-foreground"}>
+                        {linkedInContent.trim() ? "✓ Content set" : "○ No content"}
+                      </p>
+                      <p className={linkedInScheduledTime ? "text-green-600" : "text-muted-foreground"}>
+                        {linkedInScheduledTime ? `✓ ${formatScheduledTime(linkedInScheduledTime)}` : "○ No time set"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground text-center">
+                  Switch to individual platform tabs to edit content and scheduling
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* URL Field (Shared) */}
           <div className="space-y-2">
