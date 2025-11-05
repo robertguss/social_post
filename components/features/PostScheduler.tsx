@@ -69,7 +69,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
   // Platform selection state
   const [enableTwitter, setEnableTwitter] = useState(true);
-  const [enableLinkedIn, setEnableLinkedIn] = useState(false);
+  const [enableLinkedIn, setEnableLinkedIn] = useState(true);
 
   // Twitter form state
   const [twitterContent, setTwitterContent] = useState("");
@@ -479,6 +479,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenTemplatePicker("twitter")}
+                disabled={!enableTwitter}
               >
                 <IconTemplate className="mr-2 h-4 w-4" />
                 Insert Template
@@ -490,6 +491,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenTemplatePicker("linkedin")}
+                disabled={!enableLinkedIn}
               >
                 <IconTemplate className="mr-2 h-4 w-4" />
                 Insert Template

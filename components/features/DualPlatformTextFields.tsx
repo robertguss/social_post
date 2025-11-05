@@ -173,22 +173,18 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
           className={`border-2 rounded-lg transition-all ${
             twitterEnabled
               ? "border-[#1DA1F2] bg-[#1DA1F2]/5"
-              : "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60"
+              : "border-[#1DA1F2]/30 bg-[#1DA1F2]/5"
           }`}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 pb-2">
             <div className="flex items-center gap-3 flex-1">
               <IconBrandX
-                className={`w-6 h-6 ${
-                  twitterEnabled ? "text-[#1DA1F2]" : "text-gray-400 dark:text-gray-600"
-                }`}
+                className="w-6 h-6 text-[#1DA1F2]"
               />
               <Label
                 htmlFor="twitter-content"
-                className={`text-base font-semibold ${
-                  twitterEnabled ? "text-foreground" : "text-muted-foreground"
-                }`}
+                className="text-base font-semibold text-foreground"
               >
                 {twitterLabel}
               </Label>
@@ -269,22 +265,18 @@ export const DualPlatformTextFields = forwardRef<DualPlatformTextFieldsRef, Dual
           className={`border-2 rounded-lg transition-all ${
             linkedInEnabled
               ? "border-[#0A66C2] bg-[#0A66C2]/5"
-              : "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60"
+              : "border-[#0A66C2]/30 bg-[#0A66C2]/5"
           }`}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 pb-2">
             <div className="flex items-center gap-3 flex-1">
               <IconBrandLinkedin
-                className={`w-6 h-6 ${
-                  linkedInEnabled ? "text-[#0A66C2]" : "text-gray-400 dark:text-gray-600"
-                }`}
+                className="w-6 h-6 text-[#0A66C2]"
               />
               <Label
                 htmlFor="linkedin-content"
-                className={`text-base font-semibold ${
-                  linkedInEnabled ? "text-foreground" : "text-muted-foreground"
-                }`}
+                className="text-base font-semibold text-foreground"
               >
                 {linkedInLabel}
               </Label>
