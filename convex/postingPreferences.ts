@@ -174,10 +174,11 @@ export const getPostingPreferences = query({
     // Build query with optional platform filter
     let query;
     if (args.platform) {
+      const platform = args.platform;
       query = ctx.db
         .query("posting_preferences")
         .withIndex("by_user_platform", (q) =>
-          q.eq("clerkUserId", clerkUserId).eq("platform", args.platform)
+          q.eq("clerkUserId", clerkUserId).eq("platform", platform)
         );
     } else {
       // Get all preferences for user across all platforms

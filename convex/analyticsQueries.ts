@@ -5,7 +5,7 @@ import { v } from "convex/values";
  * Internal query to retrieve a post for metrics fetching.
  * Ensures the post belongs to the authenticated user.
  */
-export const getPostForMetrics = mutation({
+export const getPostForMetrics = internalMutation({
   args: {
     postId: v.id("posts"),
     clerkUserId: v.string(),

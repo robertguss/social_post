@@ -38,7 +38,7 @@ describe("Posting Preferences Integration Tests", () => {
       expect(recommendations.length).toBeGreaterThan(0);
 
       // Find user preference in recommendations
-      const userPrefRec = recommendations.find((rec) => rec.source === "user preference");
+      const userPrefRec = recommendations.find((rec: any) => rec.source === "user preference");
       expect(userPrefRec).toBeDefined();
       expect(userPrefRec?.engagementScore).toBe(95); // High priority score
     });
@@ -60,7 +60,7 @@ describe("Posting Preferences Integration Tests", () => {
       // All recommendations should be research-based
       expect(recommendations).toBeDefined();
       expect(recommendations.length).toBeGreaterThan(0);
-      expect(recommendations.every((rec) => rec.source !== "user preference")).toBe(true);
+      expect(recommendations.every((rec: any) => rec.source !== "user preference")).toBe(true);
     });
 
     test("should mix custom preferences with research-based if fewer than 3 custom", async () => {
@@ -85,11 +85,11 @@ describe("Posting Preferences Integration Tests", () => {
       expect(recommendations).toHaveLength(3);
 
       // First recommendation should be user preference
-      const userPrefRec = recommendations.find((rec) => rec.source === "user preference");
+      const userPrefRec = recommendations.find((rec: any) => rec.source === "user preference");
       expect(userPrefRec).toBeDefined();
 
       // Remaining should be research-based
-      const researchRecs = recommendations.filter((rec) => rec.source !== "user preference");
+      const researchRecs = recommendations.filter((rec: any) => rec.source !== "user preference");
       expect(researchRecs.length).toBeGreaterThan(0);
     });
 
@@ -115,7 +115,7 @@ describe("Posting Preferences Integration Tests", () => {
       });
 
       // Should include both custom time ranges
-      const userPrefs = recommendations.filter((rec) => rec.source === "user preference");
+      const userPrefs = recommendations.filter((rec: any) => rec.source === "user preference");
       expect(userPrefs.length).toBe(2);
     });
   });
@@ -132,7 +132,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const initialUserPrefs = initialRecs.filter((rec) => rec.source === "user preference");
+      const initialUserPrefs = initialRecs.filter((rec: any) => rec.source === "user preference");
       expect(initialUserPrefs).toHaveLength(0);
 
       // Add a custom preference
@@ -150,7 +150,7 @@ describe("Posting Preferences Integration Tests", () => {
       });
 
       // Should now include user preference
-      const updatedUserPrefs = updatedRecs.filter((rec) => rec.source === "user preference");
+      const updatedUserPrefs = updatedRecs.filter((rec: any) => rec.source === "user preference");
       expect(updatedUserPrefs.length).toBeGreaterThan(0);
     });
 
@@ -172,7 +172,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const userPrefs = recsWithPref.filter((rec) => rec.source === "user preference");
+      const userPrefs = recsWithPref.filter((rec: any) => rec.source === "user preference");
       expect(userPrefs.length).toBeGreaterThan(0);
 
       // Delete preference
@@ -222,7 +222,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const user1Prefs = user1Recs.filter((rec) => rec.source === "user preference");
+      const user1Prefs = user1Recs.filter((rec: any) => rec.source === "user preference");
       expect(user1Prefs.length).toBeGreaterThan(0);
       // Verify time range matches user1's preference (7-9am)
       expect(user1Prefs[0].timeRange).toContain("7");
@@ -234,7 +234,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const user2Prefs = user2Recs.filter((rec) => rec.source === "user preference");
+      const user2Prefs = user2Recs.filter((rec: any) => rec.source === "user preference");
       expect(user2Prefs.length).toBeGreaterThan(0);
       // Verify time range matches user2's preference (2-4pm / 14-16)
       expect(user2Prefs[0].timeRange).toContain("2"); // 2 PM
@@ -285,7 +285,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const twitterUserPrefs = twitterRecs.filter((rec) => rec.source === "user preference");
+      const twitterUserPrefs = twitterRecs.filter((rec: any) => rec.source === "user preference");
       expect(twitterUserPrefs.length).toBeGreaterThan(0);
 
       // LinkedIn recommendations should NOT include twitter preference
@@ -295,7 +295,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const linkedInUserPrefs = linkedInRecs.filter((rec) => rec.source === "user preference");
+      const linkedInUserPrefs = linkedInRecs.filter((rec: any) => rec.source === "user preference");
       expect(linkedInUserPrefs).toHaveLength(0);
     });
 
@@ -317,7 +317,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const mondayUserPrefs = mondayRecs.filter((rec) => rec.source === "user preference");
+      const mondayUserPrefs = mondayRecs.filter((rec: any) => rec.source === "user preference");
       expect(mondayUserPrefs.length).toBeGreaterThan(0);
 
       // Tuesday recommendations should NOT include Monday preference
@@ -327,7 +327,7 @@ describe("Posting Preferences Integration Tests", () => {
         userTimezone: "America/New_York",
       });
 
-      const tuesdayUserPrefs = tuesdayRecs.filter((rec) => rec.source === "user preference");
+      const tuesdayUserPrefs = tuesdayRecs.filter((rec: any) => rec.source === "user preference");
       expect(tuesdayUserPrefs).toHaveLength(0);
     });
   });

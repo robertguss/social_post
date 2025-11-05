@@ -333,6 +333,20 @@ export const scheduledMetricsFetch = internalAction({
  * @param dateRangeFilter - Filter by date range: "7days" | "30days" | "alltime"
  * @returns Aggregated performance data by hour with average engagement metrics
  */
+type PerformanceInsightsReturn = {
+  hourlyData: Array<{
+    hour: number;
+    avgLikes: number;
+    avgShares: number;
+    avgComments: number;
+    avgImpressions?: number;
+    postCount: number;
+    totalEngagement: number;
+  }>;
+  hasData: boolean;
+  featureEnabled: boolean;
+};
+
 export const getPerformanceInsights = action({
   args: {
     platform: v.string(),
@@ -353,7 +367,7 @@ export const getPerformanceInsights = action({
     hasData: v.boolean(),
     featureEnabled: v.boolean(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<PerformanceInsightsReturn> => {
     // Authentication check
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -383,7 +397,7 @@ export const getPerformanceInsights = action({
     // "alltime" uses cutoff of 0 (no filter)
 
     // Query all performance records for this platform via internal mutation
-    const insightsData = await ctx.runMutation(internal.analyticsQueries.getPerformanceInsightsInternal, {
+    const insightsData: PerformanceInsightsReturn = await ctx.runMutation(internal.analyticsQueries.getPerformanceInsightsInternal, {
       clerkUserId,
       platform: args.platform,
       dateRangeFilter: args.dateRangeFilter,

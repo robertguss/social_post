@@ -4,14 +4,9 @@
  * Exports modules configuration for convex-test
  */
 
-import * as postingPreferences from "./postingPreferences";
-import * as recommendations from "./recommendations";
-import * as posts from "./posts";
-import * as userPreferences from "./userPreferences";
-
 export const modules = {
-  postingPreferences,
-  recommendations,
-  posts,
-  userPreferences,
+  postingPreferences: async () => import("./postingPreferences"),
+  recommendations: async () => import("./recommendations"),
+  posts: async () => import("./posts"),
+  userPreferences: async () => import("./userPreferences"),
 };

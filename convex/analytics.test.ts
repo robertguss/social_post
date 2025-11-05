@@ -47,7 +47,7 @@ describe("Post Performance Schema Validation (AC: 1)", () => {
         comments: 3,
       };
 
-      expect(metricsWithoutImpressions.impressions).toBeUndefined();
+      expect('impressions' in metricsWithoutImpressions).toBe(false);
     });
   });
 
@@ -302,7 +302,7 @@ describe("Feature Flag Behavior (AC: 6)", () => {
     });
 
     it("should be disabled when flag is 'false'", () => {
-      const flagValue = "false";
+      const flagValue: string = "false";
       const isEnabled = flagValue === "true";
 
       expect(isEnabled).toBe(false);
@@ -316,9 +316,9 @@ describe("Feature Flag Behavior (AC: 6)", () => {
     });
 
     it("should handle case sensitivity (only 'true' string enables)", () => {
-      const value1 = "True";
-      const value2 = "TRUE";
-      const value3 = "1";
+      const value1: string = "True";
+      const value2: string = "TRUE";
+      const value3: string = "1";
       expect(value1 === "true").toBe(false);
       expect(value2 === "true").toBe(false);
       expect(value3 === "true").toBe(false);
