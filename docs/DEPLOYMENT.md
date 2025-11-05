@@ -147,6 +147,9 @@ ENCRYPTION_KEY=your_base64_encoded_32_byte_key
 # Telegram Notifications
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
+
+# Gemini AI (for AI-assisted content generation)
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### Step 3: Verify Deployment
@@ -354,6 +357,10 @@ ENCRYPTION_KEY=xxxxxx
 # Telegram (optional)
 TELEGRAM_BOT_TOKEN=xxxxxx
 TELEGRAM_CHAT_ID=xxxxxx
+
+# Gemini AI (for AI-assisted content generation)
+# Obtain from: https://aistudio.google.com/
+GEMINI_API_KEY=xxxxxx
 ```
 
 ### Generating Secrets

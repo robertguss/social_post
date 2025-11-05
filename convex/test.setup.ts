@@ -9,4 +9,5 @@ export const modules = {
   recommendations: async () => import("./recommendations"),
   posts: async () => import("./posts"),
   userPreferences: async () => import("./userPreferences"),
+  gemini: async () => import("./gemini"),
 };

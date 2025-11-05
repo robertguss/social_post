@@ -83,6 +83,10 @@ ENCRYPTION_KEY=$(openssl rand -base64 32)
 # Notifications (optional)
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
+
+# AI-Assisted Content Generation
+# Obtain from: https://aistudio.google.com/
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### Development Workflow
