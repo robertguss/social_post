@@ -346,12 +346,21 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
           break;
 
         case "expand":
+          // Validate expand conditions (AC 1)
           if (activeField !== "twitter") {
             toast.error("Expand for LinkedIn only works with Twitter content");
             setShowAISuggestionPanel(false);
             return;
           }
-          suggestion = await expandForLinkedIn({ twitterContent: content });
+          // Check if expansion makes sense (LinkedIn should be empty or shorter)
+          if (linkedInContent.trim() && linkedInContent.length >= twitterContent.length) {
+            toast.error("LinkedIn content is already longer than Twitter content");
+            setShowAISuggestionPanel(false);
+            return;
+          }
+          const expandResult = await expandForLinkedIn({ twitterContent: content });
+          suggestion = expandResult.content;
+          warning = expandResult.warning;
           break;
 
         case "hashtags":

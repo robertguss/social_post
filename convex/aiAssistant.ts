@@ -348,28 +348,75 @@ export const adjustTone = action({
 });
 
 /**
- * Expand for LinkedIn - Placeholder Action
+ * Helper function to create LinkedIn expansion prompt
+ */
+function getExpansionPrompt(twitterContent: string): string {
+  const twitterLength = twitterContent.length;
+
+  return `You are a professional content writer specializing in LinkedIn posts. Your task is to expand the following Twitter post into a longer, more detailed LinkedIn post while:
+
+1. Maintaining the core message and all key points
+2. Using a professional, business-appropriate tone suitable for LinkedIn
+3. Targeting 500-1000 characters (current Twitter length: ${twitterLength} chars)
+4. Preserving all URLs, hashtags, and @mentions exactly as they appear
+5. Adding relevant context, details, insights, or examples to make the content more valuable
+6. Using clear formatting with line breaks for readability
+7. Keeping the content engaging and appropriate for LinkedIn's professional audience
+8. If the original content contains URLs, add context about what the link offers
+
+Twitter content:
+"${twitterContent}"
+
+Important: Return ONLY the expanded LinkedIn post text without any additional explanation, formatting markers, or meta-commentary.`.trim();
+}
+
+/**
+ * Helper function to check expansion length and generate warnings
+ */
+function checkExpansionLength(expandedContent: string): string | undefined {
+  const length = expandedContent.length;
+
+  // Warn if expansion is too short (less than 500 chars target)
+  if (length < 500) {
+    return "Expansion is shorter than expected (target: 500-1000 chars). Consider adding more detail or accepting as-is.";
+  }
+
+  // Check LinkedIn character limit (should be rare with proper prompt)
+  if (length > LINKEDIN_MAX_CHARS) {
+    return `Content exceeds LinkedIn's ${LINKEDIN_MAX_CHARS} character limit (${length} chars). Please shorten before accepting.`;
+  }
+
+  return undefined;
+}
+
+/**
+ * Expand for LinkedIn - AI-Powered Action
  *
  * Expands shorter Twitter content into longer, more detailed LinkedIn post.
- * This is a placeholder that returns mock data for UI development (Story 7.2).
- * Actual Gemini integration will be implemented in Story 7.4.
+ * Uses Google's Gemini AI to intelligently expand content while preserving meaning.
  *
  * @param {string} twitterContent - Original Twitter content (max 280 chars)
- * @returns {string} Expanded LinkedIn content
+ * @returns {Object} Expanded content with optional warning
+ * @property {string} content - The AI-expanded LinkedIn content
+ * @property {string} [warning] - Optional warning if expansion is too short or too long
  *
  * @throws {Error} If user is not authenticated
- * @throws {Error} If Twitter content is empty
+ * @throws {Error} If Twitter content is empty or exceeds character limit
  *
  * @example
  * const result = await ctx.runAction(api.aiAssistant.expandForLinkedIn, {
  *   twitterContent: "Just launched our new feature! Check it out."
  * });
+ * // Returns: { content: "I'm excited to announce...", warning?: "..." }
  */
 export const expandForLinkedIn = action({
   args: {
     twitterContent: v.string(),
   },
-  returns: v.string(),
+  returns: v.object({
+    content: v.string(),
+    warning: v.optional(v.string()),
+  }),
   handler: async (ctx, args) => {
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
@@ -380,8 +427,11 @@ export const expandForLinkedIn = action({
     const { twitterContent } = args;
     const userId = identity.subject;
     const requestId = `expand-${userId.slice(0, 8)}-${Date.now()}`;
+    const startTime = Date.now();
 
-    console.log(`[AI Assistant ${requestId}] Expand Twitter content (${twitterContent.length} chars) for LinkedIn`);
+    console.log(
+      `[AI Assistant ${requestId}] Expand for LinkedIn | Twitter length: ${twitterContent.length} chars`,
+    );
 
     // Validation: Twitter content cannot be empty
     if (!twitterContent.trim()) {
@@ -390,37 +440,99 @@ export const expandForLinkedIn = action({
 
     // Validation: Check Twitter character limit
     if (twitterContent.length > TWITTER_MAX_CHARS) {
-      throw new Error(`Twitter content exceeds ${TWITTER_MAX_CHARS} character limit`);
+      throw new Error(
+        `Twitter content exceeds ${TWITTER_MAX_CHARS} character limit`,
+      );
     }
 
     try {
-      // TODO (Story 7.4): Replace with actual Gemini API call
-      // For now, return a mock expanded version
+      // Call Gemini API with retry logic
+      const expandedContent = await withRetry(async () => {
+        const model = getGeminiModel();
+        const prompt = getExpansionPrompt(twitterContent);
 
-      const expandedContent = `${twitterContent}
+        console.log(`[AI Assistant ${requestId}] Sending request to Gemini API`);
 
-Here's a more detailed perspective on this topic:
+        // Generate content with timeout
+        const result = await withTimeout(
+          model.generateContent(prompt),
+          AI_API_TIMEOUT_MS,
+        );
 
-This development represents a significant milestone in our journey. By focusing on delivering value to our users, we've been able to create something truly impactful.
+        const responseText = result.response.text().trim();
 
-Key highlights:
-• Enhanced user experience
-• Improved performance and reliability
-• Thoughtful design decisions
+        console.log(
+          `[AI Assistant ${requestId}] Received response | Length: ${responseText.length} chars`,
+        );
 
-I'd love to hear your thoughts on this. What challenges have you faced in similar situations?
+        return responseText;
+      });
 
-#Technology #Innovation #ProductDevelopment`;
+      const duration = Date.now() - startTime;
 
-      // Ensure we don't exceed LinkedIn character limit
-      const finalContent = expandedContent.slice(0, LINKEDIN_MAX_CHARS);
+      // Check expansion length and generate warning if needed
+      const warning = checkExpansionLength(expandedContent);
 
-      console.log(`[AI Assistant ${requestId}] Success! Expanded content length: ${finalContent.length}`);
+      console.log(
+        `[AI Assistant ${requestId}] Success! | Duration: ${duration}ms | ` +
+          `Original: ${twitterContent.length} chars → Expanded: ${expandedContent.length} chars | ` +
+          `Warning: ${warning ? "Yes" : "No"}`,
+      );
 
-      return finalContent;
+      return {
+        content: expandedContent,
+        warning,
+      };
     } catch (error) {
-      console.error(`[AI Assistant ${requestId}] Error:`, error);
-      throw new Error("AI service temporarily unavailable");
+      const duration = Date.now() - startTime;
+      console.error(
+        `[AI Assistant ${requestId}] Error after ${duration}ms:`,
+        error,
+      );
+
+      // Handle specific error types with user-friendly messages
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes("GEMINI_API_KEY not configured")) {
+        throw new Error(
+          "AI service configuration error. Please contact support.",
+        );
+      } else if (
+        errorMessage.includes("API_KEY_INVALID") ||
+        errorMessage.includes("401") ||
+        errorMessage.includes("Invalid API key")
+      ) {
+        throw new Error(
+          "AI service configuration error. Please contact support.",
+        );
+      } else if (
+        errorMessage.includes("429") ||
+        errorMessage.includes("RESOURCE_EXHAUSTED") ||
+        errorMessage.includes("rate limit")
+      ) {
+        throw new Error(
+          "AI service rate limit exceeded. Please wait a few minutes and try again.",
+        );
+      } else if (
+        errorMessage.includes("timeout") ||
+        errorMessage.includes("DEADLINE_EXCEEDED")
+      ) {
+        throw new Error(
+          "AI request timed out. Please try again or check your network connection.",
+        );
+      } else if (
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("ECONNREFUSED") ||
+        errorMessage.includes("ETIMEDOUT") ||
+        errorMessage.includes("network")
+      ) {
+        throw new Error(
+          "Network error connecting to AI service. Please check your internet connection and try again.",
+        );
+      } else {
+        throw new Error("AI service temporarily unavailable. Please try again.");
+      }
     }
   },
 });

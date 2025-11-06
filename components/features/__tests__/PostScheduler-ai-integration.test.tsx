@@ -66,7 +66,10 @@ describe("PostScheduler AI Integration", () => {
     it("should complete full workflow: select feature → loading → suggestion → accept", async () => {
       const user = userEvent.setup();
 
-      mockAdjustTone.mockResolvedValue("I am pleased to share: Hello world!");
+      mockAdjustTone.mockResolvedValue({
+        content: "I am pleased to share: Hello world!",
+        warning: undefined,
+      });
 
       renderPostScheduler();
 
@@ -118,9 +121,13 @@ describe("PostScheduler AI Integration", () => {
 
 Here's a more detailed perspective on this topic:
 
-This development represents a significant milestone.`;
+This development represents a significant milestone in our journey. By focusing on delivering value to our users, we've been able to create something truly impactful. Looking forward to sharing more insights with the LinkedIn community about how this will benefit our users and drive innovation in the space.`;
 
-      mockExpandForLinkedIn.mockResolvedValue(expandedContent);
+      // Mock new response format with content and optional warning
+      mockExpandForLinkedIn.mockResolvedValue({
+        content: expandedContent,
+        warning: undefined,
+      });
 
       renderPostScheduler();
 
@@ -150,6 +157,111 @@ This development represents a significant milestone.`;
 
       // Verify content was updated in Twitter field (should replace original)
       expect(twitterTextarea).toHaveValue(expandedContent);
+    });
+
+    it("should display warning when expansion is too short", async () => {
+      const user = userEvent.setup();
+
+      const shortExpansion = "Hello world! This is slightly longer but under 500 chars.";
+
+      // Mock response with warning
+      mockExpandForLinkedIn.mockResolvedValue({
+        content: shortExpansion,
+        warning: "Expansion is shorter than expected (target: 500-1000 chars). Consider adding more detail or accepting as-is.",
+      });
+
+      renderPostScheduler();
+
+      // Enter Twitter content
+      const twitterTab = screen.getByRole("tab", { name: /Twitter/i });
+      await user.click(twitterTab);
+
+      const twitterTextarea = screen.getByPlaceholderText("What's happening?");
+      await user.type(twitterTextarea, "Hello world!");
+
+      // Click AI Assistant
+      const aiButton = screen.getByRole("button", { name: /AI Assistant/i });
+      await user.click(aiButton);
+
+      // Select "Expand for LinkedIn"
+      const expandOption = await screen.findByRole("menuitem", { name: /Expand for LinkedIn/i });
+      await user.click(expandOption);
+
+      // Wait for suggestion to appear
+      await waitFor(() => {
+        expect(screen.getByText(shortExpansion)).toBeInTheDocument();
+      });
+
+      // Verify warning badge is displayed
+      expect(screen.getByText(/shorter than expected/i)).toBeInTheDocument();
+    });
+
+    it("should prevent expansion when LinkedIn content is already longer", async () => {
+      const user = userEvent.setup();
+
+      renderPostScheduler();
+
+      // Enter short Twitter content
+      const twitterTab = screen.getByRole("tab", { name: /Twitter/i });
+      await user.click(twitterTab);
+
+      const twitterTextarea = screen.getByPlaceholderText("What's happening?");
+      await user.type(twitterTextarea, "Hello!");
+
+      // Enter longer LinkedIn content
+      const linkedInTab = screen.getByRole("tab", { name: /LinkedIn/i });
+      await user.click(linkedInTab);
+
+      const linkedInTextarea = screen.getByPlaceholderText("Share your professional insights...");
+      await user.type(linkedInTextarea, "This is already a much longer LinkedIn post with more detail.");
+
+      // Switch back to Twitter field
+      await user.click(twitterTab);
+
+      // Click AI Assistant
+      const aiButton = screen.getByRole("button", { name: /AI Assistant/i });
+      await user.click(aiButton);
+
+      // Try to select "Expand for LinkedIn"
+      const expandOption = await screen.findByRole("menuitem", { name: /Expand for LinkedIn/i });
+      await user.click(expandOption);
+
+      // Should show error toast
+      await waitFor(() => {
+        expect(screen.getByText(/LinkedIn content is already longer than Twitter content/i)).toBeInTheDocument();
+      });
+
+      // Should not call the expand action
+      expect(mockExpandForLinkedIn).not.toHaveBeenCalled();
+    });
+
+    it("should show error when trying to expand from LinkedIn field", async () => {
+      const user = userEvent.setup();
+
+      renderPostScheduler();
+
+      // Enter LinkedIn content
+      const linkedInTab = screen.getByRole("tab", { name: /LinkedIn/i });
+      await user.click(linkedInTab);
+
+      const linkedInTextarea = screen.getByPlaceholderText("Share your professional insights...");
+      await user.type(linkedInTextarea, "LinkedIn post content");
+
+      // Click AI Assistant
+      const aiButton = screen.getByRole("button", { name: /AI Assistant/i });
+      await user.click(aiButton);
+
+      // Try to select "Expand for LinkedIn" while on LinkedIn field
+      const expandOption = await screen.findByRole("menuitem", { name: /Expand for LinkedIn/i });
+      await user.click(expandOption);
+
+      // Should show error toast
+      await waitFor(() => {
+        expect(screen.getByText(/Expand for LinkedIn only works with Twitter content/i)).toBeInTheDocument();
+      });
+
+      // Should not call the expand action
+      expect(mockExpandForLinkedIn).not.toHaveBeenCalled();
     });
   });
 
@@ -232,7 +344,10 @@ This development represents a significant milestone.`;
     it("should discard suggestion when Reject button is clicked", async () => {
       const user = userEvent.setup();
 
-      mockAdjustTone.mockResolvedValue("Formal version of content");
+      mockAdjustTone.mockResolvedValue({
+        content: "Formal version of content",
+        warning: undefined,
+      });
 
       renderPostScheduler();
 
@@ -274,7 +389,10 @@ This development represents a significant milestone.`;
     it("should allow editing suggestion before accepting", async () => {
       const user = userEvent.setup();
 
-      mockAdjustTone.mockResolvedValue("AI generated suggestion");
+      mockAdjustTone.mockResolvedValue({
+        content: "AI generated suggestion",
+        warning: undefined,
+      });
 
       renderPostScheduler();
 
