@@ -1,3 +1,5 @@
+import { AuthConfig } from "convex/server";
+
 // Runtime validation for required environment variables
 const CONVEX_SITE_URL = process.env.CONVEX_SITE_URL;
 
@@ -9,22 +11,13 @@ if (!CONVEX_SITE_URL) {
   );
 }
 
-interface AuthProvider {
-  domain: string;
-  applicationID: string;
-}
-
-interface AuthConfig {
-  providers: AuthProvider[];
-}
-
-const config: AuthConfig = {
+const config = {
   providers: [
     {
       domain: CONVEX_SITE_URL,
       applicationID: "convex",
     },
   ],
-};
+} satisfies AuthConfig;
 
 export default config;
