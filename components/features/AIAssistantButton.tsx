@@ -183,7 +183,7 @@ export function AIAssistantButton({
                 aria-label="AI Assistant"
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
-                className="gap-2 min-w-[44px] min-h-[44px]"
+                className="gap-2"
                 onClick={() => {
                   if (showIntro) {
                     handleDismissIntro();

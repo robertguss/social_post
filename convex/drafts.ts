@@ -14,8 +14,6 @@ export const saveDraft = mutation({
     twitterContent: v.string(),
     linkedInContent: v.string(),
     url: v.optional(v.string()),
-    twitterEnabled: v.boolean(),
-    linkedInEnabled: v.boolean(),
   },
   returns: v.id("posts"),
   handler: async (ctx, args) => {
@@ -41,8 +39,6 @@ export const saveDraft = mutation({
         twitterContent: args.twitterContent,
         linkedInContent: args.linkedInContent,
         url: args.url,
-        twitterEnabled: args.twitterEnabled,
-        linkedInEnabled: args.linkedInEnabled,
         lastEditedTime: now,
       });
 
@@ -55,8 +51,6 @@ export const saveDraft = mutation({
         twitterContent: args.twitterContent,
         linkedInContent: args.linkedInContent,
         url: args.url,
-        twitterEnabled: args.twitterEnabled,
-        linkedInEnabled: args.linkedInEnabled,
         lastEditedTime: now,
         // Scheduled times are undefined/null for drafts
       });
@@ -82,8 +76,6 @@ export const getDrafts = query({
       twitterContent: v.optional(v.string()),
       linkedInContent: v.optional(v.string()),
       url: v.optional(v.string()),
-      twitterEnabled: v.optional(v.boolean()),
-      linkedInEnabled: v.optional(v.boolean()),
       lastEditedTime: v.optional(v.number()),
     })
   ),
@@ -130,8 +122,6 @@ export const getDraftById = query({
       twitterContent: v.optional(v.string()),
       linkedInContent: v.optional(v.string()),
       url: v.optional(v.string()),
-      twitterEnabled: v.optional(v.boolean()),
-      linkedInEnabled: v.optional(v.boolean()),
       lastEditedTime: v.optional(v.number()),
     })
   ),
