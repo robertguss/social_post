@@ -116,4 +116,38 @@ export default defineSchema({
   })
     .index("by_post", ["postId"]) // Lookup metrics for a specific post
     .index("by_platform_time", ["platform", "publishedTime"]), // Aggregate metrics by time of day for analysis
+
+  // Stores user feedback about AI-generated content quality and appropriateness
+  // Used for monitoring AI content issues and improving prompts over time
+  ai_feedback: defineTable({
+    userId: v.string(), // User who submitted the feedback
+    feature: v.string(), // "tone" | "expand" | "hashtags" - which AI feature the feedback is for
+    requestId: v.string(), // Correlation ID from AI request logs for tracking
+    originalContent: v.string(), // User's original content that was sent to AI
+    aiResponse: v.string(), // AI-generated content that user is reporting
+    feedbackType: v.string(), // "inappropriate" | "low-quality" | "other"
+    feedbackText: v.optional(v.string()), // Optional user-provided details
+    timestamp: v.number(), // Unix timestamp (ms) when feedback was submitted
+  })
+    .index("by_user", ["userId"]) // Lookup all feedback from a user
+    .index("by_feature", ["feature"]) // Lookup feedback by AI feature type
+    .index("by_timestamp", ["timestamp"]), // Lookup recent feedback chronologically
+
+  // Stores Gemini API usage logs for rate limiting, cost tracking, and analytics
+  // Used for enforcing daily/monthly rate limits and monitoring API costs
+  ai_usage_logs: defineTable({
+    userId: v.string(), // User ID (Better Auth user ID) who made the request
+    timestamp: v.number(), // Unix timestamp (ms) when request was made
+    feature: v.string(), // "tone" | "expand" | "hashtags" - which AI feature was used
+    tokensUsed: v.number(), // Estimated tokens consumed (input + output)
+    cost: v.number(), // Estimated cost in USD
+    modelUsed: v.string(), // Gemini model name (e.g., "gemini-1.5-flash")
+    requestId: v.string(), // Correlation ID from AI request for debugging
+    duration: v.number(), // Request duration in milliseconds
+    success: v.boolean(), // Whether the request succeeded or failed
+  })
+    .index("by_user", ["userId"]) // Fast lookup of all usage for a user
+    .index("by_timestamp", ["timestamp"]) // Fast chronological queries for daily/monthly aggregation
+    .index("by_user_timestamp", ["userId", "timestamp"]) // Fast user-scoped time-range queries
+    .index("by_feature", ["feature"]), // Fast aggregation by feature type
 });

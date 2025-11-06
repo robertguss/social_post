@@ -30,8 +30,9 @@ import {
 } from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconCheck, IconX, IconEdit, IconSparkles } from "@tabler/icons-react";
+import { IconCheck, IconX, IconEdit, IconSparkles, IconFlag } from "@tabler/icons-react";
 import type { AIFeatureType } from "./AIAssistantButton";
+import { AIFeedbackDialog } from "./AIFeedbackDialog";
 
 interface AISuggestionPanelProps {
   /**
@@ -70,6 +71,16 @@ interface AISuggestionPanelProps {
   featureType?: AIFeatureType;
 
   /**
+   * Error message if AI request failed
+   */
+  error?: string;
+
+  /**
+   * Whether the error is retryable
+   */
+  isRetryable?: boolean;
+
+  /**
    * Callback when user accepts the suggestion
    */
   onAccept: (content: string) => void;
@@ -78,6 +89,11 @@ interface AISuggestionPanelProps {
    * Callback when user rejects the suggestion
    */
   onReject: () => void;
+
+  /**
+   * Callback when user wants to retry after error
+   */
+  onRetry?: () => void;
 }
 
 /**
@@ -135,12 +151,17 @@ export function AISuggestionPanel({
   warning,
   isLoading,
   featureType,
+  error,
+  isRetryable,
   onAccept,
   onReject,
+  onRetry,
 }: AISuggestionPanelProps) {
   const isMobile = useIsMobile();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState("");
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [requestId] = useState(() => `${featureType || 'ai'}-${Date.now()}`);
 
   // Update edited content when suggestion changes
   useEffect(() => {
@@ -184,6 +205,54 @@ export function AISuggestionPanel({
         <span className="text-sm">AI is analyzing your content...</span>
       </div>
       <Skeleton className="h-32 w-full" />
+    </div>
+  );
+
+  /**
+   * Render error state
+   */
+  const renderError = () => (
+    <div className="space-y-4">
+      {/* Error Message */}
+      <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-md">
+        <div className="flex items-start gap-3">
+          <svg
+            className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <div className="flex-1">
+            <h5 className="text-sm font-medium text-red-800 dark:text-red-200">
+              AI Request Failed
+            </h5>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+              {error || "An unexpected error occurred"}
+            </p>
+            {isRetryable && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                This error is temporary. You can try again.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Original Content for Reference */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium text-muted-foreground">
+          Original Content
+        </h4>
+        <div className="p-3 bg-muted rounded-md text-sm">
+          {originalContent || <span className="text-muted-foreground italic">No content</span>}
+        </div>
+      </div>
     </div>
   );
 
@@ -255,96 +324,172 @@ export function AISuggestionPanel({
   /**
    * Render action buttons
    */
-  const renderActions = () => (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleReject}
-        className="flex-1"
-        aria-label="Reject suggestion"
-      >
-        <IconX className="mr-2 h-4 w-4" />
-        Reject
-      </Button>
-      {!isEditing && (
+  const renderActions = () => {
+    // Error state actions
+    if (error) {
+      return (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+            aria-label="Close panel"
+          >
+            <IconX className="mr-2 h-4 w-4" />
+            Close
+          </Button>
+          {isRetryable && onRetry && (
+            <Button
+              type="button"
+              onClick={onRetry}
+              className="flex-1"
+              aria-label="Try again"
+            >
+              <svg
+                className="mr-2 h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Try Again
+            </Button>
+          )}
+        </>
+      );
+    }
+
+    // Normal state actions
+    return (
+      <>
         <Button
           type="button"
           variant="outline"
-          onClick={handleEdit}
+          onClick={handleReject}
           className="flex-1"
-          disabled={!suggestion}
-          aria-label="Edit suggestion"
+          aria-label="Reject suggestion"
         >
-          <IconEdit className="mr-2 h-4 w-4" />
-          Edit
+          <IconX className="mr-2 h-4 w-4" />
+          Reject
         </Button>
-      )}
-      <Button
-        type="button"
-        onClick={handleAccept}
-        className="flex-1"
-        disabled={!suggestion && !isEditing}
-        aria-label="Accept suggestion"
-      >
-        <IconCheck className="mr-2 h-4 w-4" />
-        Accept
-      </Button>
-    </>
-  );
+        {!isEditing && (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleEdit}
+              className="flex-1"
+              disabled={!suggestion}
+              aria-label="Edit suggestion"
+            >
+              <IconEdit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowFeedbackDialog(true)}
+              className="flex-1"
+              disabled={!suggestion}
+              aria-label="Report issue"
+            >
+              <IconFlag className="mr-2 h-4 w-4" />
+              Report
+            </Button>
+          </>
+        )}
+        <Button
+          type="button"
+          onClick={handleAccept}
+          className="flex-1"
+          disabled={!suggestion && !isEditing}
+          aria-label="Accept suggestion"
+        >
+          <IconCheck className="mr-2 h-4 w-4" />
+          Accept
+        </Button>
+      </>
+    );
+  };
 
-  // Mobile: Use Drawer
+  // Render feedback dialog (shared for both mobile and desktop)
+  const feedbackDialog = featureType && suggestion ? (
+    <AIFeedbackDialog
+      isOpen={showFeedbackDialog}
+      onClose={() => setShowFeedbackDialog(false)}
+      feature={featureType}
+      requestId={requestId}
+      originalContent={originalContent}
+      aiResponse={suggestion}
+    />
+  ) : null;
+
+  // Return appropriate view
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={onClose}>
-        <DrawerContent
-          aria-labelledby="suggestion-title"
-          aria-describedby="suggestion-description"
-        >
-          <DrawerHeader>
-            <DrawerTitle id="suggestion-title">
-              {featureType ? FEATURE_LABELS[featureType] : "AI Suggestion"}
-            </DrawerTitle>
-            <DrawerDescription id="suggestion-description">
-              Review and apply AI-generated content
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-4">
-            {isLoading ? renderLoading() : renderContent()}
-          </div>
-          <DrawerFooter>
-            <div className="flex gap-2 w-full">
-              {renderActions()}
+      <>
+        <Drawer open={isOpen} onOpenChange={onClose}>
+          <DrawerContent
+            aria-labelledby="suggestion-title"
+            aria-describedby="suggestion-description"
+          >
+            <DrawerHeader>
+              <DrawerTitle id="suggestion-title">
+                {featureType ? FEATURE_LABELS[featureType] : "AI Suggestion"}
+              </DrawerTitle>
+              <DrawerDescription id="suggestion-description">
+                Review and apply AI-generated content
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-4">
+              {isLoading ? renderLoading() : error ? renderError() : renderContent()}
             </div>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+            <DrawerFooter>
+              <div className="flex gap-2 w-full">
+                {renderActions()}
+              </div>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+        {feedbackDialog}
+      </>
     );
   }
 
-  // Desktop: Use Dialog
+  // Desktop view
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="sm:max-w-[600px]"
-        aria-labelledby="suggestion-title"
-        aria-describedby="suggestion-description"
-      >
-        <DialogHeader>
-          <DialogTitle id="suggestion-title">
-            {featureType ? FEATURE_LABELS[featureType] : "AI Suggestion"}
-          </DialogTitle>
-          <DialogDescription id="suggestion-description">
-            Review and apply AI-generated content
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          {isLoading ? renderLoading() : renderContent()}
-        </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          {renderActions()}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent
+          className="sm:max-w-[600px]"
+          aria-labelledby="suggestion-title"
+          aria-describedby="suggestion-description"
+        >
+          <DialogHeader>
+            <DialogTitle id="suggestion-title">
+              {featureType ? FEATURE_LABELS[featureType] : "AI Suggestion"}
+            </DialogTitle>
+            <DialogDescription id="suggestion-description">
+              Review and apply AI-generated content
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoading ? renderLoading() : error ? renderError() : renderContent()}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {renderActions()}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {feedbackDialog}
+    </>
   );
 }

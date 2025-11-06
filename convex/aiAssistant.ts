@@ -16,28 +16,20 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { getGeminiModel } from "./gemini";
+import { internal } from "./_generated/api";
+import {
+  getGeminiModel,
+  withTimeout,
+  withRetry,
+  handleGeminiError,
+} from "./gemini";
+import { calculateTokenEstimate, calculateCostEstimate } from "./aiUsageTracking";
 
 /**
  * Character Limits (from CLAUDE.md)
  */
 const TWITTER_MAX_CHARS = 280;
 const LINKEDIN_MAX_CHARS = 3000;
-
-/**
- * Timeout for AI API requests (10 seconds per Story 7.1)
- */
-const AI_API_TIMEOUT_MS = 10000;
-
-/**
- * Maximum retry attempts for AI API calls
- */
-const MAX_RETRIES = 2;
-
-/**
- * Base delay for exponential backoff (milliseconds)
- */
-const RETRY_BASE_DELAY_MS = 1000;
 
 /**
  * Tone options for content adjustment
@@ -50,75 +42,6 @@ export const ToneOptions = {
 } as const;
 
 export type ToneOption = typeof ToneOptions[keyof typeof ToneOptions];
-
-/**
- * Helper function to wrap promises with timeout
- */
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-): Promise<T> {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      reject(
-        new Error(
-          `Operation timed out after ${timeoutMs}ms (DEADLINE_EXCEEDED)`,
-        ),
-      );
-    }, timeoutMs);
-  });
-
-  return Promise.race([promise, timeoutPromise]);
-}
-
-/**
- * Helper function to handle retry logic with exponential backoff
- */
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  maxRetries: number = MAX_RETRIES,
-  baseDelay: number = RETRY_BASE_DELAY_MS,
-): Promise<T> {
-  let lastError: Error | unknown;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error;
-
-      // Don't retry on the last attempt
-      if (attempt === maxRetries) {
-        break;
-      }
-
-      // Check if error is retryable (network errors, timeouts, rate limits)
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      const isRetryable =
-        errorMessage.includes("timeout") ||
-        errorMessage.includes("DEADLINE_EXCEEDED") ||
-        errorMessage.includes("429") ||
-        errorMessage.includes("RESOURCE_EXHAUSTED") ||
-        errorMessage.includes("ENOTFOUND") ||
-        errorMessage.includes("ECONNREFUSED") ||
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("network");
-
-      if (!isRetryable) {
-        // Non-retryable error, throw immediately
-        throw error;
-      }
-
-      // Exponential backoff: delay = baseDelay * 2^attempt
-      const delay = baseDelay * Math.pow(2, attempt);
-      console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError;
-}
 
 /**
  * Helper function to create tone-specific prompts
@@ -226,6 +149,7 @@ export const adjustTone = action({
   returns: v.object({
     content: v.string(),
     warning: v.optional(v.string()),
+    rateLimitWarning: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     // Verify user authentication
@@ -255,6 +179,22 @@ export const adjustTone = action({
       );
     }
 
+    // Check rate limit status before executing AI request
+    const rateLimitStatus = await ctx.runQuery(
+      internal.aiUsageTracking.getRateLimitStatus,
+      {
+        userId,
+        timeWindow: "day" as const,
+      },
+    );
+
+    // If rate limit exceeded, throw error
+    if (rateLimitStatus.isExceeded) {
+      throw new Error(
+        "Daily AI request limit reached. Please try again tomorrow.",
+      );
+    }
+
     try {
       // Call Gemini API with retry logic
       const adjustedContent = await withRetry(async () => {
@@ -263,10 +203,9 @@ export const adjustTone = action({
 
         console.log(`[AI Assistant ${requestId}] Sending request to Gemini API`);
 
-        // Generate content with timeout
+        // Generate content with timeout (uses default 10s timeout from gemini.ts)
         const result = await withTimeout(
           model.generateContent(prompt),
-          AI_API_TIMEOUT_MS,
         );
 
         const responseText = result.response.text().trim();
@@ -280,69 +219,68 @@ export const adjustTone = action({
 
       const duration = Date.now() - startTime;
 
+      // Estimate token usage and cost
+      const tokenEstimate = calculateTokenEstimate(content.length, "tone");
+      const tokensUsed = tokenEstimate.input + tokenEstimate.output;
+      const cost = calculateCostEstimate(
+        tokenEstimate.input,
+        tokenEstimate.output,
+      );
+
+      // Log usage to database
+      await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+        userId,
+        feature: "tone",
+        tokensUsed,
+        cost,
+        modelUsed: "gemini-1.5-flash",
+        requestId,
+        duration,
+        success: true,
+      });
+
       // Check character limits and generate warning if needed
       const limitCheck = checkCharacterLimit(adjustedContent);
+
+      // Generate rate limit warning if approaching limit
+      const rateLimitWarning: string | undefined = rateLimitStatus.isNearLimit
+        ? `You're approaching your daily AI request limit (${rateLimitStatus.requestCount + 1}/${rateLimitStatus.limit} requests used).`
+        : undefined;
 
       console.log(
         `[AI Assistant ${requestId}] Success! | Duration: ${duration}ms | ` +
           `Original: ${content.length} chars → Adjusted: ${adjustedContent.length} chars | ` +
-          `Warning: ${limitCheck.warning ? "Yes" : "No"}`,
+          `Tokens: ${tokensUsed} | Cost: $${cost.toFixed(6)} | ` +
+          `Warning: ${limitCheck.warning ? "Yes" : "No"} | ` +
+          `Rate Limit: ${rateLimitStatus.percentUsed.toFixed(1)}%`,
       );
 
       return {
         content: adjustedContent,
         warning: limitCheck.warning,
+        rateLimitWarning,
       };
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(
-        `[AI Assistant ${requestId}] Error after ${duration}ms:`,
-        error,
+        `[AI Assistant ${requestId}] Error after ${duration}ms`,
       );
 
-      // Handle specific error types with user-friendly messages
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      // Log failed request
+      await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+        userId,
+        feature: "tone",
+        tokensUsed: 0,
+        cost: 0,
+        modelUsed: "gemini-1.5-flash",
+        requestId,
+        duration,
+        success: false,
+      });
 
-      if (errorMessage.includes("GEMINI_API_KEY not configured")) {
-        throw new Error(
-          "AI service configuration error. Please contact support.",
-        );
-      } else if (
-        errorMessage.includes("API_KEY_INVALID") ||
-        errorMessage.includes("401") ||
-        errorMessage.includes("Invalid API key")
-      ) {
-        throw new Error(
-          "AI service configuration error. Please contact support.",
-        );
-      } else if (
-        errorMessage.includes("429") ||
-        errorMessage.includes("RESOURCE_EXHAUSTED") ||
-        errorMessage.includes("rate limit")
-      ) {
-        throw new Error(
-          "AI service rate limit exceeded. Please wait a few minutes and try again.",
-        );
-      } else if (
-        errorMessage.includes("timeout") ||
-        errorMessage.includes("DEADLINE_EXCEEDED")
-      ) {
-        throw new Error(
-          "AI request timed out. Please try again or check your network connection.",
-        );
-      } else if (
-        errorMessage.includes("ENOTFOUND") ||
-        errorMessage.includes("ECONNREFUSED") ||
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("network")
-      ) {
-        throw new Error(
-          "Network error connecting to AI service. Please check your internet connection and try again.",
-        );
-      } else {
-        throw new Error("AI service temporarily unavailable. Please try again.");
-      }
+      // Use centralized error handling
+      const errorInfo = handleGeminiError(error, requestId);
+      throw new Error(errorInfo.userMessage);
     }
   },
 });
@@ -416,6 +354,7 @@ export const expandForLinkedIn = action({
   returns: v.object({
     content: v.string(),
     warning: v.optional(v.string()),
+    rateLimitWarning: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     // Verify user authentication
@@ -445,6 +384,22 @@ export const expandForLinkedIn = action({
       );
     }
 
+    // Check rate limit status before executing AI request
+    const rateLimitStatus = await ctx.runQuery(
+      internal.aiUsageTracking.getRateLimitStatus,
+      {
+        userId,
+        timeWindow: "day" as const,
+      },
+    );
+
+    // If rate limit exceeded, throw error
+    if (rateLimitStatus.isExceeded) {
+      throw new Error(
+        "Daily AI request limit reached. Please try again tomorrow.",
+      );
+    }
+
     try {
       // Call Gemini API with retry logic
       const expandedContent = await withRetry(async () => {
@@ -453,10 +408,9 @@ export const expandForLinkedIn = action({
 
         console.log(`[AI Assistant ${requestId}] Sending request to Gemini API`);
 
-        // Generate content with timeout
+        // Generate content with timeout (uses default 10s timeout from gemini.ts)
         const result = await withTimeout(
           model.generateContent(prompt),
-          AI_API_TIMEOUT_MS,
         );
 
         const responseText = result.response.text().trim();
@@ -470,69 +424,71 @@ export const expandForLinkedIn = action({
 
       const duration = Date.now() - startTime;
 
+      // Estimate token usage and cost
+      const tokenEstimate = calculateTokenEstimate(
+        twitterContent.length,
+        "expand",
+      );
+      const tokensUsed = tokenEstimate.input + tokenEstimate.output;
+      const cost = calculateCostEstimate(
+        tokenEstimate.input,
+        tokenEstimate.output,
+      );
+
+      // Log usage to database
+      await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+        userId,
+        feature: "expand",
+        tokensUsed,
+        cost,
+        modelUsed: "gemini-1.5-flash",
+        requestId,
+        duration,
+        success: true,
+      });
+
       // Check expansion length and generate warning if needed
       const warning = checkExpansionLength(expandedContent);
+
+      // Generate rate limit warning if approaching limit
+      const rateLimitWarning: string | undefined = rateLimitStatus.isNearLimit
+        ? `You're approaching your daily AI request limit (${rateLimitStatus.requestCount + 1}/${rateLimitStatus.limit} requests used).`
+        : undefined;
 
       console.log(
         `[AI Assistant ${requestId}] Success! | Duration: ${duration}ms | ` +
           `Original: ${twitterContent.length} chars → Expanded: ${expandedContent.length} chars | ` +
-          `Warning: ${warning ? "Yes" : "No"}`,
+          `Tokens: ${tokensUsed} | Cost: $${cost.toFixed(6)} | ` +
+          `Warning: ${warning ? "Yes" : "No"} | ` +
+          `Rate Limit: ${rateLimitStatus.percentUsed.toFixed(1)}%`,
       );
 
       return {
         content: expandedContent,
         warning,
+        rateLimitWarning,
       };
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(
-        `[AI Assistant ${requestId}] Error after ${duration}ms:`,
-        error,
+        `[AI Assistant ${requestId}] Error after ${duration}ms`,
       );
 
-      // Handle specific error types with user-friendly messages
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      // Log failed request
+      await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+        userId,
+        feature: "expand",
+        tokensUsed: 0,
+        cost: 0,
+        modelUsed: "gemini-1.5-flash",
+        requestId,
+        duration,
+        success: false,
+      });
 
-      if (errorMessage.includes("GEMINI_API_KEY not configured")) {
-        throw new Error(
-          "AI service configuration error. Please contact support.",
-        );
-      } else if (
-        errorMessage.includes("API_KEY_INVALID") ||
-        errorMessage.includes("401") ||
-        errorMessage.includes("Invalid API key")
-      ) {
-        throw new Error(
-          "AI service configuration error. Please contact support.",
-        );
-      } else if (
-        errorMessage.includes("429") ||
-        errorMessage.includes("RESOURCE_EXHAUSTED") ||
-        errorMessage.includes("rate limit")
-      ) {
-        throw new Error(
-          "AI service rate limit exceeded. Please wait a few minutes and try again.",
-        );
-      } else if (
-        errorMessage.includes("timeout") ||
-        errorMessage.includes("DEADLINE_EXCEEDED")
-      ) {
-        throw new Error(
-          "AI request timed out. Please try again or check your network connection.",
-        );
-      } else if (
-        errorMessage.includes("ENOTFOUND") ||
-        errorMessage.includes("ECONNREFUSED") ||
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("network")
-      ) {
-        throw new Error(
-          "Network error connecting to AI service. Please check your internet connection and try again.",
-        );
-      } else {
-        throw new Error("AI service temporarily unavailable. Please try again.");
-      }
+      // Use centralized error handling
+      const errorInfo = handleGeminiError(error, requestId);
+      throw new Error(errorInfo.userMessage);
     }
   },
 });
@@ -706,6 +662,29 @@ export const generateHashtags = action({
       throw new Error("Hashtag count must be between 1 and 20");
     }
 
+    // Check rate limit status before executing AI request
+    const rateLimitStatus = await ctx.runQuery(
+      internal.aiUsageTracking.getRateLimitStatus,
+      {
+        userId,
+        timeWindow: "day" as const,
+      },
+    );
+
+    // If rate limit exceeded, throw error
+    if (rateLimitStatus.isExceeded) {
+      throw new Error(
+        "Daily AI request limit reached. Please try again tomorrow.",
+      );
+    }
+
+    // Log rate limit warning if approaching limit
+    if (rateLimitStatus.isNearLimit) {
+      console.log(
+        `[AI Assistant ${requestId}] Rate limit warning: ${rateLimitStatus.percentUsed.toFixed(1)}% used (${rateLimitStatus.requestCount}/${rateLimitStatus.limit})`,
+      );
+    }
+
     try {
       // Call Gemini API with retry logic
       const hashtags = await withRetry(async () => {
@@ -714,10 +693,9 @@ export const generateHashtags = action({
 
         console.log(`[AI Assistant ${requestId}] Sending request to Gemini API`);
 
-        // Generate content with timeout
+        // Generate content with timeout (uses default 10s timeout from gemini.ts)
         const result = await withTimeout(
           model.generateContent(prompt),
-          AI_API_TIMEOUT_MS,
         );
 
         const responseText = result.response.text().trim();
@@ -734,71 +712,80 @@ export const generateHashtags = action({
 
       const duration = Date.now() - startTime;
 
+      // Estimate token usage and cost
+      const tokenEstimate = calculateTokenEstimate(content.length, "hashtags");
+      const tokensUsed = tokenEstimate.input + tokenEstimate.output;
+      const cost = calculateCostEstimate(
+        tokenEstimate.input,
+        tokenEstimate.output,
+      );
+
+      // Log usage to database
+      await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+        userId,
+        feature: "hashtags",
+        tokensUsed,
+        cost,
+        modelUsed: "gemini-1.5-flash",
+        requestId,
+        duration,
+        success: true,
+      });
+
       console.log(
         `[AI Assistant ${requestId}] Success! | Duration: ${duration}ms | ` +
-          `Generated ${hashtags.length} hashtags: [${hashtags.join(", ")}]`,
+          `Generated ${hashtags.length} hashtags: [${hashtags.join(", ")}] | ` +
+          `Tokens: ${tokensUsed} | Cost: $${cost.toFixed(6)} | ` +
+          `Rate Limit: ${rateLimitStatus.percentUsed.toFixed(1)}%`,
       );
 
       return hashtags;
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(
-        `[AI Assistant ${requestId}] Error after ${duration}ms:`,
-        error,
+        `[AI Assistant ${requestId}] Error after ${duration}ms`,
       );
 
       // Handle specific error types with user-friendly messages
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      // Don't wrap validation errors
+      // Don't wrap validation errors - throw them as-is
       if (
         errorMessage.includes("Unable to generate") ||
         errorMessage.includes("Content cannot be empty") ||
         errorMessage.includes("Hashtag count must be")
       ) {
+        // Log failed request for validation errors
+        await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+          userId,
+          feature: "hashtags",
+          tokensUsed: 0,
+          cost: 0,
+          modelUsed: "gemini-1.5-flash",
+          requestId,
+          duration,
+          success: false,
+        });
+
         throw error;
       }
 
-      if (errorMessage.includes("GEMINI_API_KEY not configured")) {
-        throw new Error(
-          "AI service configuration error. Please contact support.",
-        );
-      } else if (
-        errorMessage.includes("API_KEY_INVALID") ||
-        errorMessage.includes("401") ||
-        errorMessage.includes("Invalid API key")
-      ) {
-        throw new Error(
-          "AI service configuration error. Please contact support.",
-        );
-      } else if (
-        errorMessage.includes("429") ||
-        errorMessage.includes("RESOURCE_EXHAUSTED") ||
-        errorMessage.includes("rate limit")
-      ) {
-        throw new Error(
-          "AI service rate limit exceeded. Please wait a few minutes and try again.",
-        );
-      } else if (
-        errorMessage.includes("timeout") ||
-        errorMessage.includes("DEADLINE_EXCEEDED")
-      ) {
-        throw new Error(
-          "AI request timed out. Please try again or check your network connection.",
-        );
-      } else if (
-        errorMessage.includes("ENOTFOUND") ||
-        errorMessage.includes("ECONNREFUSED") ||
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("network")
-      ) {
-        throw new Error(
-          "Network error connecting to AI service. Please check your internet connection and try again.",
-        );
-      } else {
-        throw new Error("AI service temporarily unavailable. Please try again.");
-      }
+      // Log failed request for API errors
+      await ctx.runMutation(internal.aiUsageTracking.logAIUsage, {
+        userId,
+        feature: "hashtags",
+        tokensUsed: 0,
+        cost: 0,
+        modelUsed: "gemini-1.5-flash",
+        requestId,
+        duration,
+        success: false,
+      });
+
+      // Use centralized error handling
+      const errorInfo = handleGeminiError(error, requestId);
+      throw new Error(errorInfo.userMessage);
     }
   },
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -68,10 +68,10 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const incrementTemplateUsage = useMutation(api.templates.incrementTemplateUsage);
   const saveDraft = useMutation(api.drafts.saveDraft);
 
-  // AI Assistant mutations
-  const adjustTone = useMutation(api.aiAssistant.adjustTone);
-  const expandForLinkedIn = useMutation(api.aiAssistant.expandForLinkedIn);
-  const generateHashtags = useMutation(api.aiAssistant.generateHashtags);
+  // AI Assistant actions
+  const adjustTone = useAction(api.aiAssistant.adjustTone);
+  const expandForLinkedIn = useAction(api.aiAssistant.expandForLinkedIn);
+  const generateHashtags = useAction(api.aiAssistant.generateHashtags);
 
   // Fetch original post if this is a cloned post
   const originalPost = useQuery(
@@ -131,6 +131,8 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const [isAILoading, setIsAILoading] = useState(false);
   const [aiSuggestion, setAISuggestion] = useState<string | undefined>();
   const [aiWarning, setAIWarning] = useState<string | undefined>();
+  const [aiError, setAIError] = useState<string | undefined>();
+  const [aiIsRetryable, setAIIsRetryable] = useState<boolean>(false);
   const [showAISuggestionPanel, setShowAISuggestionPanel] = useState(false);
 
   // Hashtag generation state
@@ -334,45 +336,65 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     setIsAILoading(true);
     setAISuggestion(undefined);
     setAIWarning(undefined);
+    setAIError(undefined);
+    setAIIsRetryable(false);
     setShowAISuggestionPanel(true);
 
     try {
-      let suggestion: string | string[];
-      let warning: string | undefined;
-
       // Call appropriate AI action based on feature
       switch (feature) {
-        case "tone":
+        case "tone": {
           // Default to "professional" tone for now
           // TODO (Story 7.3): Add tone selector UI
           const toneResult = await adjustTone({ content, tone: "professional" });
-          suggestion = toneResult.content;
-          warning = toneResult.warning;
-          break;
+          setAISuggestion(toneResult.content);
+          setAIWarning(toneResult.warning);
 
-        case "expand":
+          // Show warning toast if present
+          if (toneResult.warning) {
+            toast.warning("Character Limit Exceeded", {
+              description: toneResult.warning,
+              duration: 6000,
+            });
+          }
+          break;
+        }
+
+        case "expand": {
           // Validate expand conditions (AC 1)
           if (activeField !== "twitter") {
             toast.error("Expand for LinkedIn only works with Twitter content");
             setShowAISuggestionPanel(false);
+            setIsAILoading(false);
             return;
           }
           // Check if expansion makes sense (LinkedIn should be empty or shorter)
           if (linkedInContent.trim() && linkedInContent.length >= twitterContent.length) {
             toast.error("LinkedIn content is already longer than Twitter content");
             setShowAISuggestionPanel(false);
+            setIsAILoading(false);
             return;
           }
           const expandResult = await expandForLinkedIn({ twitterContent: content });
-          suggestion = expandResult.content;
-          warning = expandResult.warning;
+          setAISuggestion(expandResult.content);
+          setAIWarning(expandResult.warning);
+
+          // Show warning toast if present
+          if (expandResult.warning) {
+            toast.warning("Content Length Warning", {
+              description: expandResult.warning,
+              duration: 6000,
+            });
+          }
           break;
+        }
 
         case "hashtags":
           // For hashtags, we use a separate panel instead of AISuggestionPanel
           setIsHashtagsLoading(true);
           setGeneratedHashtags(undefined);
           setShowHashtagPanel(true);
+          setIsAILoading(false);
 
           try {
             const platform = activeField === "twitter" ? "twitter" : "linkedin";
@@ -392,24 +414,23 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
           throw new Error(`Unknown AI feature: ${feature}`);
       }
 
-      // Display suggestion and warning
-      setAISuggestion(typeof suggestion === "string" ? suggestion : suggestion.join(" "));
-      setAIWarning(warning);
-
-      // Show warning toast if present
-      if (warning) {
-        toast.warning("Character Limit Exceeded", {
-          description: warning,
-          duration: 6000,
-        });
-      }
-
       setIsAILoading(false);
     } catch (error) {
       console.error("AI feature error:", error);
-      toast.error(error instanceof Error ? error.message : "AI service temporarily unavailable");
+      const errorMessage = error instanceof Error ? error.message : "AI service temporarily unavailable";
+
+      // Determine if error is retryable based on message content
+      const isRetryable = errorMessage.includes("rate limit") ||
+                          errorMessage.includes("timed out") ||
+                          errorMessage.includes("Network error") ||
+                          errorMessage.includes("temporarily unavailable");
+
+      setAIError(errorMessage);
+      setAIIsRetryable(isRetryable);
       setIsAILoading(false);
-      setShowAISuggestionPanel(false);
+
+      // Show error toast
+      toast.error(errorMessage);
     }
   };
 
@@ -458,13 +479,24 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     setShowAISuggestionPanel(false);
     setAISuggestion(undefined);
     setAIWarning(undefined);
+    setAIError(undefined);
     setSelectedAIFeature(undefined);
+  };
+
+  /**
+   * Handle AI retry after error
+   */
+  const handleAIRetry = () => {
+    if (selectedAIFeature) {
+      // Retry the same feature
+      handleAIFeatureSelect(selectedAIFeature);
+    }
   };
 
   /**
    * Insert hashtag at cursor position or append to content
    */
-  const insertHashtagAtCursor = (hashtag: string, content: string, textareaRef: React.RefObject<HTMLTextAreaElement>): string => {
+  const insertHashtagAtCursor = (hashtag: string, content: string, textareaRef: React.RefObject<HTMLTextAreaElement | null>): string => {
     const hashtagWithPrefix = `#${hashtag}`;
     const textarea = textareaRef.current;
     const cursorPos = textarea?.selectionStart;
@@ -1153,10 +1185,13 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         originalContent={activeField === "twitter" ? twitterContent : linkedInContent}
         suggestion={aiSuggestion}
         warning={aiWarning}
+        error={aiError}
+        isRetryable={aiIsRetryable}
         isLoading={isAILoading}
         featureType={selectedAIFeature}
         onAccept={handleAISuggestionAccept}
         onReject={handleAISuggestionReject}
+        onRetry={handleAIRetry}
       />
 
       {/* Hashtag Suggestion Panel */}

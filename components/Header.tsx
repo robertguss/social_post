@@ -26,7 +26,7 @@ export function Header() {
             Settings
           </Link>
         </Authenticated>
-        <UserMenu user={currentUser ? { name: currentUser.name, email: currentUser.email, image: currentUser.image } : undefined} />
+        <UserMenu user={currentUser ? { name: currentUser.name, email: currentUser.email, image: currentUser.image ?? undefined } : undefined} />
       </div>
     </header>
   );

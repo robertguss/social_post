@@ -9,6 +9,8 @@
  */
 
 import type * as aiAssistant from "../aiAssistant.js";
+import type * as aiFeedback from "../aiFeedback.js";
+import type * as aiUsageTracking from "../aiUsageTracking.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsQueries from "../analyticsQueries.js";
 import type * as auth from "../auth.js";
@@ -46,6 +48,8 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   aiAssistant: typeof aiAssistant;
+  aiFeedback: typeof aiFeedback;
+  aiUsageTracking: typeof aiUsageTracking;
   analytics: typeof analytics;
   analyticsQueries: typeof analyticsQueries;
   auth: typeof auth;

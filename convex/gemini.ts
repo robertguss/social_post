@@ -78,12 +78,14 @@ const GEMINI_API_TIMEOUT_MS = 10000;
 /**
  * Error Types for Gemini API
  */
-enum GeminiErrorType {
+export enum GeminiErrorType {
   MISSING_API_KEY = "MISSING_API_KEY",
   INVALID_API_KEY = "INVALID_API_KEY",
   NETWORK_ERROR = "NETWORK_ERROR",
   RATE_LIMIT = "RATE_LIMIT",
   TIMEOUT = "TIMEOUT",
+  CONTENT_FILTER = "CONTENT_FILTER",
+  INVALID_RESPONSE = "INVALID_RESPONSE",
   UNKNOWN = "UNKNOWN",
 }
 
@@ -91,7 +93,7 @@ enum GeminiErrorType {
  * Wraps an async operation with a timeout.
  *
  * @param {Promise<T>} promise - The promise to execute
- * @param {number} timeoutMs - Timeout in milliseconds
+ * @param {number} timeoutMs - Timeout in milliseconds (default: 10000ms)
  * @returns {Promise<T>} The result of the promise or throws timeout error
  *
  * @throws {Error} If the operation exceeds the timeout
@@ -102,9 +104,9 @@ enum GeminiErrorType {
  *   10000
  * );
  */
-async function withTimeout<T>(
+export async function withTimeout<T>(
   promise: Promise<T>,
-  timeoutMs: number,
+  timeoutMs: number = GEMINI_API_TIMEOUT_MS,
 ): Promise<T> {
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
@@ -120,15 +122,110 @@ async function withTimeout<T>(
 }
 
 /**
+ * Maximum retry attempts for AI API calls
+ */
+const MAX_RETRIES = 2;
+
+/**
+ * Base delay for exponential backoff (milliseconds)
+ */
+const RETRY_BASE_DELAY_MS = 1000;
+
+/**
+ * Helper function to handle retry logic with exponential backoff
+ *
+ * @param {Function} operation - The async operation to retry
+ * @param {number} maxRetries - Maximum retry attempts (default: 2)
+ * @param {number} baseDelay - Base delay for exponential backoff in ms (default: 1000)
+ * @returns {Promise<T>} Result of the operation
+ *
+ * @throws {Error} Throws the last error if all retries fail
+ *
+ * @example
+ * const result = await withRetry(async () => {
+ *   const model = getGeminiModel();
+ *   return await model.generateContent(prompt);
+ * });
+ */
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES,
+  baseDelay: number = RETRY_BASE_DELAY_MS,
+): Promise<T> {
+  let lastError: Error | unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      // Don't retry on the last attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Check if error is retryable (network errors, timeouts, rate limits)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const isRetryable =
+        errorMessage.includes("timeout") ||
+        errorMessage.includes("DEADLINE_EXCEEDED") ||
+        errorMessage.includes("429") ||
+        errorMessage.includes("RESOURCE_EXHAUSTED") ||
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("ECONNREFUSED") ||
+        errorMessage.includes("ETIMEDOUT") ||
+        errorMessage.includes("network") ||
+        errorMessage.includes("fetch failed");
+
+      if (!isRetryable) {
+        // Non-retryable error, throw immediately
+        throw error;
+      }
+
+      // Exponential backoff: delay = baseDelay * 2^attempt
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Error information returned by handleGeminiError
+ */
+export interface GeminiErrorInfo {
+  errorType: GeminiErrorType;
+  userMessage: string;
+  technicalMessage: string;
+  errorId: string;
+  timestamp: string;
+  isRetryable: boolean;
+}
+
+/**
  * Categorizes and formats Gemini API errors for user-friendly messaging.
  *
  * @param {unknown} error - The error object from Gemini API
  * @param {string} correlationId - Optional correlation ID for tracking
- * @returns {Object} Formatted error information
+ * @returns {GeminiErrorInfo} Formatted error information
  *
- * @internal
+ * @example
+ * try {
+ *   const result = await model.generateContent(prompt);
+ * } catch (error) {
+ *   const errorInfo = handleGeminiError(error, requestId);
+ *   console.error(errorInfo.userMessage);
+ *   return { success: false, error: errorInfo.userMessage };
+ * }
  */
-function handleGeminiError(error: unknown, correlationId?: string) {
+export function handleGeminiError(
+  error: unknown,
+  correlationId?: string,
+): GeminiErrorInfo {
   const timestamp = new Date().toISOString();
   const errorId = correlationId || `gemini-${Date.now()}`;
 
@@ -141,6 +238,7 @@ function handleGeminiError(error: unknown, correlationId?: string) {
   let errorType: GeminiErrorType = GeminiErrorType.UNKNOWN;
   let userMessage: string;
   let technicalMessage: string;
+  let isRetryable = false;
 
   if (error instanceof Error) {
     technicalMessage = error.message;
@@ -149,8 +247,8 @@ function handleGeminiError(error: unknown, correlationId?: string) {
     if (technicalMessage.includes("GEMINI_API_KEY not configured")) {
       errorType = GeminiErrorType.MISSING_API_KEY;
       userMessage =
-        "GEMINI_API_KEY not configured in environment variables. " +
-        "Please configure the API key in Convex Dashboard.";
+        "AI service not configured. Please contact support.";
+      isRetryable = false;
     } else if (
       technicalMessage.includes("API_KEY_INVALID") ||
       technicalMessage.includes("401") ||
@@ -159,8 +257,8 @@ function handleGeminiError(error: unknown, correlationId?: string) {
     ) {
       errorType = GeminiErrorType.INVALID_API_KEY;
       userMessage =
-        "Invalid Gemini API key - check credentials. " +
-        "Please verify the API key in Convex Dashboard.";
+        "AI service authentication failed. Please contact support.";
+      isRetryable = false;
     } else if (
       technicalMessage.includes("429") ||
       technicalMessage.includes("RESOURCE_EXHAUSTED") ||
@@ -169,8 +267,8 @@ function handleGeminiError(error: unknown, correlationId?: string) {
     ) {
       errorType = GeminiErrorType.RATE_LIMIT;
       userMessage =
-        "Gemini API rate limit exceeded. " +
-        "Please wait a few minutes and try again.";
+        "AI service rate limit exceeded. Please wait a few minutes and try again.";
+      isRetryable = true;
     } else if (
       technicalMessage.includes("timeout") ||
       technicalMessage.includes("DEADLINE_EXCEEDED") ||
@@ -178,8 +276,8 @@ function handleGeminiError(error: unknown, correlationId?: string) {
     ) {
       errorType = GeminiErrorType.TIMEOUT;
       userMessage =
-        "Gemini API request timed out. " +
-        "Please try again or check your network connection.";
+        "AI request timed out. Please try again or check your network connection.";
+      isRetryable = true;
     } else if (
       technicalMessage.includes("ENOTFOUND") ||
       technicalMessage.includes("ECONNREFUSED") ||
@@ -189,18 +287,39 @@ function handleGeminiError(error: unknown, correlationId?: string) {
     ) {
       errorType = GeminiErrorType.NETWORK_ERROR;
       userMessage =
-        "Network error connecting to Gemini API. " +
-        "Please check your internet connection and try again.";
+        "Network error connecting to AI service. Please check your internet connection and try again.";
+      isRetryable = true;
+    } else if (
+      technicalMessage.includes("SAFETY") ||
+      technicalMessage.includes("blocked") ||
+      technicalMessage.includes("content policy") ||
+      technicalMessage.includes("inappropriate")
+    ) {
+      errorType = GeminiErrorType.CONTENT_FILTER;
+      userMessage =
+        "Content violates AI service policies. Please rephrase your content and try again.";
+      isRetryable = false;
+    } else if (
+      technicalMessage.includes("Unable to generate") ||
+      technicalMessage.includes("invalid response") ||
+      technicalMessage.includes("parse")
+    ) {
+      errorType = GeminiErrorType.INVALID_RESPONSE;
+      userMessage =
+        "AI service returned an invalid response. Please try again.";
+      isRetryable = true;
     } else {
       userMessage = "AI service temporarily unavailable, please try again.";
+      isRetryable = true;
     }
   } else {
     technicalMessage = String(error);
     userMessage = "AI service temporarily unavailable, please try again.";
+    isRetryable = true;
   }
 
   console.error(
-    `[Gemini Error ${errorId}] Type: ${errorType}, User Message: ${userMessage}`,
+    `[Gemini Error ${errorId}] Type: ${errorType} | Retryable: ${isRetryable} | User Message: ${userMessage}`,
   );
 
   return {
@@ -209,6 +328,7 @@ function handleGeminiError(error: unknown, correlationId?: string) {
     technicalMessage,
     errorId,
     timestamp,
+    isRetryable,
   };
 }
 

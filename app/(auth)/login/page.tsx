@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const fromParam = searchParams.get("from") || "/dashboard";
 
@@ -112,7 +112,7 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
                 className="font-medium text-primary underline-offset-4 hover:underline"
@@ -125,5 +125,13 @@ export default function LoginPage() {
       </Card>
     </div>
     </AuthGuard>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
