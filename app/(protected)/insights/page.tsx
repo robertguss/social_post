@@ -20,7 +20,7 @@ export const metadata = {
  * NOTE: This feature requires API access to Twitter/LinkedIn engagement metrics.
  * See docs/features/performance-tracking.md for setup instructions.
  *
- * Protected by Clerk middleware (configured in middleware.ts).
+ * Protected by Better Auth middleware (configured in middleware.ts).
  */
 export default function InsightsPage() {
   return (

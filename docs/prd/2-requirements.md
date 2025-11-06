@@ -2,7 +2,7 @@
 
 ## Functional
 
-1. **FR1 (Authentication):** The system must support single-user authentication and secure session management via Clerk.
+1. **FR1 (Authentication):** The system must support single-user authentication and secure session management via Better Auth.
 2. **FR2 (Platform Connection):** The system must allow users to establish OAuth flows for X/Twitter and LinkedIn.
 3. **FR3 (Content Input):** The system must provide a text input field for post content with separate character counters for X (280 max) and LinkedIn (3,000 max).
 4. **FR4 (URL Handling):** The system must have a separate URL field, which is used for auto-posting as the first comment (LinkedIn) or as a thread reply (X).

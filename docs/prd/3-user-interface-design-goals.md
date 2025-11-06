@@ -8,7 +8,7 @@ The application should prioritize utility and efficiency for the solo content cr
 
 ## Core Screens and Views
 
-- **Authentication Screen:** Login/Signup (Clerk integration)
+- **Authentication Screen:** Login/Signup (Better Auth integration)
 - **Connection Manager:** For linking X/Twitter and LinkedIn
 - **Post Creation Form:** The primary, integrated workspace.
 - **Dashboard/List View:** Main view for scheduled and pending posts.

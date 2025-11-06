@@ -65,8 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Security
 
 - AES-256-GCM encryption for OAuth tokens
-- Clerk authentication integration
-- User data isolation via `clerkUserId`
+- Better Auth authentication integration
+- User data isolation via `userId`
 - Encrypted token storage in Convex database
 - Token migration utility for existing plain-text tokens
 
@@ -104,21 +104,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Database Schema
 
 - **posts**: Scheduled and published content with status tracking
-  - Index: `by_user` on `[clerkUserId]`
+  - Index: `by_user` on `[userId]`
 - **user_connections**: Encrypted OAuth tokens per platform
-  - Index: `by_user_platform` on `[clerkUserId, platform]`
+  - Index: `by_user_platform` on `[userId, platform]`
 - **templates**: Reusable content templates with tags
-  - Index: `by_user` on `[clerkUserId]`
+  - Index: `by_user` on `[userId]`
 
 #### API Endpoints
 
 - OAuth callback routes for Twitter and LinkedIn
 - Health check endpoint for monitoring
-- Clerk webhook support (infrastructure)
+- Better Auth API routes (infrastructure)
 
 #### Environment Configuration
 
-- Clerk authentication (development and production)
+- Better Auth configuration (development and production)
 - Convex deployment URLs
 - Twitter OAuth credentials
 - LinkedIn OAuth credentials
@@ -195,14 +195,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Next.js 15.5.4 with App Router
 - Convex backend setup
-- Clerk authentication integration
+- Better Auth authentication integration
 - Vercel deployment configuration
 - Environment variable management
 
 #### Security
 
 - Token encryption implementation
-- User authentication via Clerk
+- User authentication via Better Auth
 - Data isolation per user
 
 #### Developer Setup

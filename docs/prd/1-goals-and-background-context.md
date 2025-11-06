@@ -10,7 +10,7 @@
 
 ## Background Context
 
-The product is a productivity tool, requiring a simple, fast UI to minimize clicks and avoid feature creep until the core workflow is solid. The architecture is defined as a Serverless Fullstack using Next.js, Convex (for database and scheduled functions), and Clerk (for authentication).
+The product is a productivity tool, requiring a simple, fast UI to minimize clicks and avoid feature creep until the core workflow is solid. The architecture is defined as a Serverless Fullstack using Next.js, Convex (for database and scheduled functions), and Better Auth (for authentication).
 
 ## Change Log
 

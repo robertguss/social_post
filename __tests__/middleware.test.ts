@@ -1,13 +1,13 @@
 import { describe, it, expect } from '@jest/globals';
 
 /**
- * Unit tests for Clerk middleware configuration
+ * Unit tests for Better Auth middleware configuration
  * Verifies route protection logic
  */
 describe('Middleware Configuration', () => {
   it('should be configured to protect /server route', () => {
     // This test verifies the middleware configuration exists
-    // In a real scenario, we would mock the Clerk middleware
+    // In a real scenario, we would mock the Better Auth middleware
     // and test that the route matcher correctly identifies protected routes
 
     const protectedRoutes = ['/server'];

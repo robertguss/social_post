@@ -12,7 +12,7 @@
 
 ### Starter Template or Existing Project
 
-The project is built on the **Convex + Next.js + Clerk** starter template, which aligns with the PRD's specified stack: Next.js/Tailwind, Clerk Auth, and Convex Backend.
+The project is built on the **Convex + Next.js + Better Auth** starter template, which aligns with the PRD's specified stack: Next.js/Tailwind, Better Auth, and Convex Backend.
 
 **Decision:** Maintain the current **Integrated Monorepo** style based on standard Next.js/Tailwind/Convex best practices, leveraging the starter's pre-configured structure and dependencies.
 
@@ -22,7 +22,7 @@ The project is built on the **Convex + Next.js + Clerk** starter template, which
 
 ### Technical Summary
 
-The architecture will follow a **Serverless Fullstack** style, utilizing **Next.js** for a flexible frontend (with server-side and client-side rendering) and **Convex** for the unified backend (database, server logic, and the critical scheduled functions). **Clerk** is employed for secure single-user authentication and session management. The development structure will maintain the starter's **Integrated Monorepo** style for tight coupling between the frontend and the Convex backend functions.
+The architecture will follow a **Serverless Fullstack** style, utilizing **Next.js** for a flexible frontend (with server-side and client-side rendering) and **Convex** for the unified backend (database, server logic, and the critical scheduled functions). **Better Auth** is employed for secure single-user authentication and session management. The development structure will maintain the starter's **Integrated Monorepo** style for tight coupling between the frontend and the Convex backend functions.
 
 ### Platform and Infrastructure Choice
 
@@ -30,12 +30,12 @@ The architecture will follow a **Serverless Fullstack** style, utilizing **Next.
 
 **Key Services:**
 
-| Layer        | Technology | Service                                         | Purpose                                                                                            |
-| :----------- | :--------- | :---------------------------------------------- | :------------------------------------------------------------------------------------------------- |
-| **Backend**  | Convex     | Database, Queries, Mutations, Scheduled Actions | Handles all persistent data, server logic, and the time-sensitive scheduling required for posting. |
-| **Auth**     | Clerk      | Authentication/Authorization                    | Secure user login and protected routes.                                                            |
-| **Frontend** | Next.js    | App Routing, UI Hosting                         | Renders the mobile-responsive UI.                                                                  |
-| **External** | N/A        | X/LinkedIn/Telegram APIs                        | Handled by Convex Actions, securely calling third-party services for publishing and notifications. |
+| Layer        | Technology  | Service                                         | Purpose                                                                                            |
+| :----------- | :---------- | :---------------------------------------------- | :------------------------------------------------------------------------------------------------- |
+| **Backend**  | Convex      | Database, Queries, Mutations, Scheduled Actions | Handles all persistent data, server logic, and the time-sensitive scheduling required for posting. |
+| **Auth**     | Better Auth | Authentication/Authorization                    | Secure user login and protected routes.                                                            |
+| **Frontend** | Next.js     | App Routing, UI Hosting                         | Renders the mobile-responsive UI.                                                                  |
+| **External** | N/A         | X/LinkedIn/Telegram APIs                        | Handled by Convex Actions, securely calling third-party services for publishing and notifications. |
 
 ### Repository Structure
 
@@ -46,14 +46,14 @@ social_post/
 ├── app/                    # Next.js pages and routing
 │   ├── (server)/           # Server components
 │   ├── globals.css         # Tailwind CSS
-│   └── layout.tsx          # Root layout with Clerk/Convex Contexts
+│   └── layout.tsx          # Root layout with Better Auth/Convex Contexts
 ├── components/             # Reusable UI components
 ├── convex/                 # All backend logic (DB, Queries, Mutations, Actions)
-│   ├── auth.config.ts      # Clerk/Convex integration config
+│   ├── auth.config.ts      # Better Auth/Convex integration config
 │   ├── myFunctions.ts      # Example functions
 │   └── schema.ts           # Database schema definition
 ├── hooks/                  # NEW: Custom Convex/React hooks
-├── middleware.ts           # Clerk protection for routes
+├── middleware.ts           # Better Auth protection for routes
 └── package.json            # Unified dependencies
 ```
 
@@ -97,7 +97,7 @@ This table is the **DEFINITIVE** technology selection for the entire project.
 | **Styling**              | Tailwind CSS                 | ^4      | Utility-first CSS for rapid, customizable styling.                                                         | Already configured in the starter, supports the fast/simple UI goal.                                  |
 | **Backend Language**     | TypeScript                   | ^5      | Type safety for reliable server logic and data validation.                                                 | Consistent with the starter and aligns with engineer's preference for reliable code.                  |
 | **Database/Functions**   | Convex                       | ^1.28.0 | Unified DB, realtime queries, and scheduled functions for timed publishing.                                | Provides built-in scheduling capabilities which are **critical** for the core publishing requirement. |
-| **Authentication**       | Clerk                        | ^6.12.6 | Secure single-user authentication and session management.                                                  | Fully integrated into the starter and ideal for protected routes.                                     |
+| **Authentication**       | Better Auth                  | ^1.1.10 | Secure single-user authentication and session management.                                                  | Fully integrated into the starter and ideal for protected routes.                                     |
 | **API Style**            | Convex/TS                    | N/A     | **Reactive Queries** (Convex), **Atomic Mutations** (Convex), **Node Actions** (Convex) for external APIs. | Leverages Convex's realtime features and isolates external API calls into safe `actions`.             |
 | **Secrets Management**   | Convex Environment Variables | N/A     | Secure storage of X, LinkedIn, and Telegram API keys.                                                      | Convex `actions` can securely access environment variables, keeping secrets out of the client/repo.   |
 
@@ -107,10 +107,10 @@ This table is the **DEFINITIVE** technology selection for the entire project.
 
 The data models defined in the PRD will be implemented in `convex/schema.ts`.
 
-| Model Name           | Purpose                                | Key Fields (Convex Type)                                                                                                                                                                   | Indexes                                         | Rationale                                                                        |
-| :------------------- | :------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------- | :------------------------------------------------------------------------------- |
-| **posts**            | Stores content and scheduling details. | `clerkUserId`: string (ID), `status`: string, `twitterContent`: string, `linkedInContent`: string, `twitterScheduledTime`: number (timestamp), `linkedInScheduledTime`: number (timestamp) | `by_user`: ["clerkUserId"]                      | Allows fast lookup of all posts for the current authenticated user.              |
-| **user_connections** | Stores secure, encrypted OAuth tokens. | `clerkUserId`: string (ID), `platform`: string, `accessToken`: string (encrypted), `refreshToken`: string (encrypted), `expiresAt`: number (timestamp)                                     | `by_user_platform`: ["clerkUserId", "platform"] | Enables quick, secure retrieval of credentials for a specific user and platform. |
+| Model Name           | Purpose                                | Key Fields (Convex Type)                                                                                                                                                                   | Indexes                                    | Rationale                                                                        |
+| :------------------- | :------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------- | :------------------------------------------------------------------------------- |
+| **posts**            | Stores content and scheduling details. | `userId`: string (ID), `status`: string, `twitterContent`: string, `linkedInContent`: string, `twitterScheduledTime`: number (timestamp), `linkedInScheduledTime`: number (timestamp) | `by_user`: ["userId"]                      | Allows fast lookup of all posts for the current authenticated user.              |
+| **user_connections** | Stores secure, encrypted OAuth tokens. | `userId`: string (ID), `platform`: string, `accessToken`: string (encrypted), `refreshToken`: string (encrypted), `expiresAt`: number (timestamp)                                     | `by_user_platform`: ["userId", "platform"] | Enables quick, secure retrieval of credentials for a specific user and platform. |
 
 ---
 
@@ -122,7 +122,7 @@ The data models defined in the PRD will be implemented in `convex/schema.ts`.
 
 | Component Type    | Location               | Purpose                                                                               |
 | :---------------- | :--------------------- | :------------------------------------------------------------------------------------ |
-| **App Shell**     | `app/layout.tsx`       | Provides Clerk and Convex contexts, handles global styling.                           |
+| **App Shell**     | `app/layout.tsx`       | Provides Better Auth and Convex contexts, handles global styling.                           |
 | **Pages/Views**   | `app/`                 | Defines routes and assembles features into a view.                                    |
 | **Core Features** | `components/features/` | Components for complex workflows, e.g., `PostScheduler.tsx`, `ConnectionManager.tsx`. |
 | **UI Primitives** | `components/ui/`       | Exports from `shadcn/ui`.                                                             |
@@ -142,7 +142,7 @@ The application relies entirely on the **Next.js App Router** structure.
 | **Post Creation/Scheduling**    | `app/schedule/page.tsx`              |
 | **List View / Post Management** | `app/dashboard/page.tsx` (Protected) |
 | **Post History**                | `app/history/page.tsx` (Protected)   |
-| **Authentication Flow**         | Handled by Clerk components          |
+| **Authentication Flow**         | Handled by Better Auth components    |
 
 ---
 
@@ -150,9 +150,9 @@ The application relies entirely on the **Next.js App Router** structure.
 
 ### Authentication & Authorization
 
-- **Provider:** Clerk.
-- **Client Authorization:** Clerk's middleware (`middleware.ts`) protects core application routes.
-- **Convex Authorization:** All critical Queries and Mutations must use `ctx.auth.getUserIdentity()` to verify the user is authenticated and that they are only accessing their own data (i.e., verifying `userId` against the document's `clerkUserId`).
+- **Provider:** Better Auth.
+- **Client Authorization:** Better Auth's middleware (`middleware.ts`) protects core application routes.
+- **Convex Authorization:** All critical Queries and Mutations must use `ctx.auth.getUserIdentity()` to verify the user is authenticated and that they are only accessing their own data (i.e., verifying `userId` against the document's `userId`).
 
 ### Secure Secrets Management
 

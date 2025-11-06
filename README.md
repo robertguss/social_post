@@ -1,6 +1,6 @@
 # Social Posting Scheduler
 
-A self-hosted social media scheduling application for scheduling and publishing content to X/Twitter and LinkedIn. Built with Next.js, Convex, and Clerk as a single-user productivity tool to replace expensive subscription services.
+A self-hosted social media scheduling application for scheduling and publishing content to X/Twitter and LinkedIn. Built with Next.js, Convex, and Better Auth as a single-user productivity tool to replace expensive subscription services.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black)
@@ -59,7 +59,7 @@ Visit `http://localhost:3000` to see your app.
 
 - **Node.js** 20+ and **pnpm** 8+
 - **Convex Account** - [Sign up at convex.dev](https://convex.dev/)
-- **Clerk Account** - [Sign up at clerk.com](https://clerk.com/)
+- **Better Auth Setup** - Configured with Convex
 - **X/Twitter Developer Account** - [Apply at developer.twitter.com](https://developer.twitter.com/)
 - **LinkedIn Developer Account** - [Apply at developer.linkedin.com](https://developer.linkedin.com/)
 - **Telegram Bot** (optional) - [Create via @BotFather](https://t.me/botfather)
@@ -86,24 +86,17 @@ pnpm dlx convex dev
 # - Link your local code to the deployment
 ```
 
-### 3. Set Up Clerk Authentication
+### 3. Set Up Better Auth
 
-1. Create a new application at [clerk.com](https://clerk.com/)
-2. Configure Clerk in your Convex deployment:
+1. Better Auth is already configured with Convex in this project
+2. Configure Better Auth environment variables in your Convex deployment:
 
    ```bash
-   # Follow the Clerk + Convex setup guide:
-   # https://docs.convex.dev/auth/clerk
+   # Follow the Better Auth + Convex setup guide:
+   # https://www.better-auth.com/docs
    ```
 
-3. Create a JWT template in Clerk Dashboard:
-   - Name: "convex"
-   - Copy the Issuer URL
-4. Add to Convex environment variables:
-
-   ```
-   CLERK_JWT_ISSUER_DOMAIN=your-clerk-issuer-url
-   ```
+3. Add required environment variables (see Configuration section below)
 
 ### 4. Configure OAuth Applications
 
@@ -133,9 +126,9 @@ pnpm dlx convex dev
 Create `.env.local` for Next.js:
 
 ```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+# Better Auth
+BETTER_AUTH_SECRET=your_secret_key
+BETTER_AUTH_URL=http://localhost:3000
 
 # Convex
 NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
@@ -147,8 +140,9 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 Add to Convex Dashboard (Settings → Environment Variables):
 
 ```bash
-# Clerk JWT Verification
-CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-domain.clerk.accounts.dev
+# Better Auth Configuration
+BETTER_AUTH_SECRET=your_secret_key
+BETTER_AUTH_URL=http://localhost:3000
 
 # X/Twitter OAuth
 TWITTER_CLIENT_ID=your_twitter_client_id
@@ -240,7 +234,7 @@ social_post/
 ├── docs/                     # Documentation
 ├── hooks/                    # Custom React hooks
 ├── lib/                      # Utility functions
-└── middleware.ts             # Clerk route protection
+└── middleware.ts             # Better Auth route protection
 ```
 
 ## Architecture
@@ -249,7 +243,7 @@ social_post/
 
 - **Frontend**: Next.js 15.5.4 (App Router), React 19, Tailwind CSS 4
 - **Backend**: Convex (database, queries, mutations, actions)
-- **Authentication**: Clerk (single-user auth)
+- **Authentication**: Better Auth (single-user auth)
 - **UI Components**: shadcn/ui
 - **Language**: TypeScript throughout
 
@@ -275,24 +269,24 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 
 - OAuth tokens encrypted with AES-256-GCM before database storage
 - All Convex functions verify user authentication
-- Data scoped to `clerkUserId` for single-user isolation
+- Data scoped to `userId` for single-user isolation
 
 ### Data Models
 
 **posts** - Stores scheduled and published content
 
 - Fields: `status`, `twitterContent`, `linkedInContent`, `scheduledTimes`, `url`, `errorMessage`, `retryCount`
-- Index: `by_user` on `[clerkUserId]`
+- Index: `by_user` on `[userId]`
 
 **user_connections** - Stores encrypted OAuth tokens
 
 - Fields: `platform`, `accessToken`, `refreshToken`, `expiresAt`
-- Index: `by_user_platform` on `[clerkUserId, platform]`
+- Index: `by_user_platform` on `[userId, platform]`
 
 **templates** - Stores reusable content templates
 
 - Fields: `name`, `content`, `tags`, `lastUsedAt`, `usageCount`
-- Index: `by_user` on `[clerkUserId]`
+- Index: `by_user` on `[userId]`
 
 ## Documentation
 
@@ -366,7 +360,7 @@ pnpm dlx convex deploy
 - [ ] OAuth apps configured with production callback URLs
 - [ ] Encryption key generated and set
 - [ ] Telegram bot configured (optional)
-- [ ] Clerk production instance configured
+- [ ] Better Auth production instance configured
 - [ ] DNS records pointed to Vercel
 - [ ] SSL certificate active
 - [ ] Error tracking configured
@@ -466,7 +460,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [Convex](https://convex.dev/) for backend infrastructure
 - Styled with [shadcn/ui](https://ui.shadcn.com/) components
-- Authenticated with [Clerk](https://clerk.com/)
+- Authenticated with [Better Auth](https://www.better-auth.com/)
 - Deployed on [Vercel](https://vercel.com/)
 
 ## Support

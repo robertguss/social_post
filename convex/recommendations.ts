@@ -365,7 +365,7 @@ function convertLocalRangeToUTC(
  * NOTE: This returns an empty array if no performance data exists (feature not yet activated)
  *
  * @param ctx - Query context
- * @param userId - Clerk user ID
+ * @param userId - Better Auth user ID
  * @param platform - Platform name ("twitter" or "linkedin")
  * @returns Array of performance data with published time and engagement metrics
  */

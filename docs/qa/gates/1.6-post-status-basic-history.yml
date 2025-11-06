@@ -39,7 +39,7 @@ nfr_validation:
     status: PASS
     notes: |
       - Authentication properly enforced in getPosts query (ctx.auth.getUserIdentity())
-      - Data properly scoped to clerkUserId via indexed query
+      - Data properly scoped to userId via indexed query
       - /history route protected in middleware.ts
       - Telegram credentials stored in environment variables (not exposed to client)
       - No sensitive data leakage in UI components

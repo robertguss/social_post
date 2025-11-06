@@ -2,9 +2,9 @@
 
 ## Authentication & Authorization
 
-- **Provider:** Clerk.
-- **Client Authorization:** Clerk's middleware (`middleware.ts`) protects core application routes.
-- **Convex Authorization:** All critical Queries and Mutations must use `ctx.auth.getUserIdentity()` to verify the user is authenticated and that they are only accessing their own data (i.e., verifying `userId` against the document's `clerkUserId`).
+- **Provider:** Better Auth.
+- **Client Authorization:** Better Auth's middleware (`middleware.ts`) protects core application routes.
+- **Convex Authorization:** All critical Queries and Mutations must use `ctx.auth.getUserIdentity()` to verify the user is authenticated and that they are only accessing their own data (i.e., verifying `userId` against the document's `userId`).
 
 ## Secure Secrets Management
 

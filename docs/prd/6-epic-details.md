@@ -19,9 +19,9 @@
 
 #### Acceptance Criteria
 
-1. The Next.js project runs with the Clerk/Convex context provided.
-2. A user can successfully sign up and log in via Clerk/Next.js components.
-3. The main app route is protected by Clerk middleware.
+1. The Next.js project runs with the Better Auth/Convex context provided.
+2. A user can successfully sign up and log in via Better Auth/Next.js components.
+3. The main app route is protected by Better Auth middleware.
 4. The foundational Convex database is initialized with the `posts` and `user_connections` tables defined in the schema.
 
 ### Story 1.2 Secure X/Twitter OAuth Integration
@@ -31,7 +31,7 @@
 #### Acceptance Criteria
 
 1. The UI displays a button to initiate the X/Twitter OAuth flow.
-2. Upon successful OAuth, a single `user_connections` record is created for X/Twitter linked to the Clerk user ID.
+2. Upon successful OAuth, a single `user_connections` record is created for X/Twitter linked to the Better Auth user ID.
 3. The API credentials (`accessToken`, `refreshToken`) are stored and secured.
 4. The UI displays the X/Twitter connection status (active/needs re-auth).
 
@@ -102,7 +102,7 @@
 #### Acceptance Criteria
 
 1. The UI displays a button to initiate the LinkedIn OAuth 2.0 flow.
-2. Upon successful OAuth, a `user_connections` record is created for LinkedIn linked to the Clerk user ID.
+2. Upon successful OAuth, a `user_connections` record is created for LinkedIn linked to the Better Auth user ID.
 3. The LinkedIn API credentials (`accessToken`, `refreshToken`, `expiresAt`) are stored securely.
 4. The UI displays the LinkedIn connection status (active/needs re-auth) alongside the existing X/Twitter status.
 
@@ -190,8 +190,8 @@
 
 #### Acceptance Criteria
 
-1. A `templates` table is defined in the Convex schema with fields: `clerkUserId`, `name`, `content`, `tags` (array), `createdAt`, `lastUsedAt`, `usageCount`.
-2. The `templates` table has an index `by_user` on `clerkUserId` for efficient user-scoped queries.
+1. A `templates` table is defined in the Convex schema with fields: `userId`, `name`, `content`, `tags` (array), `createdAt`, `lastUsedAt`, `usageCount`.
+2. The `templates` table has an index `by_user` on `userId` for efficient user-scoped queries.
 3. Convex mutations are implemented for creating, updating, and deleting templates.
 4. Convex queries are implemented for retrieving user's templates, optionally filtered by tag.
 5. Template names must be unique per user (validation in mutation).
@@ -297,13 +297,13 @@
 
 #### Acceptance Criteria
 
-1. A `recurring_queues` table is defined in the Convex schema with fields: `clerkUserId`, `originalPostId`, `status` (active/paused), `interval` (days), `nextScheduledTime`, `lastExecutedTime`, `executionCount`, `maxExecutions` (optional).
-2. The `recurring_queues` table has an index `by_user_status` on `["clerkUserId", "status"]` for efficient active queue queries.
+1. A `recurring_queues` table is defined in the Convex schema with fields: `userId`, `originalPostId`, `status` (active/paused), `interval` (days), `nextScheduledTime`, `lastExecutedTime`, `executionCount`, `maxExecutions` (optional).
+2. The `recurring_queues` table has an index `by_user_status` on `["userId", "status"]` for efficient active queue queries.
 3. A Convex scheduled function runs daily to check for queues due for execution (`nextScheduledTime` <= now).
 4. When a queue is due, the scheduled function clones the original post and schedules it using the existing publishing logic.
 5. After execution, `nextScheduledTime` is updated to `lastExecutedTime` + `interval`, and `executionCount` is incremented.
 6. If `maxExecutions` is set and reached, the queue status is automatically set to "completed".
-7. All queue operations are scoped to the authenticated user's `clerkUserId`.
+7. All queue operations are scoped to the authenticated user's `userId`.
 
 ### Story 4.4 Queue Management UI (Pause/Resume/Edit)
 
@@ -507,7 +507,7 @@
 
 1. A "Posting Preferences" settings page is added to the application.
 2. Users can define their own "preferred posting windows" for each platform (e.g., "Twitter: Mon-Fri 7-9am, Sat 10am").
-3. Preferred windows are stored in a `user_preferences` table with fields: `clerkUserId`, `platform`, `dayOfWeek`, `customTimeRanges`.
+3. Preferred windows are stored in a `user_preferences` table with fields: `userId`, `platform`, `dayOfWeek`, `customTimeRanges`.
 4. When custom preferences exist, the time suggestion algorithm prioritizes user-defined windows over research-based recommendations.
 5. Users can reset preferences to default (research-based) recommendations at any time.
 6. The settings page displays both custom preferences and default recommendations side-by-side for comparison.
@@ -618,7 +618,7 @@
 #### Acceptance Criteria
 
 1. The application tracks the number of Gemini API calls made per day/month.
-2. A `ai_usage_logs` table stores: `clerkUserId`, `timestamp`, `feature` (tone/expand/hashtags), `tokensUsed`, `cost` (estimated).
+2. A `ai_usage_logs` table stores: `userId`, `timestamp`, `feature` (tone/expand/hashtags), `tokensUsed`, `cost` (estimated).
 3. If the daily rate limit is approaching (e.g., 90% of quota), users receive a warning message when invoking AI features.
 4. Admin users can view total API usage and estimated costs in a dashboard or logs.
 5. The application respects Gemini API rate limits and implements exponential backoff if rate-limited.

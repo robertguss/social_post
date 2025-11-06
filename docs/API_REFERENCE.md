@@ -88,7 +88,7 @@ Updates an existing scheduled post. Cancels existing scheduled actions and creat
 **Constraints:**
 
 - Only posts with status "Scheduled" can be edited
-- User must own the post (verified via `clerkUserId`)
+- User must own the post (verified via `userId`)
 - Same validation rules as `createPost`
 
 **Usage Example:**
@@ -289,10 +289,10 @@ Retrieves and decrypts OAuth tokens for a specific platform. Restricted to inter
 
 **Arguments:**
 
-| Parameter     | Type     | Required | Description   |
-| ------------- | -------- | -------- | ------------- |
-| `clerkUserId` | `string` | Yes      | The user's ID |
-| `platform`    | `string` | Yes      | Platform name |
+| Parameter | Type     | Required | Description   |
+| --------- | -------- | -------- | ------------- |
+| `userId`  | `string` | Yes      | The user's ID |
+| `platform`| `string` | Yes      | Platform name |
 
 **Returns:**
 
@@ -580,9 +580,9 @@ Refreshes expired LinkedIn OAuth tokens.
 
 **Arguments:**
 
-| Parameter     | Type     | Required | Description   |
-| ------------- | -------- | -------- | ------------- |
-| `clerkUserId` | `string` | Yes      | The user's ID |
+| Parameter | Type     | Required | Description   |
+| --------- | -------- | -------- | ------------- |
+| `userId`  | `string` | Yes      | The user's ID |
 
 **Returns:**
 
@@ -716,7 +716,7 @@ throw new Error("Twitter content exceeds 280 character limit");
 throw new Error("Unauthorized: You can only edit your own posts");
 ```
 
-- All operations verify ownership via `clerkUserId`
+- All operations verify ownership via `userId`
 
 **API Errors:**
 
@@ -794,7 +794,7 @@ if (!identity) throw new Error("Not authenticated");
 ```typescript
 ctx.db
   .query("posts")
-  .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+  .withIndex("by_user", (q) => q.eq("userId", userId))
   .collect();
 ```
 
@@ -818,7 +818,7 @@ console.log("Token refresh successful");
 ## Additional Resources
 
 - [Convex Documentation](https://docs.convex.dev)
-- [Clerk Authentication](https://clerk.com/docs)
+- [Better Auth Documentation](https://www.better-auth.com/docs)
 - [X/Twitter API Reference](https://developer.twitter.com/en/docs/api-reference-index)
 - [LinkedIn API Reference](https://learn.microsoft.com/en-us/linkedin/)
 - [Project PRD](../docs/prd.md)

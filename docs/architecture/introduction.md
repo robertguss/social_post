@@ -10,7 +10,7 @@
 
 ## Starter Template or Existing Project
 
-The project is built on the **Convex + Next.js + Clerk** starter template, which aligns with the PRD's specified stack: Next.js/Tailwind, Clerk Auth, and Convex Backend.
+The project is built on the **Convex + Next.js + Better Auth** starter template, which aligns with the PRD's specified stack: Next.js/Tailwind, Better Auth, and Convex Backend.
 
 **Decision:** Maintain the current **Integrated Monorepo** style based on standard Next.js/Tailwind/Convex best practices, leveraging the starter's pre-configured structure and dependencies.
 

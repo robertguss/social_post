@@ -38,8 +38,8 @@ Complete guide for deploying and operating the Social Posting Scheduler in produ
         │                       │
         ▼                       ▼
 ┌──────────────┐        ┌──────────────┐
-│ Clerk Auth   │        │ Convex Cloud │
-│  Service     │        │   (Backend)  │
+│ Better Auth  │        │ Convex Cloud │
+│   Service    │        │   (Backend)  │
 └──────────────┘        └──────┬───────┘
                                │
                     ┌──────────┴──────────┐
@@ -57,7 +57,7 @@ Complete guide for deploying and operating the Social Posting Scheduler in produ
 |---------|----------|---------|
 | **Frontend Hosting** | Vercel | Next.js deployment, CDN, SSL |
 | **Backend & Database** | Convex | Serverless functions, realtime DB |
-| **Authentication** | Clerk | User auth, JWT management |
+| **Authentication** | Better Auth | User auth, session management |
 | **Domain & DNS** | Cloudflare/Route53 | DNS management |
 | **Monitoring** | Sentry/LogRocket | Error tracking, performance |
 | **Uptime Monitoring** | BetterUptime/UptimeRobot | Health checks |
@@ -79,7 +79,7 @@ Complete guide for deploying and operating the Social Posting Scheduler in produ
 
 - [ ] Vercel account created
 - [ ] Convex production deployment created
-- [ ] Clerk production instance configured
+- [ ] Better Auth production configuration complete
 - [ ] Domain purchased and DNS configured
 - [ ] SSL certificate obtained (automatic with Vercel)
 - [ ] Monitoring tools configured
@@ -130,8 +130,9 @@ pnpm dlx convex deploy --prod
 3. Add the following variables:
 
 ```bash
-# Clerk JWT Verification
-CLERK_JWT_ISSUER_DOMAIN=https://your-prod-clerk-domain.clerk.accounts.dev
+# Better Auth Configuration
+BETTER_AUTH_SECRET=your_production_auth_secret
+BETTER_AUTH_URL=https://yourdomain.com
 
 # X/Twitter OAuth (Production)
 TWITTER_CLIENT_ID=your_production_twitter_client_id
@@ -215,9 +216,9 @@ vercel
 In Vercel Dashboard → Project → Settings → Environment Variables:
 
 ```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
+# Better Auth Configuration
+BETTER_AUTH_SECRET=your_production_auth_secret
+BETTER_AUTH_URL=https://yourdomain.com
 
 # Convex Production URL
 NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
@@ -326,9 +327,9 @@ git push origin main
 #### Vercel (Next.js)
 
 ```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxxxxx
-CLERK_SECRET_KEY=sk_live_xxxxxx
+# Better Auth
+BETTER_AUTH_SECRET=xxxxxx
+BETTER_AUTH_URL=https://yourdomain.com
 
 # Convex
 NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
@@ -340,8 +341,8 @@ NEXT_PUBLIC_BASE_URL=https://yourdomain.com
 #### Convex (Backend)
 
 ```bash
-# Clerk
-CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-domain.clerk.accounts.dev
+# Better Auth
+BETTER_AUTH_SECRET=xxxxxx
 
 # X/Twitter OAuth
 TWITTER_CLIENT_ID=xxxxxx
@@ -642,7 +643,7 @@ export function checkRateLimit(userId: string): boolean {
 - [ ] Rotate encryption keys
 - [ ] Audit user access logs
 - [ ] Update dependencies (`pnpm update`)
-- [ ] Review Clerk security settings
+- [ ] Review Better Auth security settings
 - [ ] Check for exposed secrets (gitleaks, trufflehog)
 - [ ] Review CORS configuration
 - [ ] Verify HTTPS everywhere
@@ -658,7 +659,7 @@ export function checkRateLimit(userId: string): boolean {
 // Always use indexes for queries
 const posts = await ctx.db
   .query("posts")
-  .withIndex("by_user", (q) => q.eq("clerkUserId", userId))
+  .withIndex("by_user", (q) => q.eq("userId", userId))
   .collect();
 ```
 
@@ -667,7 +668,7 @@ const posts = await ctx.db
 // Paginate large result sets
 const posts = await ctx.db
   .query("posts")
-  .withIndex("by_user", (q) => q.eq("clerkUserId", userId))
+  .withIndex("by_user", (q) => q.eq("userId", userId))
   .order("desc")
   .take(20);  // Limit to 20 results
 ```
@@ -900,7 +901,7 @@ Schedule via cron (Convex doesn't support cron yet, use external scheduler).
 
 - **Convex Support**: [Convex Discord](https://convex.dev/community)
 - **Vercel Support**: [Vercel Support](https://vercel.com/support)
-- **Clerk Support**: [Clerk Docs](https://clerk.com/docs)
+- **Better Auth Support**: [Better Auth Docs](https://www.better-auth.com/docs)
 - **Project Issues**: [GitHub Issues](https://github.com/yourusername/social_post/issues)
 
 ---
