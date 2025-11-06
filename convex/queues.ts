@@ -15,14 +15,14 @@ import { cronJobs } from "convex/server";
  * @param ctx - Convex context
  * @param originalPostId - ID of the post being queued
  * @param scheduledTime - Timestamp to check for conflicts
- * @param clerkUserId - User ID for scoping
+ * @param userId - User ID for scoping
  * @returns true if exact conflict exists, false otherwise
  */
 async function checkExactConflict(
   ctx: MutationCtx,
   originalPostId: Id<"posts">,
   scheduledTime: number,
-  clerkUserId: string
+  userId: string
 ): Promise<boolean> {
   const EXACT_TOLERANCE = 1000; // 1 second in milliseconds
 
@@ -40,7 +40,7 @@ async function checkExactConflict(
   const scheduledPosts = await ctx.db
     .query("posts")
     .withIndex("by_user_status", (q) =>
-      q.eq("clerkUserId", clerkUserId).eq("status", "Scheduled")
+      q.eq("userId", userId).eq("status", "Scheduled")
     )
     .collect();
 
@@ -99,7 +99,7 @@ export const createQueue = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Validate interval > 0 (must be at least 1 day)
     if (args.interval < 1) {
@@ -116,7 +116,7 @@ export const createQueue = mutation({
     if (!originalPost) {
       throw new Error("Original post not found");
     }
-    if (originalPost.clerkUserId !== clerkUserId) {
+    if (originalPost.userId !== userId) {
       throw new Error("Unauthorized: You do not own this post");
     }
 
@@ -126,7 +126,7 @@ export const createQueue = mutation({
       const activeQueues = await ctx.db
         .query("recurring_queues")
         .withIndex("by_user_status", (q) =>
-          q.eq("clerkUserId", clerkUserId).eq("status", "active")
+          q.eq("userId", userId).eq("status", "active")
         )
         .collect();
 
@@ -134,7 +134,7 @@ export const createQueue = mutation({
       const pausedQueues = await ctx.db
         .query("recurring_queues")
         .withIndex("by_user_status", (q) =>
-          q.eq("clerkUserId", clerkUserId).eq("status", "paused")
+          q.eq("userId", userId).eq("status", "paused")
         )
         .collect();
 
@@ -163,7 +163,7 @@ export const createQueue = mutation({
       ctx,
       args.originalPostId,
       args.nextScheduledTime,
-      clerkUserId
+      userId
     );
 
     if (hasExactConflict) {
@@ -176,7 +176,7 @@ export const createQueue = mutation({
 
     // Create queue record with status "active" and executionCount 0
     const queueId = await ctx.db.insert("recurring_queues", {
-      clerkUserId,
+      userId,
       originalPostId: args.originalPostId,
       status: "active",
       interval: args.interval,
@@ -209,7 +209,7 @@ export const updateQueue = mutation({
   returns: v.object({
     _id: v.id("recurring_queues"),
     _creationTime: v.number(),
-    clerkUserId: v.string(),
+    userId: v.string(),
     originalPostId: v.id("posts"),
     status: v.string(),
     interval: v.number(),
@@ -224,14 +224,14 @@ export const updateQueue = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Verify queue exists and user owns it
     const queue = await ctx.db.get(args.queueId);
     if (!queue) {
       throw new Error("Queue not found");
     }
-    if (queue.clerkUserId !== clerkUserId) {
+    if (queue.userId !== userId) {
       throw new Error("Unauthorized: You do not own this queue");
     }
 
@@ -246,7 +246,7 @@ export const updateQueue = mutation({
         ctx,
         queue.originalPostId,
         args.nextScheduledTime,
-        clerkUserId
+        userId
       );
 
       if (hasExactConflict) {
@@ -292,14 +292,14 @@ export const deleteQueue = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Verify queue exists and user owns it
     const queue = await ctx.db.get(args.queueId);
     if (!queue) {
       throw new Error("Queue not found");
     }
-    if (queue.clerkUserId !== clerkUserId) {
+    if (queue.userId !== userId) {
       throw new Error("Unauthorized: You do not own this queue");
     }
 
@@ -324,14 +324,14 @@ export const pauseQueue = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Verify queue exists and user owns it
     const queue = await ctx.db.get(args.queueId);
     if (!queue) {
       throw new Error("Queue not found");
     }
-    if (queue.clerkUserId !== clerkUserId) {
+    if (queue.userId !== userId) {
       throw new Error("Unauthorized: You do not own this queue");
     }
 
@@ -357,14 +357,14 @@ export const resumeQueue = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Verify queue exists and user owns it
     const queue = await ctx.db.get(args.queueId);
     if (!queue) {
       throw new Error("Queue not found");
     }
-    if (queue.clerkUserId !== clerkUserId) {
+    if (queue.userId !== userId) {
       throw new Error("Unauthorized: You do not own this queue");
     }
 
@@ -393,7 +393,7 @@ export const checkDuplicateQueue = query({
     v.object({
       _id: v.id("recurring_queues"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       originalPostId: v.id("posts"),
       status: v.string(),
       interval: v.number(),
@@ -409,16 +409,16 @@ export const checkDuplicateQueue = query({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
-    // Query recurring_queues for queues matching originalPostId and clerkUserId
+    // Query recurring_queues for queues matching originalPostId and userId
     // Query results to include only "active" and "paused" queues (exclude "completed")
 
     // Query for active queues
     const activeQueues = await ctx.db
       .query("recurring_queues")
       .withIndex("by_user_status", (q) =>
-        q.eq("clerkUserId", clerkUserId).eq("status", "active")
+        q.eq("userId", userId).eq("status", "active")
       )
       .collect();
 
@@ -426,7 +426,7 @@ export const checkDuplicateQueue = query({
     const pausedQueues = await ctx.db
       .query("recurring_queues")
       .withIndex("by_user_status", (q) =>
-        q.eq("clerkUserId", clerkUserId).eq("status", "paused")
+        q.eq("userId", userId).eq("status", "paused")
       )
       .collect();
 
@@ -465,7 +465,7 @@ export const detectSchedulingConflicts = query({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     const ONE_HOUR = 3600000; // 1 hour in milliseconds
 
@@ -479,7 +479,7 @@ export const detectSchedulingConflicts = query({
     const activeQueues = await ctx.db
       .query("recurring_queues")
       .withIndex("by_user_status", (q) =>
-        q.eq("clerkUserId", clerkUserId).eq("status", "active")
+        q.eq("userId", userId).eq("status", "active")
       )
       .collect();
 
@@ -487,7 +487,7 @@ export const detectSchedulingConflicts = query({
     const scheduledPosts = await ctx.db
       .query("posts")
       .withIndex("by_user_status", (q) =>
-        q.eq("clerkUserId", clerkUserId).eq("status", "Scheduled")
+        q.eq("userId", userId).eq("status", "Scheduled")
       )
       .collect();
 
@@ -549,7 +549,7 @@ export const getQueues = query({
     v.object({
       _id: v.id("recurring_queues"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       originalPostId: v.id("posts"),
       status: v.string(),
       interval: v.number(),
@@ -571,7 +571,7 @@ export const getQueues = query({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Query recurring_queues with by_user_status index
     let queues;
@@ -581,14 +581,14 @@ export const getQueues = query({
       queues = await ctx.db
         .query("recurring_queues")
         .withIndex("by_user_status", (q) =>
-          q.eq("clerkUserId", clerkUserId).eq("status", status)
+          q.eq("userId", userId).eq("status", status)
         )
         .collect();
     } else {
       // No status filter, get all queues for user
       queues = await ctx.db
         .query("recurring_queues")
-        .withIndex("by_user_status", (q) => q.eq("clerkUserId", clerkUserId))
+        .withIndex("by_user_status", (q) => q.eq("userId", userId))
         .collect();
     }
 
@@ -656,7 +656,7 @@ async function cloneAndSchedulePost(
   const linkedInScheduledTime = hasLinkedIn ? nextScheduledTime : undefined;
   // Create new post record with cloned content
   const newPostId = await ctx.db.insert("posts", {
-    clerkUserId: originalPost.clerkUserId,
+    userId: originalPost.userId,
     status: "Scheduled", // Set to Scheduled (not draft) since we're auto-scheduling
     twitterContent: originalPost.twitterContent || "",
     linkedInContent: originalPost.linkedInContent || "",

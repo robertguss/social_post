@@ -42,7 +42,7 @@ export const fetchEngagementMetrics = action({
     // Verify the post exists and belongs to the authenticated user
     const post = await ctx.runMutation(internal.analyticsQueries.getPostForMetrics, {
       postId: args.postId,
-      clerkUserId: identity.subject,
+      userId: identity.subject,
     });
 
     if (!post) {
@@ -373,7 +373,7 @@ export const getPerformanceInsights = action({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Check if feature is enabled
     const featureEnabled = process.env.PERFORMANCE_TRACKING_ENABLED === "true";
@@ -398,7 +398,7 @@ export const getPerformanceInsights = action({
 
     // Query all performance records for this platform via internal mutation
     const insightsData: PerformanceInsightsReturn = await ctx.runMutation(internal.analyticsQueries.getPerformanceInsightsInternal, {
-      clerkUserId,
+      userId,
       platform: args.platform,
       dateRangeFilter: args.dateRangeFilter,
     });

@@ -514,10 +514,10 @@ describe("Query authentication logic validation", () => {
 
   it("should extract clerk user ID from identity", () => {
     const identity = { subject: "user_123456" };
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
-    expect(clerkUserId).toBe("user_123456");
-    expect(clerkUserId).toBeDefined();
+    expect(userId).toBe("user_123456");
+    expect(userId).toBeDefined();
   });
 
   it("should verify authenticated user has subject", () => {

@@ -364,8 +364,8 @@ describe("Posting Preferences - Unit Tests", () => {
 
       expect(user1Prefs).toHaveLength(1);
       expect(user2Prefs).toHaveLength(1);
-      expect(user1Prefs[0].clerkUserId).toBe("user123");
-      expect(user2Prefs[0].clerkUserId).toBe("user456");
+      expect(user1Prefs[0].userId).toBe("user123");
+      expect(user2Prefs[0].userId).toBe("user456");
     });
 
     test("should return empty array for user with no preferences", async () => {

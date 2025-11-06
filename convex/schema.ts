@@ -5,7 +5,7 @@ import { v } from "convex/values";
 export default defineSchema({
   // Stores scheduled and published content
   posts: defineTable({
-    clerkUserId: v.string(),
+    userId: v.string(),
     status: v.string(), // "draft" | "scheduled" | "publishing" | "published" | "failed"
     twitterContent: v.optional(v.string()),
     linkedInContent: v.optional(v.string()),
@@ -24,31 +24,31 @@ export default defineSchema({
     linkedInEnabled: v.optional(v.boolean()), // Track which platforms are enabled for drafts
     lastEditedTime: v.optional(v.number()), // Timestamp for tracking draft updates
   })
-    .index("by_user", ["clerkUserId"])
-    .index("by_user_status", ["clerkUserId", "status"]),
+    .index("by_user", ["userId"])
+    .index("by_user_status", ["userId", "status"]),
 
   // Stores encrypted OAuth tokens for external platforms
   user_connections: defineTable({
-    clerkUserId: v.string(),
+    userId: v.string(),
     platform: v.string(), // "twitter" | "linkedin"
     accessToken: v.string(), // Must be encrypted before storage
     refreshToken: v.string(), // Must be encrypted before storage
     expiresAt: v.number(), // Timestamp
-  }).index("by_user_platform", ["clerkUserId", "platform"]),
+  }).index("by_user_platform", ["userId", "platform"]),
 
   // Stores reusable content templates for users
   templates: defineTable({
-    clerkUserId: v.string(),
+    userId: v.string(),
     name: v.string(), // Unique per user
     content: v.string(), // Template text content
     tags: v.array(v.string()), // e.g., ["hashtags", "closing", "buildinpublic"]
     lastUsedAt: v.optional(v.number()), // Timestamp, null until first use
     usageCount: v.number(), // Default 0
-  }).index("by_user", ["clerkUserId"]),
+  }).index("by_user", ["userId"]),
 
   // Stores recurring post queues for automated content recycling
   recurring_queues: defineTable({
-    clerkUserId: v.string(), // Clerk user ID for user scoping
+    userId: v.string(), // User ID for user scoping
     originalPostId: v.id("posts"), // Reference to the post to clone
     status: v.string(), // "active" | "paused" | "completed"
     interval: v.number(), // Number of days between executions
@@ -57,21 +57,21 @@ export default defineSchema({
     executionCount: v.number(), // Total number of times queue has executed
     maxExecutions: v.optional(v.number()), // Max executions before auto-completion (null for infinite)
   })
-    .index("by_user_status", ["clerkUserId", "status"])
+    .index("by_user_status", ["userId", "status"])
     .index("by_next_scheduled", ["nextScheduledTime"])
     .index("by_status_next_scheduled", ["status", "nextScheduledTime"]),
 
   // Stores user-specific preferences and settings
   user_preferences: defineTable({
-    clerkUserId: v.string(),
+    userId: v.string(),
     enableContentPrePopulation: v.boolean(), // Default: true - Smart content pre-fill from Twitter to LinkedIn
     // Future preference fields can be added here
-  }).index("by_user", ["clerkUserId"]),
+  }).index("by_user", ["userId"]),
 
   // Stores user-defined custom posting time preferences that override research-based recommendations
   // Times are stored in user's local timezone (unlike posting_time_recommendations which uses UTC)
   posting_preferences: defineTable({
-    clerkUserId: v.string(), // Clerk user ID (for data scoping)
+    userId: v.string(), // User ID (for data scoping)
     platform: v.string(), // "twitter" | "linkedin"
     dayOfWeek: v.number(), // 0-6 (Sunday=0, Saturday=6)
     customTimeRanges: v.array(
@@ -81,8 +81,8 @@ export default defineSchema({
       })
     ),
   })
-    .index("by_user_platform", ["clerkUserId", "platform"])
-    .index("by_user_platform_day", ["clerkUserId", "platform", "dayOfWeek"]),
+    .index("by_user_platform", ["userId", "platform"])
+    .index("by_user_platform_day", ["userId", "platform", "dayOfWeek"]),
 
   // Stores optimal posting time recommendations based on industry research
   // System-wide data (not user-scoped) - provides intelligent time suggestions

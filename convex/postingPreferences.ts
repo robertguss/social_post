@@ -23,7 +23,7 @@ export const setPostingPreference = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Validate dayOfWeek range (0-6)
     if (args.dayOfWeek < 0 || args.dayOfWeek > 6) {
@@ -53,7 +53,7 @@ export const setPostingPreference = mutation({
       .query("posting_preferences")
       .withIndex("by_user_platform_day", (q) =>
         q
-          .eq("clerkUserId", clerkUserId)
+          .eq("userId", userId)
           .eq("platform", args.platform)
           .eq("dayOfWeek", args.dayOfWeek)
       )
@@ -68,7 +68,7 @@ export const setPostingPreference = mutation({
     } else {
       // Create new preference
       return await ctx.db.insert("posting_preferences", {
-        clerkUserId,
+        userId,
         platform: args.platform,
         dayOfWeek: args.dayOfWeek,
         customTimeRanges: args.customTimeRanges,
@@ -91,7 +91,7 @@ export const deletePostingPreference = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Get preference to verify ownership
     const preference = await ctx.db.get(args.preferenceId);
@@ -100,7 +100,7 @@ export const deletePostingPreference = mutation({
     }
 
     // Verify user owns this preference
-    if (preference.clerkUserId !== clerkUserId) {
+    if (preference.userId !== userId) {
       throw new Error("Unauthorized: You can only delete your own preferences");
     }
 
@@ -123,12 +123,12 @@ export const resetAllPostingPreferences = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Get all user preferences
     const userPreferences = await ctx.db
       .query("posting_preferences")
-      .withIndex("by_user_platform", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user_platform", (q) => q.eq("userId", userId))
       .collect();
 
     // Delete all preferences
@@ -152,7 +152,7 @@ export const getPostingPreferences = query({
     v.object({
       _id: v.id("posting_preferences"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       platform: v.string(),
       dayOfWeek: v.number(),
       customTimeRanges: v.array(
@@ -169,7 +169,7 @@ export const getPostingPreferences = query({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Build query with optional platform filter
     let query;
@@ -178,13 +178,13 @@ export const getPostingPreferences = query({
       query = ctx.db
         .query("posting_preferences")
         .withIndex("by_user_platform", (q) =>
-          q.eq("clerkUserId", clerkUserId).eq("platform", platform)
+          q.eq("userId", userId).eq("platform", platform)
         );
     } else {
       // Get all preferences for user across all platforms
       query = ctx.db
         .query("posting_preferences")
-        .withIndex("by_user_platform", (q) => q.eq("clerkUserId", clerkUserId));
+        .withIndex("by_user_platform", (q) => q.eq("userId", userId));
     }
 
     return await query.collect();

@@ -29,7 +29,7 @@ export const getRecommendedTimes = query({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Extract day of week from provided date (0-6, Sunday=0)
     const dateObj = new Date(args.date);
@@ -40,7 +40,7 @@ export const getRecommendedTimes = query({
       .query("posting_preferences")
       .withIndex("by_user_platform_day", (q) =>
         q
-          .eq("clerkUserId", clerkUserId)
+          .eq("userId", userId)
           .eq("platform", args.platform)
           .eq("dayOfWeek", dayOfWeek)
       )
@@ -89,7 +89,7 @@ export const getRecommendedTimes = query({
     // Get user's scheduled posts for conflict detection
     const scheduledPosts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("status"), "scheduled"))
       .collect();
 
@@ -107,7 +107,7 @@ export const getRecommendedTimes = query({
     // Get historical performance data for this user and platform (Story 6.4)
     const historicalPerformance = await getHistoricalPerformanceData(
       ctx,
-      clerkUserId,
+      userId,
       args.platform
     );
 
@@ -365,13 +365,13 @@ function convertLocalRangeToUTC(
  * NOTE: This returns an empty array if no performance data exists (feature not yet activated)
  *
  * @param ctx - Query context
- * @param clerkUserId - Clerk user ID
+ * @param userId - Clerk user ID
  * @param platform - Platform name ("twitter" or "linkedin")
  * @returns Array of performance data with published time and engagement metrics
  */
 async function getHistoricalPerformanceData(
   ctx: any,
-  clerkUserId: string,
+  userId: string,
   platform: string
 ): Promise<
   Array<{
@@ -400,7 +400,7 @@ async function getHistoricalPerformanceData(
   const userPostIds = new Set<string>();
   const userPosts = await ctx.db
     .query("posts")
-    .withIndex("by_user", (q: any) => q.eq("clerkUserId", clerkUserId))
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .collect();
 
   userPosts.forEach((post: any) => userPostIds.add(post._id));

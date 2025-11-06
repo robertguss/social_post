@@ -15,13 +15,13 @@ import { internal } from "./_generated/api";
  * - Access tokens: 60 days (5,184,000 seconds)
  * - Refresh tokens: 365 days (31,536,000 seconds)
  *
- * @param clerkUserId - The user's Clerk ID
+ * @param userId - The user's Clerk ID
  * @returns Success status and updated expiration timestamp, or error details
  * @throws Error if refresh token is expired (requires re-authentication)
  */
 export const refreshLinkedInToken = internalAction({
   args: {
-    clerkUserId: v.string(),
+    userId: v.string(),
   },
   returns: v.object({
     success: v.boolean(),
@@ -40,7 +40,7 @@ export const refreshLinkedInToken = internalAction({
       const connection = await ctx.runQuery(
         internal.connections.getConnectionInternal,
         {
-          clerkUserId: args.clerkUserId,
+          userId: args.userId,
           platform: "linkedin",
         }
       );
@@ -152,7 +152,7 @@ export const refreshLinkedInToken = internalAction({
 
           // Save encrypted tokens to database
           await ctx.runMutation(internal.connections.saveConnectionInternal, {
-            clerkUserId: args.clerkUserId,
+            userId: args.userId,
             platform: "linkedin",
             accessToken: encryptedAccessToken,
             refreshToken: encryptedRefreshToken,

@@ -35,7 +35,7 @@ export const saveConnection = action({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     try {
       // Encrypt the tokens before storage
@@ -53,7 +53,7 @@ export const saveConnection = action({
       const connectionId = await ctx.runMutation(
         internal.connections.saveConnectionInternal,
         {
-          clerkUserId,
+          userId,
           platform: args.platform,
           accessToken: encryptedAccessToken,
           refreshToken: encryptedRefreshToken,
@@ -77,7 +77,7 @@ export const saveConnection = action({
  * This mutation should only be called from the saveConnection action after tokens are encrypted.
  * It handles the database insert/update logic.
  *
- * @param clerkUserId - The authenticated user's Clerk ID
+ * @param userId - The authenticated user's Clerk ID
  * @param platform - The platform name ("twitter" or "linkedin")
  * @param accessToken - ENCRYPTED OAuth access token
  * @param refreshToken - ENCRYPTED OAuth refresh token
@@ -86,7 +86,7 @@ export const saveConnection = action({
  */
 export const saveConnectionInternal = internalMutation({
   args: {
-    clerkUserId: v.string(),
+    userId: v.string(),
     platform: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
@@ -97,7 +97,7 @@ export const saveConnectionInternal = internalMutation({
     const existingConnection = await ctx.db
       .query("user_connections")
       .withIndex("by_user_platform", (q) =>
-        q.eq("clerkUserId", args.clerkUserId).eq("platform", args.platform)
+        q.eq("userId", args.userId).eq("platform", args.platform)
       )
       .first();
 
@@ -112,7 +112,7 @@ export const saveConnectionInternal = internalMutation({
     } else {
       // Insert new connection with encrypted tokens
       const connectionId = await ctx.db.insert("user_connections", {
-        clerkUserId: args.clerkUserId,
+        userId: args.userId,
         platform: args.platform,
         accessToken: args.accessToken,
         refreshToken: args.refreshToken,
@@ -129,13 +129,13 @@ export const saveConnectionInternal = internalMutation({
  * This action is restricted to internal use only (e.g., from publishing actions).
  * It retrieves the encrypted tokens from the database and decrypts them.
  *
- * @param clerkUserId - The user's Clerk ID
+ * @param userId - The user's Clerk ID
  * @param platform - The platform name ("twitter" or "linkedin")
  * @returns Object containing decrypted tokens and expiration, or null if not found
  */
 export const getDecryptedConnection = internalAction({
   args: {
-    clerkUserId: v.string(),
+    userId: v.string(),
     platform: v.string(),
   },
   handler: async (ctx, args): Promise<{
@@ -148,7 +148,7 @@ export const getDecryptedConnection = internalAction({
       const connection = await ctx.runQuery(
         internal.connections.getConnectionInternal,
         {
-          clerkUserId: args.clerkUserId,
+          userId: args.userId,
           platform: args.platform,
         }
       );
@@ -188,13 +188,13 @@ export const getDecryptedConnection = internalAction({
  * This query retrieves the connection record with encrypted tokens.
  * Should only be called from internal actions.
  *
- * @param clerkUserId - The user's Clerk ID
+ * @param userId - The user's Clerk ID
  * @param platform - The platform name ("twitter" or "linkedin")
  * @returns Connection record or null if not found
  */
 export const getConnectionInternal = internalQuery({
   args: {
-    clerkUserId: v.string(),
+    userId: v.string(),
     platform: v.string(),
   },
   handler: async (ctx, args): Promise<{
@@ -205,7 +205,7 @@ export const getConnectionInternal = internalQuery({
     const connection = await ctx.db
       .query("user_connections")
       .withIndex("by_user_platform", (q) =>
-        q.eq("clerkUserId", args.clerkUserId).eq("platform", args.platform)
+        q.eq("userId", args.userId).eq("platform", args.platform)
       )
       .first();
 
@@ -242,13 +242,13 @@ export const getConnectionStatus = query({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Query connection using the by_user_platform index
     const connection = await ctx.db
       .query("user_connections")
       .withIndex("by_user_platform", (q) =>
-        q.eq("clerkUserId", clerkUserId).eq("platform", args.platform)
+        q.eq("userId", userId).eq("platform", args.platform)
       )
       .first();
 
