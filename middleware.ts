@@ -4,37 +4,30 @@ import type { NextRequest } from "next/server";
 /**
  * Middleware for Better Auth route protection
  *
- * IMPORTANT: This only checks for the existence of a session cookie,
- * it does NOT validate the session. Always validate sessions on the server
- * for protected actions using auth.api.getSession().
+ * IMPORTANT: This middleware only does basic routing.
+ * Actual authentication validation happens in the AuthGuard component.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow all API routes to pass through
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   // Define public routes that don't require authentication
-  const publicRoutes = ["/", "/login", "/signup", "/api/auth"];
+  const publicRoutes = ["/", "/login", "/signup"];
 
   // Check if the current route is public
-  const isPublicRoute = publicRoutes.some(route =>
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
+  const isPublicRoute = publicRoutes.some(route => pathname === route);
 
   // If it's a public route, allow access
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // Check for Better Auth session cookie
-  const sessionToken = request.cookies.get("better-auth.session_token");
-
-  // If no session cookie exists, redirect to login
-  if (!sessionToken) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Session cookie exists (but still needs server validation in components)
+  // For all other routes, let them through
+  // The AuthGuard component will handle authentication checks
   return NextResponse.next();
 }
 

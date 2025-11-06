@@ -14,7 +14,9 @@ export default function Home() {
     async function checkAuth() {
       try {
         const session = await authClient.getSession();
-        if (session?.user) {
+
+        // Check if session exists - the structure is { data: { session, user }, error }
+        if (session?.data?.user) {
           setIsAuthenticated(true);
           // Redirect authenticated users to dashboard
           router.push("/dashboard");

@@ -31,7 +31,8 @@ export function AuthGuard({ children, requireUnauth = false }: AuthGuardProps) {
         // Get session from Better Auth
         const session = await authClient.getSession();
 
-        if (session?.user) {
+        // Check if session exists - the structure is { data: { session, user }, error }
+        if (session?.data?.user) {
           setIsAuthenticated(true);
 
           // If this is an unauth-only page (login/signup) and user is authenticated,
