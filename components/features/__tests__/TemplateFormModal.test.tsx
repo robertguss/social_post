@@ -23,7 +23,7 @@ const mockOnSuccess = jest.fn();
 const mockTemplate: Doc<"templates"> = {
   _id: "1" as Id<"templates">,
   _creationTime: Date.now(),
-  clerkUserId: "user1",
+  userId: "user1",
   name: "Existing Template",
   content: "Existing content",
   tags: ["existing", "tags"],

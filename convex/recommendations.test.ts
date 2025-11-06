@@ -512,7 +512,7 @@ describe("Query authentication logic validation", () => {
     }).toThrow("Not authenticated");
   });
 
-  it("should extract clerk user ID from identity", () => {
+  it("should extract user ID from identity", () => {
     const identity = { subject: "user_123456" };
     const userId = identity.subject;
 

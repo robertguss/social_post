@@ -19,7 +19,18 @@ import {
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") || "/dashboard";
+  const fromParam = searchParams.get("from") || "/dashboard";
+
+  // Validate and normalize redirect path to prevent open-redirect vulnerability
+  // Only allow relative paths starting with "/" but not "//" or containing protocol
+  let from = "/dashboard";
+  if (fromParam.startsWith("/") && !fromParam.startsWith("//")) {
+    // Additional check: ensure no protocol is present (e.g., "/http://evil.com")
+    if (!/^\/[a-zA-Z]+:/.test(fromParam)) {
+      from = fromParam;
+    }
+  }
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

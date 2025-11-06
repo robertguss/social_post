@@ -10,7 +10,7 @@ jest.mock("date-fns", () => ({
 const mockTemplate: Doc<"templates"> = {
   _id: "1" as unknown as Doc<"templates">["_id"],
   _creationTime: Date.now(),
-  clerkUserId: "user1",
+  userId: "user1",
   name: "Test Template",
   content: "This is test content with hashtags",
   tags: ["test", "example"],

@@ -54,7 +54,7 @@ jest.mock("@/components/features/TemplatePickerModal", () => ({
     const mockTemplate = {
       _id: "template1" as any,
       _creationTime: 1698768000000,
-      clerkUserId: "user123",
+      userId: "user123",
       name: "Test Template",
       content: "Template content here",
       tags: ["test"],

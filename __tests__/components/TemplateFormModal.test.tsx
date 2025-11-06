@@ -46,7 +46,7 @@ describe("TemplateFormModal Component", () => {
   const mockTemplate: Doc<"templates"> = {
     _id: "template1" as any,
     _creationTime: 1698768000000,
-    clerkUserId: "user123",
+    userId: "user123",
     name: "Launch Announcement",
     content: "This is a template for launch announcements",
     tags: ["launch", "announcement"],

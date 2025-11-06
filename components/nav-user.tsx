@@ -43,7 +43,7 @@ export function NavUser({
 
   const handleSignOut = async () => {
     await authClient.signOut()
-    router.push("/")
+    router.push("/login")
   }
 
   const getInitials = (name: string) => {

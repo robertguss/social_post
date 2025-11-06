@@ -34,7 +34,7 @@ describe("TemplatePickerModal Component", () => {
     {
       _id: "template1" as any,
       _creationTime: 1698768000000,
-      clerkUserId: "user123",
+      userId: "user123",
       name: "Launch Announcement",
       content: "Excited to announce our new product!",
       tags: ["launch", "announcement"],
@@ -44,7 +44,7 @@ describe("TemplatePickerModal Component", () => {
     {
       _id: "template2" as any,
       _creationTime: 1698854400000,
-      clerkUserId: "user123",
+      userId: "user123",
       name: "Weekly Update",
       content: "Here's what we shipped this week...",
       tags: ["weekly", "update"],
@@ -54,7 +54,7 @@ describe("TemplatePickerModal Component", () => {
     {
       _id: "template3" as any,
       _creationTime: 1698940800000,
-      clerkUserId: "user123",
+      userId: "user123",
       name: "Thank You",
       content: "Thank you to everyone who supported us!",
       tags: ["gratitude", "announcement"],

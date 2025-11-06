@@ -36,7 +36,7 @@ describe("publishTwitterPost action", () => {
       // Setup mocks
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Hello World!",
         url: "",
@@ -94,7 +94,7 @@ describe("publishTwitterPost action", () => {
       // Setup mocks
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Check out my blog post!",
         url: "https://example.com/blog",
@@ -166,7 +166,7 @@ describe("publishTwitterPost action", () => {
     it("should update post status to Published with tweet ID", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Hello!",
         url: "",
@@ -199,7 +199,7 @@ describe("publishTwitterPost action", () => {
     it("should handle token decryption failure", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Test",
         url: "",
@@ -224,7 +224,7 @@ describe("publishTwitterPost action", () => {
     it("should handle missing connection (user not connected to Twitter)", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Test",
         url: "",
@@ -310,7 +310,7 @@ describe("publishTwitterPost action", () => {
     it("should schedule retry with exponential backoff for transient errors", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Test",
         url: "",
@@ -345,7 +345,7 @@ describe("publishTwitterPost action", () => {
     it("should increment retry count on transient failure", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Test",
         url: "",
@@ -363,7 +363,7 @@ describe("publishTwitterPost action", () => {
       // Create a post object at max retries
       const post = {
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Test",
         url: "",
@@ -402,7 +402,7 @@ describe("publishTwitterPost action", () => {
       // Create a post at max retries
       const post = {
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Test",
         url: "",
@@ -581,7 +581,7 @@ describe("publishLinkedInPost action", () => {
       // Setup mocks
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         linkedInContent: "Excited to share this with my network!",
         url: "",
@@ -662,7 +662,7 @@ describe("publishLinkedInPost action", () => {
       // Setup mocks
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         linkedInContent: "Check out this resource!",
         url: "https://example.com/article",
@@ -735,7 +735,7 @@ describe("publishLinkedInPost action", () => {
     it("should update post status to Published with LinkedIn post URN", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         linkedInContent: "Hello LinkedIn!",
         url: "",
@@ -773,7 +773,7 @@ describe("publishLinkedInPost action", () => {
 
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         linkedInContent: "Test post",
         url: "",
@@ -833,7 +833,7 @@ describe("publishLinkedInPost action", () => {
 
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         linkedInContent: "Test",
         url: "",
@@ -951,7 +951,7 @@ describe("publishLinkedInPost action", () => {
     it("should trigger Telegram notification after max retries", async () => {
       mockContext.runQuery.mockResolvedValueOnce({
         _id: "post-123",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         linkedInContent: "Test post",
         linkedInScheduledTime: Date.now(),

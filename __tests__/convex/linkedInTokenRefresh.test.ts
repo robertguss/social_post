@@ -80,7 +80,7 @@ describe("LinkedIn Token Refresh", () => {
         }),
       });
 
-      const args = { clerkUserId: "user_123" };
+      const args = { userId: "user_123" };
       const result = await refreshLinkedInToken.handler(ctx as any, args);
 
       expect(result.success).toBe(true);
@@ -93,7 +93,7 @@ describe("LinkedIn Token Refresh", () => {
       expect(ctx.runMutation).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          clerkUserId: "user_123",
+          userId: "user_123",
           platform: "linkedin",
           accessToken: "encrypted_new_access",
           refreshToken: "encrypted_new_refresh",
@@ -130,7 +130,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       const afterTime = Date.now();
@@ -170,7 +170,7 @@ describe("LinkedIn Token Refresh", () => {
 
       const beforeTime = Date.now();
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       // Should default to 60 days (5184000 seconds)
@@ -200,7 +200,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -226,7 +226,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -238,7 +238,7 @@ describe("LinkedIn Token Refresh", () => {
       ctx.runQuery = jest.fn().mockResolvedValue(null);
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -288,7 +288,7 @@ describe("LinkedIn Token Refresh", () => {
         });
 
       const resultPromise = refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       // Fast-forward through retry delay (1 second for first retry)
@@ -332,7 +332,7 @@ describe("LinkedIn Token Refresh", () => {
         });
 
       const resultPromise = refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       await jest.advanceTimersByTimeAsync(1000);
@@ -360,7 +360,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -385,7 +385,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const resultPromise = refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       // Fast-forward through all retry delays (1s + 2s + 4s)
@@ -444,7 +444,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const resultPromise = refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       // Trigger timeout (10 seconds)
@@ -473,7 +473,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const resultPromise = refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       // Trigger all 3 timeouts with retries
@@ -522,7 +522,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       // Verify mutation was called with ENCRYPTED tokens
@@ -556,7 +556,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -582,7 +582,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -603,7 +603,7 @@ describe("LinkedIn Token Refresh", () => {
       ctx.runAction = jest.fn().mockResolvedValue("decrypted_refresh");
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);
@@ -622,7 +622,7 @@ describe("LinkedIn Token Refresh", () => {
       ctx.runAction = jest.fn().mockResolvedValue("decrypted_refresh");
 
       const result = await refreshLinkedInToken.handler(ctx as any, {
-        clerkUserId: "user_123",
+        userId: "user_123",
       });
 
       expect(result.success).toBe(false);

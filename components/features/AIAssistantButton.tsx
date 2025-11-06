@@ -155,10 +155,7 @@ export function AIAssistantButton({
   /**
    * Handle keyboard navigation in menu
    */
-  const handleKeyDown = (
-    e: React.KeyboardEvent,
-    featureId: AIFeatureType
-  ) => {
+  const handleKeyDown = (e: React.KeyboardEvent, featureId: AIFeatureType) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleFeatureSelect(featureId);
@@ -167,11 +164,14 @@ export function AIAssistantButton({
 
   return (
     <TooltipProvider>
-      <Tooltip open={showIntro && !disabled} onOpenChange={(open) => {
-        if (!open && showIntro) {
-          handleDismissIntro();
-        }
-      }}>
+      <Tooltip
+        open={showIntro && !disabled}
+        onOpenChange={(open) => {
+          if (!open && showIntro) {
+            handleDismissIntro();
+          }
+        }}
+      >
         <Popover open={isOpen} onOpenChange={onOpenChange}>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
@@ -183,7 +183,7 @@ export function AIAssistantButton({
                 aria-label="AI Assistant"
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
-                className="gap-2"
+                className="min-w-[44px] min-h-[44px] gap-2"
                 onClick={() => {
                   if (showIntro) {
                     handleDismissIntro();
@@ -233,7 +233,9 @@ export function AIAssistantButton({
                   onClick={(e) => {
                     e.preventDefault();
                     // TODO: Link to actual documentation when available
-                    alert("AI Assistant Help:\n\n• Adjust Tone: Refine your message to be more professional, casual, or engaging\n• Expand for LinkedIn: Convert short Twitter posts into detailed LinkedIn content\n• Generate Hashtags: Get relevant hashtag suggestions based on your content");
+                    alert(
+                      "AI Assistant Help:\n\n• Adjust Tone: Refine your message to be more professional, casual, or engaging\n• Expand for LinkedIn: Convert short Twitter posts into detailed LinkedIn content\n• Generate Hashtags: Get relevant hashtag suggestions based on your content",
+                    );
                   }}
                 >
                   <IconInfoCircle className="w-4 h-4" />

@@ -46,7 +46,7 @@ async function createPostMock(
     throw new Error("Not authenticated");
   }
 
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Validation: At least one platform must be selected
   const hasTwitter = args.twitterContent && args.twitterScheduledTime;
@@ -86,7 +86,7 @@ async function createPostMock(
 
   // Create the post record
   const postId = await ctx.db.insert("posts", {
-    clerkUserId,
+    userId,
     status: "Scheduled",
     twitterContent: args.twitterContent || "",
     linkedInContent: args.linkedInContent || "",
@@ -148,14 +148,14 @@ async function updatePostMock(
     throw new Error("Not authenticated");
   }
 
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Retrieve existing post and verify ownership
   const post = await ctx.db.get(args.postId);
   if (!post) {
     throw new Error("Post not found");
   }
-  if (post.clerkUserId !== clerkUserId) {
+  if (post.userId !== userId) {
     throw new Error("Unauthorized: You can only edit your own posts");
   }
 
@@ -272,14 +272,14 @@ async function deletePostMock(
     throw new Error("Not authenticated");
   }
 
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Retrieve post and verify ownership
   const post = await ctx.db.get(args.postId);
   if (!post) {
     throw new Error("Post not found");
   }
-  if (post.clerkUserId !== clerkUserId) {
+  if (post.userId !== userId) {
     throw new Error("Unauthorized: You can only delete your own posts");
   }
 
@@ -326,7 +326,7 @@ describe("createPost mutation - Twitter-only posts", () => {
 
     expect(postId).toBe("mock-post-id");
     expect(mockContext.db.insert).toHaveBeenCalledWith("posts", {
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Hello Twitter!",
       linkedInContent: "",
@@ -414,7 +414,7 @@ describe("createPost mutation - LinkedIn-only posts", () => {
 
     expect(postId).toBe("mock-post-id");
     expect(mockContext.db.insert).toHaveBeenCalledWith("posts", {
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "",
       linkedInContent: "Hello LinkedIn! This is a professional post.",
@@ -506,7 +506,7 @@ describe("createPost mutation - Dual-platform posts", () => {
 
     expect(postId).toBe("mock-post-id");
     expect(mockContext.db.insert).toHaveBeenCalledWith("posts", {
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Hello Twitter!",
       linkedInContent: "Hello LinkedIn! This is a longer professional post.",
@@ -652,7 +652,7 @@ describe("createPost mutation - Authentication and scoping", () => {
     await createPostMock(mockContext, args);
 
     const insertCall = mockContext.db.insert.mock.calls[0];
-    expect(insertCall[1].clerkUserId).toBe("user_456");
+    expect(insertCall[1].userId).toBe("user_456");
   });
 
   it("should set post status to Scheduled", async () => {
@@ -770,7 +770,7 @@ describe("updatePost mutation - Successful updates", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Old content",
       twitterScheduledTime: Date.now() + 3600000,
@@ -819,7 +819,7 @@ describe("updatePost mutation - Successful updates", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Old Twitter",
       linkedInContent: "Keep LinkedIn",
@@ -862,7 +862,7 @@ describe("updatePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Published",
       twitterContent: "Published content",
     });
@@ -886,7 +886,7 @@ describe("updatePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_456",  // Different user
+      userId: "user_456",  // Different user
       status: "Scheduled",
       twitterContent: "Someone else's post",
     });
@@ -910,7 +910,7 @@ describe("updatePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Old content",
     });
@@ -934,7 +934,7 @@ describe("updatePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Old content",
     });
@@ -958,7 +958,7 @@ describe("updatePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterContent: "Old content",
     });
@@ -1002,7 +1002,7 @@ describe("deletePost mutation - Successful deletion", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterSchedulerId: "twitter-scheduler-id",
       linkedInSchedulerId: "linkedin-scheduler-id",
@@ -1029,7 +1029,7 @@ describe("deletePost mutation - Successful deletion", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       // No scheduler IDs
     });
@@ -1054,7 +1054,7 @@ describe("deletePost mutation - Successful deletion", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Scheduled",
       twitterSchedulerId: "twitter-scheduler-id",
     });
@@ -1084,7 +1084,7 @@ describe("deletePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       status: "Published",
     });
 
@@ -1104,7 +1104,7 @@ describe("deletePost mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "post-123",
-      clerkUserId: "user_456",  // Different user
+      userId: "user_456",  // Different user
       status: "Scheduled",
     });
 
@@ -1166,7 +1166,7 @@ describe("getPosts query", () => {
     mockPosts = [
       {
         _id: "post-1",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Twitter post 1",
         twitterScheduledTime: now - 2 * DAY_MS,
@@ -1177,7 +1177,7 @@ describe("getPosts query", () => {
       },
       {
         _id: "post-2",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: undefined,
         twitterScheduledTime: undefined,
@@ -1188,7 +1188,7 @@ describe("getPosts query", () => {
       },
       {
         _id: "post-3",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Twitter post 3",
         twitterScheduledTime: now - 10 * DAY_MS,
@@ -1199,7 +1199,7 @@ describe("getPosts query", () => {
       },
       {
         _id: "post-4",
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: "Twitter post 4",
         twitterScheduledTime: now - 35 * DAY_MS,
@@ -1479,7 +1479,7 @@ async function clonePostMock(
     throw new Error("Not authenticated");
   }
 
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Fetch original post by ID
   const originalPost = await ctx.db.get(args.postId);
@@ -1488,13 +1488,13 @@ async function clonePostMock(
   }
 
   // Verify original post belongs to authenticated user (security check)
-  if (originalPost.clerkUserId !== clerkUserId) {
+  if (originalPost.userId !== userId) {
     throw new Error("Unauthorized: You can only clone your own posts");
   }
 
   // Create new post object with cloned content fields
   const newPostId = await ctx.db.insert("posts", {
-    clerkUserId, // Use authenticated user's ID
+    userId, // Use authenticated user's ID
     status: "draft", // New post starts as draft
     twitterContent: originalPost.twitterContent || "",
     linkedInContent: originalPost.linkedInContent || "",
@@ -1531,7 +1531,7 @@ describe("clonePost mutation", () => {
     // Mock original post
     const originalPost = {
       _id: "original-post-id",
-      clerkUserId: "test-user-123",
+      userId: "test-user-123",
       status: "Published",
       twitterContent: "This is a test tweet",
       linkedInContent: "This is a test LinkedIn post",
@@ -1557,7 +1557,7 @@ describe("clonePost mutation", () => {
 
     // Verify new post was created
     expect(mockContext.db.insert).toHaveBeenCalledWith("posts", {
-      clerkUserId: "test-user-123",
+      userId: "test-user-123",
       status: "draft",
       twitterContent: "This is a test tweet",
       linkedInContent: "This is a test LinkedIn post",
@@ -1580,7 +1580,7 @@ describe("clonePost mutation", () => {
   it("should set clonedFromPostId to original post ID", async () => {
     const originalPost = {
       _id: "original-123",
-      clerkUserId: "test-user-123",
+      userId: "test-user-123",
       status: "Published",
       twitterContent: "Content",
       linkedInContent: "Content",
@@ -1599,7 +1599,7 @@ describe("clonePost mutation", () => {
   it("should clear all scheduling fields", async () => {
     const originalPost = {
       _id: "original-id",
-      clerkUserId: "test-user-123",
+      userId: "test-user-123",
       status: "Published",
       twitterContent: "Content",
       twitterScheduledTime: 1234567890000,
@@ -1623,7 +1623,7 @@ describe("clonePost mutation", () => {
   it("should clear all publishing fields", async () => {
     const originalPost = {
       _id: "original-id",
-      clerkUserId: "test-user-123",
+      userId: "test-user-123",
       status: "Published",
       twitterContent: "Content",
       twitterPostId: "tweet-123",
@@ -1655,7 +1655,7 @@ describe("clonePost mutation", () => {
   it("should throw error if user tries to clone another user's post", async () => {
     const originalPost = {
       _id: "original-id",
-      clerkUserId: "different-user",
+      userId: "different-user",
       status: "Published",
       twitterContent: "Content",
     };
@@ -1678,7 +1678,7 @@ describe("clonePost mutation", () => {
   it("should not modify the original post", async () => {
     const originalPost = {
       _id: "original-id",
-      clerkUserId: "test-user-123",
+      userId: "test-user-123",
       status: "Published",
       twitterContent: "Original content",
       linkedInContent: "Original LinkedIn content",
