@@ -63,9 +63,9 @@ export function TemplateLibrary() {
   /**
    * Extract all unique tags from templates
    */
-  const allTags = useMemo(() => {
+  const allTags = useMemo<string[]>(() => {
     if (!templates) return [];
-    const tagSet = new Set(templates.flatMap((template: Doc<"templates">) => template.tags));
+    const tagSet = new Set<string>(templates.flatMap((template: Doc<"templates">) => template.tags));
     return Array.from(tagSet).sort();
   }, [templates]);
 
@@ -246,7 +246,7 @@ export function TemplateLibrary() {
                 <span className="text-sm font-medium">Filter by tags:</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {allTags.map((tag: string) => {
+                {allTags.map((tag) => {
                   const isSelected = selectedTags.includes(tag);
                   return (
                     <Badge

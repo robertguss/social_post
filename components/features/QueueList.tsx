@@ -130,7 +130,7 @@ export function QueueList() {
   }
 
   // Count unique queues with conflicts
-  const conflictingQueueIds = new Set(conflicts?.map((c: { queueId: Id<"recurring_queues">; conflictsWith: Id<"recurring_queues">[]; nextScheduledTime: number }) => c.queueId) || []);
+  const conflictingQueueIds = new Set(conflicts?.map((c) => c.queueId) || []);
   const conflictCount = conflictingQueueIds.size;
 
   // Handle conflict click

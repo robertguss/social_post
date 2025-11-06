@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^1.0.0",
+    "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

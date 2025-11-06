@@ -130,8 +130,8 @@ export default function PostingPreferencesPage() {
                         <div className="space-y-2">
                           <p className="text-sm font-medium">Example: Twitter on Monday</p>
                           {defaultRecommendations
-                            .filter((rec: Doc<"posting_time_recommendations">) => rec.source !== "user preference")
-                            .map((rec: Doc<"posting_time_recommendations">, index: number) => (
+                            .filter((rec: { source: string }) => rec.source !== "user preference")
+                            .map((rec: { timeRange: string; engagementScore: number }, index: number) => (
                               <div
                                 key={index}
                                 className="flex items-center justify-between rounded-lg border p-3"

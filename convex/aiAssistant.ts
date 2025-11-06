@@ -146,12 +146,7 @@ export const adjustTone = action({
       v.literal("formal")
     ),
   },
-  returns: v.object({
-    content: v.string(),
-    warning: v.optional(v.string()),
-    rateLimitWarning: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ content: string; warning?: string; rateLimitWarning?: string }> => {
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -351,12 +346,7 @@ export const expandForLinkedIn = action({
   args: {
     twitterContent: v.string(),
   },
-  returns: v.object({
-    content: v.string(),
-    warning: v.optional(v.string()),
-    rateLimitWarning: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ content: string; warning?: string; rateLimitWarning?: string }> => {
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {

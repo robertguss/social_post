@@ -2,7 +2,6 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -165,7 +164,7 @@ export function RecommendedTimes({ selectedDate, platform, onTimeSelect }: Recom
 
       {/* Recommendation suggestions */}
       <div className="space-y-2">
-        {recommendations.map((rec: Doc<"posting_time_recommendations">, index: number) => {
+        {recommendations.map((rec: { timeRange: string; engagementScore: number; conflictsWithPost: boolean }, index: number) => {
           const engagementLevel = getEngagementLevel(rec.engagementScore);
 
           return (
