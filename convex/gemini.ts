@@ -15,19 +15,22 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
- * Model Selection Rationale:
+ * Model Selection Rationale (Updated January 2025):
  *
- * - gemini-1.5-flash: Fast, cost-efficient, suitable for most content refinement tasks
+ * - gemini-2.5-flash: Fast, cost-efficient, suitable for most content refinement tasks
  *   - Use for: Tone adjustment, content expansion, hashtag generation
  *   - Performance: ~1-2 seconds response time
- *   - Cost: Lowest tier (free tier: 15 RPM, 1,500 RPD)
+ *   - Cost: Lowest tier with excellent performance
+ *   - Auto-updated to latest stable version
  *
- * - gemini-1.5-pro: More capable, slower, more expensive
+ * - gemini-2.5-pro: More capable, slower, more expensive
  *   - Use for: Complex analysis, multi-step reasoning (future features)
  *   - Performance: ~3-5 seconds response time
- *   - Cost: Higher tier (free tier: 2 RPM, 50 RPD)
+ *   - Cost: Higher tier
  *
- * Default: gemini-1.5-flash for optimal cost-performance balance
+ * Default: gemini-2.5-flash for optimal cost-performance balance
+ *
+ * Note: gemini-1.5-* models have been deprecated. All users should use gemini-2.* models.
  */
 
 /**
@@ -56,15 +59,15 @@ export function getGeminiClient(): GoogleGenerativeAI {
 /**
  * Retrieves a Gemini generative model instance with the specified model name.
  *
- * @param {string} modelName - The Gemini model to use (default: "gemini-1.5-flash")
+ * @param {string} modelName - The Gemini model to use (default: "gemini-2.5-flash")
  * @returns {GenerativeModel} Initialized generative model instance
  * @throws {Error} If API key is not configured or model initialization fails
  *
  * @example
- * const model = getGeminiModel(); // Uses default: gemini-1.5-flash
- * const proModel = getGeminiModel("gemini-1.5-pro"); // Uses pro model
+ * const model = getGeminiModel(); // Uses default: gemini-2.5-flash
+ * const proModel = getGeminiModel("gemini-2.5-pro"); // Uses pro model
  */
-export function getGeminiModel(modelName: string = "gemini-1.5-flash") {
+export function getGeminiModel(modelName: string = "gemini-2.5-flash") {
   const client = getGeminiClient();
   return client.getGenerativeModel({ model: modelName });
 }
@@ -413,7 +416,7 @@ export const testGeminiConnection = action({
  * - Troubleshooting API issues
  *
  * @param {string} prompt - Optional test prompt (default: "Hello")
- * @param {string} modelName - Optional model name (default: "gemini-1.5-flash")
+ * @param {string} modelName - Optional model name (default: "gemini-2.5-flash")
  *
  * @returns {Object} Detailed test results
  * @property {boolean} success - Whether the test was successful

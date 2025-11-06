@@ -141,7 +141,7 @@ export default defineSchema({
     feature: v.string(), // "tone" | "expand" | "hashtags" - which AI feature was used
     tokensUsed: v.number(), // Estimated tokens consumed (input + output)
     cost: v.number(), // Estimated cost in USD
-    modelUsed: v.string(), // Gemini model name (e.g., "gemini-1.5-flash")
+    modelUsed: v.string(), // Gemini model name (e.g., "gemini-2.5-flash")
     requestId: v.string(), // Correlation ID from AI request for debugging
     duration: v.number(), // Request duration in milliseconds
     success: v.boolean(), // Whether the request succeeded or failed

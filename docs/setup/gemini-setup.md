@@ -67,12 +67,14 @@ If the test fails, check the error message in the Convex logs:
 
 ## Model Selection
 
-The application uses `gemini-1.5-flash` by default for optimal cost-performance balance:
+The application uses `gemini-2.5-flash` by default for optimal cost-performance balance:
 
-- **gemini-1.5-flash:** Fast, cost-efficient, suitable for most content refinement tasks
-- **gemini-1.5-pro:** More capable but slower and more expensive (reserved for future complex tasks)
+- **gemini-2.5-flash:** Fast, cost-efficient, suitable for most content refinement tasks (auto-updated to latest stable version)
+- **gemini-2.5-pro:** More capable but slower and more expensive (reserved for future complex tasks)
 
 Model selection is configured in `convex/gemini.ts` and can be adjusted if needed.
+
+**Note:** As of January 2025, Gemini 1.5 models have been deprecated. All users should use Gemini 2.* models.
 
 ## Security Best Practices
 
@@ -152,16 +154,16 @@ Model selection is configured in `convex/gemini.ts` and can be adjusted if neede
 
 ### Free Tier Limits
 
-Google Gemini API offers a free tier with the following limits (as of November 2024):
+Google Gemini API offers a free tier with the following limits (as of January 2025):
 
-- **gemini-1.5-flash:** 15 requests per minute, 1,500 requests per day
-- **gemini-1.5-pro:** 2 requests per minute, 50 requests per day
+- **gemini-2.5-flash:** 15 requests per minute, 1,500 requests per day
+- **gemini-2.5-pro:** 2 requests per minute, 50 requests per day
 
 Check [Google AI Pricing](https://ai.google.dev/pricing) for current limits and paid tier options.
 
 ### Cost Optimization
 
-1. Use `gemini-1.5-flash` for most tasks (included in this implementation)
+1. Use `gemini-2.5-flash` for most tasks (included in this implementation)
 2. Implement caching for repeated requests (future enhancement)
 3. Monitor usage via AI usage logs (implemented in Story 7.7)
 4. Set up usage alerts to avoid unexpected charges
@@ -184,6 +186,6 @@ If you encounter issues not covered in this guide:
 
 ---
 
-**Last Updated:** November 5, 2025
-**Version:** 1.0
+**Last Updated:** January 6, 2025
+**Version:** 1.1
 **Related Stories:** Epic 7 - AI-Assisted Content Generation (Story 7.1)

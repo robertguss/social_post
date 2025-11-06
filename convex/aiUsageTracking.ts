@@ -18,11 +18,11 @@ import { v } from "convex/values";
  * Gemini API Pricing Constants (as of January 2025)
  *
  * Free Tier Limits:
- * - gemini-1.5-flash: 15 RPM, 1,500 RPD
+ * - gemini-2.5-flash: 15 RPM, 1,500 RPD
  * - Free up to 15M input/output tokens per month
  *
  * Paid Tier Pricing:
- * - gemini-1.5-flash:
+ * - gemini-2.5-flash:
  *   - Input: $0.075 per 1M tokens
  *   - Output: $0.30 per 1M tokens
  *
@@ -32,7 +32,7 @@ import { v } from "convex/values";
  * - Hashtag Generation: ~$0.000023 per request
  */
 const GEMINI_PRICING = {
-  // Gemini 1.5 Flash pricing (paid tier, if free tier exceeded)
+  // Gemini 2.5 Flash pricing (paid tier, if free tier exceeded)
   INPUT_COST_PER_TOKEN: 0.075 / 1_000_000, // $0.075 per 1M tokens
   OUTPUT_COST_PER_TOKEN: 0.3 / 1_000_000, // $0.30 per 1M tokens
 } as const;
