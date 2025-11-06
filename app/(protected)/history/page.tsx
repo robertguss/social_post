@@ -15,7 +15,7 @@ export const metadata = {
  * Post History Page
  *
  * Displays a list of user's scheduled and published posts with filtering options.
- * Protected by Clerk middleware (configured in middleware.ts).
+ * Protected by Better Auth middleware (configured in middleware.ts).
  */
 export default function HistoryPage() {
   return (

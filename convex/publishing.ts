@@ -62,7 +62,7 @@ export const publishTwitterPost = internalAction({
       const connection = await ctx.runAction(
         internal.connections.getDecryptedConnection,
         {
-          clerkUserId: post.clerkUserId,
+          userId: post.userId,
           platform: "twitter",
         }
       );
@@ -463,7 +463,7 @@ export const publishLinkedInPost = internalAction({
       let connection = await ctx.runAction(
         internal.connections.getDecryptedConnection,
         {
-          clerkUserId: post.clerkUserId,
+          userId: post.userId,
           platform: "linkedin",
         }
       );
@@ -486,7 +486,7 @@ export const publishLinkedInPost = internalAction({
 
         const refreshResult = await ctx.runAction(
           internal.tokenRefresh.refreshLinkedInToken,
-          { clerkUserId: post.clerkUserId }
+          { userId: post.userId }
         );
 
         if (!refreshResult.success) {
@@ -508,7 +508,7 @@ export const publishLinkedInPost = internalAction({
         connection = await ctx.runAction(
           internal.connections.getDecryptedConnection,
           {
-            clerkUserId: post.clerkUserId,
+            userId: post.userId,
             platform: "linkedin",
           }
         );

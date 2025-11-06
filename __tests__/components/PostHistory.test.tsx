@@ -71,7 +71,7 @@ describe("PostHistory Component", () => {
       {
         _id: "post1" as any,
         _creationTime: 1698768000000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Scheduled",
         twitterContent: "This is a test post about coding",
         linkedInContent: "",
@@ -86,7 +86,7 @@ describe("PostHistory Component", () => {
       {
         _id: "post2" as any,
         _creationTime: 1698854400000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Published",
         twitterContent: "Another post about TypeScript",
         linkedInContent: "",
@@ -101,7 +101,7 @@ describe("PostHistory Component", () => {
       {
         _id: "post3" as any,
         _creationTime: 1698940800000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Failed",
         twitterContent: "Failed post test",
         linkedInContent: "",
@@ -217,7 +217,7 @@ describe("PostHistory Component", () => {
       {
         _id: "post1" as any,
         _creationTime: 1698768000000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Scheduled",
         twitterContent: "Test post",
         linkedInContent: "",
@@ -266,7 +266,7 @@ describe("PostHistory Component", () => {
       {
         _id: "post1" as any,
         _creationTime: 1698768000000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Published",
         twitterContent: "Modal test post",
         linkedInContent: "",
@@ -331,7 +331,7 @@ describe("PostHistory Component", () => {
         {
           _id: "post1" as any,
           _creationTime: 1698768000000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Scheduled",
           twitterContent: "Test",
           linkedInContent: "",
@@ -358,7 +358,7 @@ describe("PostHistory Component", () => {
         {
           _id: "post1" as any,
           _creationTime: 1698768000000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Publishing",
           twitterContent: "Test",
           linkedInContent: "",
@@ -385,7 +385,7 @@ describe("PostHistory Component", () => {
         {
           _id: "post1" as any,
           _creationTime: 1698768000000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Published",
           twitterContent: "Test",
           linkedInContent: "",
@@ -412,7 +412,7 @@ describe("PostHistory Component", () => {
         {
           _id: "post1" as any,
           _creationTime: 1698768000000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Failed",
           twitterContent: "Test",
           linkedInContent: "",
@@ -441,7 +441,7 @@ describe("PostHistory Component", () => {
         {
           _id: "scheduled-post" as any,
           _creationTime: 1698768000000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Scheduled",
           twitterContent: "Scheduled post",
           linkedInContent: "",
@@ -456,7 +456,7 @@ describe("PostHistory Component", () => {
         {
           _id: "published-post" as any,
           _creationTime: 1698854400000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Published",
           twitterContent: "Published post",
           linkedInContent: "",
@@ -490,7 +490,7 @@ describe("PostHistory Component", () => {
         {
           _id: "published-post" as any,
           _creationTime: 1698854400000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Published",
           twitterContent: "Published post",
           linkedInContent: "",
@@ -520,7 +520,7 @@ describe("PostHistory Component", () => {
         {
           _id: "publishing-post" as any,
           _creationTime: 1698854400000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Publishing",
           twitterContent: "Publishing post",
           linkedInContent: "",
@@ -550,7 +550,7 @@ describe("PostHistory Component", () => {
         {
           _id: "failed-post" as any,
           _creationTime: 1698854400000,
-          clerkUserId: "user123",
+          userId: "user123",
           status: "Failed",
           twitterContent: "Failed post",
           linkedInContent: "",
@@ -581,7 +581,7 @@ describe("PostHistory Component", () => {
       {
         _id: "scheduled-post" as any,
         _creationTime: 1698768000000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Scheduled",
         twitterContent: "Scheduled post",
         linkedInContent: "",
@@ -687,7 +687,7 @@ describe("PostHistory Component", () => {
       {
         _id: "scheduled-post" as any,
         _creationTime: 1698768000000,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "Scheduled",
         twitterContent: "Scheduled post to edit",
         linkedInContent: "LinkedIn content",

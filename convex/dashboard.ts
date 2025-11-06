@@ -20,12 +20,12 @@ export const getDashboardStats = query({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Get all posts for the user
     const posts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     // Calculate stats
@@ -53,7 +53,7 @@ export const getDashboardStats = query({
     // Get connected platforms
     const connections = await ctx.db
       .query("user_connections")
-      .withIndex("by_user_platform", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user_platform", (q) => q.eq("userId", userId))
       .collect();
 
     // Count non-expired connections
@@ -87,13 +87,13 @@ export const getRecentPosts = query({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
     const limit = args.limit || 10;
 
     // Get posts sorted by creation time
     const posts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .take(limit);
 

@@ -20,7 +20,7 @@ describe("Performance Tracking Integration Tests", () => {
       // Mock post data
       const mockPost = {
         _id: "post123" as any,
-        clerkUserId: "user123",
+        userId: "user123",
         status: "published",
         twitterPostId: "tweet123",
         twitterScheduledTime: Date.now() - 24 * 60 * 60 * 1000, // 1 day ago
@@ -385,11 +385,11 @@ describe("Performance Tracking Integration Tests", () => {
       const authenticatedUserId = "user123";
       const post = {
         _id: "post1",
-        clerkUserId: "user123",
+        userId: "user123",
         status: "published",
       };
 
-      const canStoreMetrics = post.clerkUserId === authenticatedUserId;
+      const canStoreMetrics = post.userId === authenticatedUserId;
       expect(canStoreMetrics).toBe(true);
     });
   });

@@ -15,7 +15,7 @@ export const metadata = {
  * Templates Page
  *
  * Displays a library of user's content templates with create, edit, and delete functionality.
- * Protected by Clerk middleware (configured in middleware.ts).
+ * Protected by Better Auth middleware (configured in middleware.ts).
  */
 export default function TemplatesPage() {
   return (

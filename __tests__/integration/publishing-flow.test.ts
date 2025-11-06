@@ -69,7 +69,7 @@ describe("End-to-End Publishing Flow", () => {
 
       // Simulate createPost mutation
       await mockContext.db.insert("posts", {
-        clerkUserId: "user-123",
+        userId: "user-123",
         status: "Scheduled",
         twitterContent: args.content,
         twitterScheduledTime: args.scheduledTime,
@@ -170,7 +170,7 @@ describe("End-to-End Publishing Flow", () => {
       mockContext.db.get.mockResolvedValueOnce({
         _id: postId,
         status: "Scheduled",
-        clerkUserId: "user-123",
+        userId: "user-123",
         twitterContent: "Test",
         url: "",
         retryCount: 0,

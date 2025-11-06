@@ -1,14 +1,23 @@
 import { AuthConfig } from "convex/server";
 
-export default {
+// Runtime validation for required environment variables
+const CONVEX_SITE_URL = process.env.CONVEX_SITE_URL;
+
+if (!CONVEX_SITE_URL) {
+  throw new Error(
+    "Missing required environment variable: CONVEX_SITE_URL. " +
+    "Please set CONVEX_SITE_URL in your Convex dashboard environment variables. " +
+    "This should be your Convex deployment URL (e.g., https://your-deployment.convex.cloud)."
+  );
+}
+
+const config = {
   providers: [
     {
-      // Replace with your own Clerk Issuer URL from your "convex" JWT template
-      // or with `process.env.CLERK_JWT_ISSUER_DOMAIN`
-      // and configure CLERK_JWT_ISSUER_DOMAIN on the Convex Dashboard
-      // See https://docs.convex.dev/auth/clerk#configuring-dev-and-prod-instances
-      domain: process.env.CLERK_JWT_ISSUER_DOMAIN!,
+      domain: CONVEX_SITE_URL,
       applicationID: "convex",
     },
   ],
 } satisfies AuthConfig;
+
+export default config;

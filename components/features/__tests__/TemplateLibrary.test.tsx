@@ -60,7 +60,7 @@ const mockTemplates = [
   {
     _id: "1" as unknown as Doc<"templates">["_id"],
     _creationTime: baseTime - 3 * 24 * 60 * 60 * 1000, // 3 days ago
-    clerkUserId: "user1",
+    userId: "user1",
     name: "Launch Announcement",
     content: "We're excited to launch our new feature! #hashtags #buildinpublic",
     tags: ["hashtags", "buildinpublic"],
@@ -70,7 +70,7 @@ const mockTemplates = [
   {
     _id: "2" as unknown as Doc<"templates">["_id"],
     _creationTime: baseTime - 2 * 24 * 60 * 60 * 1000, // 2 days ago
-    clerkUserId: "user1",
+    userId: "user1",
     name: "Weekly Update",
     content: "Here's what we shipped this week at our startup",
     tags: ["updates", "twitter"],
@@ -80,7 +80,7 @@ const mockTemplates = [
   {
     _id: "3" as unknown as Doc<"templates">["_id"],
     _creationTime: baseTime - 1 * 24 * 60 * 60 * 1000, // 1 day ago
-    clerkUserId: "user1",
+    userId: "user1",
     name: "Twitter Closing",
     content: "Thanks for reading! What do you think? #hashtags",
     tags: ["closing", "hashtags", "twitter"],
@@ -90,7 +90,7 @@ const mockTemplates = [
   {
     _id: "4" as unknown as Doc<"templates">["_id"],
     _creationTime: baseTime - 4 * 24 * 60 * 60 * 1000, // 4 days ago (oldest)
-    clerkUserId: "user1",
+    userId: "user1",
     name: "LinkedIn Post",
     content: "Professional insight about building products",
     tags: ["linkedin"],

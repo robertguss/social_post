@@ -79,9 +79,8 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     postData?.clonedFromPostId ? { postId: postData.clonedFromPostId } : "skip"
   );
 
-  // Platform selection state
-  const [enableTwitter, setEnableTwitter] = useState(false);
-  const [enableLinkedIn, setEnableLinkedIn] = useState(false);
+  // Platform selection - determined by whether content exists
+  // Removed explicit enable/disable toggles for better UX
 
   // Twitter form state
   const [twitterContent, setTwitterContent] = useState("");
@@ -151,15 +150,15 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const LINKEDIN_WARNING_THRESHOLD = 2900;
   const isLinkedInOverLimit = linkedInCharCount > LINKEDIN_MAX_CHARS;
 
+  // Derived state: platforms are enabled if they have content
+  const enableTwitter = twitterContent.trim().length > 0;
+  const enableLinkedIn = linkedInContent.trim().length > 0;
+
   /**
    * Pre-fill form when in edit mode
    */
   useEffect(() => {
     if (mode === "edit" && postData) {
-      // Pre-fill platform selection
-      setEnableTwitter(!!postData.twitterContent);
-      setEnableLinkedIn(!!postData.linkedInContent);
-
       // Pre-fill Twitter fields
       if (postData.twitterContent) {
         setTwitterContent(postData.twitterContent);
@@ -620,8 +619,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         twitterContent: twitterContent,
         linkedInContent: linkedInContent,
         url: url.trim() || undefined,
-        twitterEnabled: enableTwitter,
-        linkedInEnabled: enableLinkedIn,
       });
 
       toast.success("Draft saved");
@@ -832,26 +829,15 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                     <IconBrandX className="w-6 h-6 text-[#1DA1F2]" />
                     <Label className="text-base font-semibold">Twitter/X Content</Label>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="twitter-enabled"
-                      checked={enableTwitter}
-                      onCheckedChange={setEnableTwitter}
-                      aria-label="Enable Twitter posting"
-                    />
-                    <Label htmlFor="twitter-enabled" className="text-sm text-muted-foreground cursor-pointer">
-                      {enableTwitter ? "Enabled" : "Disabled"}
-                    </Label>
-                  </div>
                 </div>
 
                 {/* Twitter Content */}
                 <div className="space-y-2">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex items-center justify-end gap-2">
                     <AIAssistantButton
                       onFeatureSelect={handleAIFeatureSelect}
                       isLoading={isAILoading}
-                      disabled={!enableTwitter || !twitterContent.trim()}
+                      disabled={!twitterContent.trim()}
                       isOpen={isAIAssistantOpen && activeField === "twitter"}
                       onOpenChange={setIsAIAssistantOpen}
                     />
@@ -860,7 +846,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                       variant="outline"
                       size="sm"
                       onClick={() => handleOpenTemplatePicker("twitter")}
-                      disabled={!enableTwitter}
                     >
                       <IconTemplate className="mr-2 h-4 w-4" />
                       Insert Template
@@ -872,7 +857,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                     value={twitterContent}
                     onChange={(e) => setTwitterContent(e.target.value)}
                     onFocus={() => setActiveField("twitter")}
-                    disabled={!enableTwitter}
                     className="min-h-[120px] resize-y"
                   />
                   <div className="flex justify-end">
@@ -917,18 +901,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                   />
                 </div>
               )}
-
-              {/* Quick toggle for LinkedIn */}
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-                <Switch
-                  id="also-linkedin"
-                  checked={enableLinkedIn}
-                  onCheckedChange={setEnableLinkedIn}
-                />
-                <Label htmlFor="also-linkedin" className="text-sm cursor-pointer">
-                  Also post to LinkedIn
-                </Label>
-              </div>
             </TabsContent>
 
             {/* LinkedIn Tab */}
@@ -940,23 +912,12 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                     <IconBrandLinkedin className="w-6 h-6 text-[#0A66C2]" />
                     <Label className="text-base font-semibold">LinkedIn Content</Label>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="linkedin-enabled"
-                      checked={enableLinkedIn}
-                      onCheckedChange={setEnableLinkedIn}
-                      aria-label="Enable LinkedIn posting"
-                    />
-                    <Label htmlFor="linkedin-enabled" className="text-sm text-muted-foreground cursor-pointer">
-                      {enableLinkedIn ? "Enabled" : "Disabled"}
-                    </Label>
-                  </div>
                 </div>
 
                 {/* LinkedIn Content */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    {twitterContent.trim() && !linkedInContent.trim() && enableLinkedIn && (
+                    {twitterContent.trim() && !linkedInContent.trim() && (
                       <Button
                         type="button"
                         variant="outline"
@@ -969,11 +930,11 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                       </Button>
                     )}
                     <div className="flex-1" />
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <AIAssistantButton
                         onFeatureSelect={handleAIFeatureSelect}
                         isLoading={isAILoading}
-                        disabled={!enableLinkedIn || !linkedInContent.trim()}
+                        disabled={!linkedInContent.trim()}
                         isOpen={isAIAssistantOpen && activeField === "linkedin"}
                         onOpenChange={setIsAIAssistantOpen}
                       />
@@ -982,7 +943,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                         variant="outline"
                         size="sm"
                         onClick={() => handleOpenTemplatePicker("linkedin")}
-                        disabled={!enableLinkedIn}
                       >
                         <IconTemplate className="mr-2 h-4 w-4" />
                         Insert Template
@@ -995,7 +955,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                     value={linkedInContent}
                     onChange={(e) => setLinkedInContent(e.target.value)}
                     onFocus={() => setActiveField("linkedin")}
-                    disabled={!enableLinkedIn}
                     className="min-h-[120px] resize-y"
                   />
                   <div className="flex justify-end">
@@ -1047,18 +1006,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                   />
                 </div>
               )}
-
-              {/* Quick toggle for Twitter */}
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-                <Switch
-                  id="also-twitter"
-                  checked={enableTwitter}
-                  onCheckedChange={setEnableTwitter}
-                />
-                <Label htmlFor="also-twitter" className="text-sm cursor-pointer">
-                  Also post to Twitter
-                </Label>
-              </div>
             </TabsContent>
           </Tabs>
 

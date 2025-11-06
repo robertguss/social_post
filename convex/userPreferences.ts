@@ -12,7 +12,7 @@ export const getUserPreferences = query({
     v.object({
       _id: v.id("user_preferences"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       enableContentPrePopulation: v.boolean(),
     })
   ),
@@ -22,7 +22,7 @@ export const getUserPreferences = query({
 
     const prefs = await ctx.db
       .query("user_preferences")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
 
     return prefs || null;
@@ -45,7 +45,7 @@ export const updateUserPreferences = mutation({
 
     const existing = await ctx.db
       .query("user_preferences")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
 
     if (existing) {
@@ -55,7 +55,7 @@ export const updateUserPreferences = mutation({
     } else {
       // Create new preferences with defaults
       const newId = await ctx.db.insert("user_preferences", {
-        clerkUserId: identity.subject,
+        userId: identity.subject,
         enableContentPrePopulation: args.enableContentPrePopulation ?? true,
       });
       return newId;

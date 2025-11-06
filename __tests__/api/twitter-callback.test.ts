@@ -1,13 +1,13 @@
 /**
  * Integration tests for Twitter OAuth callback route handler
  *
- * Note: These tests mock external dependencies (Clerk, Convex, Twitter API).
+ * Note: These tests mock external dependencies (Better Auth, Convex, Twitter API).
  */
 import { NextRequest } from "next/server";
 import { GET } from "@/app/api/auth/twitter/callback/route";
 
 // Mock dependencies
-jest.mock("@clerk/nextjs/server", () => ({
+jest.mock("@/lib/auth-server", () => ({
   auth: jest.fn(),
 }));
 
@@ -20,7 +20,7 @@ jest.mock("convex/browser", () => ({
 }));
 
 describe("Twitter OAuth Callback Route", () => {
-  const mockAuth = require("@clerk/nextjs/server").auth;
+  const mockAuth = require("@/lib/auth-server").auth;
   const mockCookies = require("next/headers").cookies;
   const { ConvexHttpClient } = require("convex/browser");
 
@@ -29,8 +29,8 @@ describe("Twitter OAuth Callback Route", () => {
 
     // Default mocks
     mockAuth.mockResolvedValue({
-      userId: "user_123",
-      getToken: jest.fn().mockResolvedValue("clerk_token_123"),
+      user: { id: "user_123" },
+      session: { id: "session_123" },
     });
 
     mockCookies.mockResolvedValue({
@@ -127,7 +127,7 @@ describe("Twitter OAuth Callback Route", () => {
   });
 
   it("should handle unauthenticated user", async () => {
-    mockAuth.mockResolvedValue({ userId: null });
+    mockAuth.mockResolvedValue({ user: null, session: null });
 
     const request = new NextRequest(
       "http://localhost:3000/api/auth/twitter/callback?code=auth_code_123&state=state_123"

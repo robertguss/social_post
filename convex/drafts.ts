@@ -14,8 +14,6 @@ export const saveDraft = mutation({
     twitterContent: v.string(),
     linkedInContent: v.string(),
     url: v.optional(v.string()),
-    twitterEnabled: v.boolean(),
-    linkedInEnabled: v.boolean(),
   },
   returns: v.id("posts"),
   handler: async (ctx, args) => {
@@ -33,7 +31,7 @@ export const saveDraft = mutation({
       if (!existing) {
         throw new Error("Draft not found");
       }
-      if (existing.clerkUserId !== identity.subject) {
+      if (existing.userId !== identity.subject) {
         throw new Error("Unauthorized");
       }
 
@@ -41,8 +39,6 @@ export const saveDraft = mutation({
         twitterContent: args.twitterContent,
         linkedInContent: args.linkedInContent,
         url: args.url,
-        twitterEnabled: args.twitterEnabled,
-        linkedInEnabled: args.linkedInEnabled,
         lastEditedTime: now,
       });
 
@@ -50,13 +46,11 @@ export const saveDraft = mutation({
     } else {
       // Create new draft
       const draftId = await ctx.db.insert("posts", {
-        clerkUserId: identity.subject,
+        userId: identity.subject,
         status: "draft",
         twitterContent: args.twitterContent,
         linkedInContent: args.linkedInContent,
         url: args.url,
-        twitterEnabled: args.twitterEnabled,
-        linkedInEnabled: args.linkedInEnabled,
         lastEditedTime: now,
         // Scheduled times are undefined/null for drafts
       });
@@ -77,13 +71,11 @@ export const getDrafts = query({
     v.object({
       _id: v.id("posts"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       status: v.string(),
       twitterContent: v.optional(v.string()),
       linkedInContent: v.optional(v.string()),
       url: v.optional(v.string()),
-      twitterEnabled: v.optional(v.boolean()),
-      linkedInEnabled: v.optional(v.boolean()),
       lastEditedTime: v.optional(v.number()),
     })
   ),
@@ -98,7 +90,7 @@ export const getDrafts = query({
     const drafts = await ctx.db
       .query("posts")
       .withIndex("by_user_status", (q) =>
-        q.eq("clerkUserId", identity.subject).eq("status", "draft")
+        q.eq("userId", identity.subject).eq("status", "draft")
       )
       .collect();
 
@@ -125,13 +117,11 @@ export const getDraftById = query({
     v.object({
       _id: v.id("posts"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       status: v.string(),
       twitterContent: v.optional(v.string()),
       linkedInContent: v.optional(v.string()),
       url: v.optional(v.string()),
-      twitterEnabled: v.optional(v.boolean()),
-      linkedInEnabled: v.optional(v.boolean()),
       lastEditedTime: v.optional(v.number()),
     })
   ),
@@ -148,7 +138,7 @@ export const getDraftById = query({
     }
 
     // Verify ownership
-    if (draft.clerkUserId !== identity.subject) {
+    if (draft.userId !== identity.subject) {
       throw new Error("Unauthorized");
     }
 
@@ -177,7 +167,7 @@ export const deleteDraft = mutation({
     if (!draft) {
       throw new Error("Draft not found");
     }
-    if (draft.clerkUserId !== identity.subject) {
+    if (draft.userId !== identity.subject) {
       throw new Error("Unauthorized");
     }
     if (draft.status !== "draft") {

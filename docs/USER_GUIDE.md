@@ -22,7 +22,7 @@ Complete guide for using the Social Posting Scheduler to schedule and publish co
 
 1. **Create an Account**
    - Visit the application URL
-   - Click "Sign Up" or "Sign In" (powered by Clerk)
+   - Click "Sign Up" or "Sign In" (powered by Better Auth)
    - Complete the authentication process
 
 2. **Connect Social Media Accounts**
@@ -433,7 +433,7 @@ LinkedIn:   2:00 PM - Deep-dive version
 ### Account Security
 
 **Protect Your Access:**
-- Use strong passwords for Clerk account
+- Use strong passwords for Better Auth account
 - Enable 2FA on X/Twitter and LinkedIn accounts
 - Regularly review connected apps
 - Monitor unauthorized access

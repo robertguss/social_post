@@ -15,13 +15,13 @@ import { internal } from "./_generated/api";
  * - Access tokens: 60 days (5,184,000 seconds)
  * - Refresh tokens: 365 days (31,536,000 seconds)
  *
- * @param clerkUserId - The user's Clerk ID
+ * @param userId - The user's ID
  * @returns Success status and updated expiration timestamp, or error details
  * @throws Error if refresh token is expired (requires re-authentication)
  */
 export const refreshLinkedInToken = internalAction({
   args: {
-    clerkUserId: v.string(),
+    userId: v.string(),
   },
   returns: v.object({
     success: v.boolean(),
@@ -29,7 +29,10 @@ export const refreshLinkedInToken = internalAction({
     error: v.optional(v.string()),
     needsReauth: v.optional(v.boolean()),
   }),
-  handler: async (ctx, args): Promise<{
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
     success: boolean;
     expiresAt?: number;
     error?: string;
@@ -40,9 +43,9 @@ export const refreshLinkedInToken = internalAction({
       const connection = await ctx.runQuery(
         internal.connections.getConnectionInternal,
         {
-          clerkUserId: args.clerkUserId,
+          userId: args.userId,
           platform: "linkedin",
-        }
+        },
       );
 
       if (!connection) {
@@ -56,7 +59,7 @@ export const refreshLinkedInToken = internalAction({
       // Decrypt the refresh token
       const decryptedRefreshToken = await ctx.runAction(
         internal.encryption.decrypt,
-        { ciphertext: connection.refreshToken }
+        { ciphertext: connection.refreshToken },
       );
 
       // Get LinkedIn OAuth credentials from environment
@@ -113,7 +116,7 @@ export const refreshLinkedInToken = internalAction({
               if (attempt < maxRetries - 1) {
                 const delayMs = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
                 console.warn(
-                  `LinkedIn token refresh failed (attempt ${attempt + 1}/${maxRetries}): ${response.statusText}. Retrying in ${delayMs}ms...`
+                  `LinkedIn token refresh failed (attempt ${attempt + 1}/${maxRetries}): ${response.statusText}. Retrying in ${delayMs}ms...`,
                 );
                 await new Promise((resolve) => setTimeout(resolve, delayMs));
                 continue;
@@ -122,7 +125,7 @@ export const refreshLinkedInToken = internalAction({
 
             // Don't retry on other client errors (4xx)
             throw new Error(
-              `LinkedIn token refresh failed: ${response.statusText} - ${errorText}`
+              `LinkedIn token refresh failed: ${response.statusText} - ${errorText}`,
             );
           }
 
@@ -131,7 +134,7 @@ export const refreshLinkedInToken = internalAction({
 
           if (!data.access_token || !data.refresh_token) {
             throw new Error(
-              "LinkedIn token refresh response missing required tokens"
+              "LinkedIn token refresh response missing required tokens",
             );
           }
 
@@ -142,17 +145,17 @@ export const refreshLinkedInToken = internalAction({
           // Encrypt the new tokens before storage
           const encryptedAccessToken = await ctx.runAction(
             internal.encryption.encrypt,
-            { plaintext: data.access_token }
+            { plaintext: data.access_token },
           );
 
           const encryptedRefreshToken = await ctx.runAction(
             internal.encryption.encrypt,
-            { plaintext: data.refresh_token }
+            { plaintext: data.refresh_token },
           );
 
           // Save encrypted tokens to database
           await ctx.runMutation(internal.connections.saveConnectionInternal, {
-            clerkUserId: args.clerkUserId,
+            userId: args.userId,
             platform: "linkedin",
             accessToken: encryptedAccessToken,
             refreshToken: encryptedRefreshToken,
@@ -169,13 +172,13 @@ export const refreshLinkedInToken = internalAction({
             if (attempt < maxRetries - 1) {
               const delayMs = Math.pow(2, attempt) * 1000;
               console.warn(
-                `LinkedIn token refresh timed out (attempt ${attempt + 1}/${maxRetries}). Retrying in ${delayMs}ms...`
+                `LinkedIn token refresh timed out (attempt ${attempt + 1}/${maxRetries}). Retrying in ${delayMs}ms...`,
               );
               await new Promise((resolve) => setTimeout(resolve, delayMs));
               continue;
             }
             lastError = new Error(
-              "LinkedIn token refresh timed out after multiple attempts"
+              "LinkedIn token refresh timed out after multiple attempts",
             );
             break;
           }
@@ -184,10 +187,11 @@ export const refreshLinkedInToken = internalAction({
           if (attempt < maxRetries - 1) {
             const delayMs = Math.pow(2, attempt) * 1000;
             console.warn(
-              `LinkedIn token refresh error (attempt ${attempt + 1}/${maxRetries}): ${error instanceof Error ? error.message : "Unknown error"}. Retrying in ${delayMs}ms...`
+              `LinkedIn token refresh error (attempt ${attempt + 1}/${maxRetries}): ${error instanceof Error ? error.message : "Unknown error"}. Retrying in ${delayMs}ms...`,
             );
             await new Promise((resolve) => setTimeout(resolve, delayMs));
-            lastError = error instanceof Error ? error : new Error(String(error));
+            lastError =
+              error instanceof Error ? error : new Error(String(error));
             continue;
           }
 
@@ -199,7 +203,9 @@ export const refreshLinkedInToken = internalAction({
       // All retries failed
       return {
         success: false,
-        error: lastError?.message || "LinkedIn token refresh failed after all retries",
+        error:
+          lastError?.message ||
+          "LinkedIn token refresh failed after all retries",
         needsReauth: false,
       };
     } catch (error) {

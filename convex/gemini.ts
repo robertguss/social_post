@@ -301,7 +301,7 @@ export const testGeminiConnection = action({
  * @property {number} durationMs - Time taken for the API call in milliseconds
  * @property {string} modelUsed - The Gemini model that was used
  * @property {number} timestamp - Unix timestamp of the test
- * @property {string} userId - Clerk user ID of the requester
+ * @property {string} userId - Better Auth user ID of the requester
  *
  * @throws {Error} If user is not authenticated
  *

@@ -29,7 +29,7 @@ const mockQueues = [
   {
     _id: "queue1" as Id<"recurring_queues">,
     _creationTime: Date.now(),
-    clerkUserId: "user1",
+    userId: "user1",
     originalPostId: "post1" as Id<"posts">,
     status: "active",
     interval: 7,
@@ -44,7 +44,7 @@ const mockQueues = [
   {
     _id: "queue2" as Id<"recurring_queues">,
     _creationTime: Date.now(),
-    clerkUserId: "user1",
+    userId: "user1",
     originalPostId: "post2" as Id<"posts">,
     status: "paused",
     interval: 3,
@@ -59,7 +59,7 @@ const mockQueues = [
   {
     _id: "queue3" as Id<"recurring_queues">,
     _creationTime: Date.now(),
-    clerkUserId: "user1",
+    userId: "user1",
     originalPostId: "post3" as Id<"posts">,
     status: "completed",
     interval: 1,

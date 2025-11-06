@@ -55,7 +55,7 @@ type QueueCardProps = {
   queue: {
     _id: Id<"recurring_queues">;
     _creationTime: number;
-    clerkUserId: string;
+    userId: string;
     originalPostId: Id<"posts">;
     status: string;
     interval: number;

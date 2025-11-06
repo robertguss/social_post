@@ -11,7 +11,8 @@ import {
   IconShare3,
   IconTemplate,
 } from "@tabler/icons-react"
-import { useUser } from "@clerk/nextjs"
+import { useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -69,12 +70,12 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useUser()
+  const currentUser = useQuery(api.auth.getCurrentUser)
 
   const userData = {
-    name: user?.fullName || user?.firstName || "User",
-    email: user?.emailAddresses?.[0]?.emailAddress || "",
-    avatar: user?.imageUrl || "",
+    name: currentUser?.name || "User",
+    email: currentUser?.email || "",
+    avatar: currentUser?.image || "",
   }
 
   return (

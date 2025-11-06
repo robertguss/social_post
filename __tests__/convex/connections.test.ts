@@ -127,7 +127,7 @@ describe("Convex Connections Functions", () => {
         .mockResolvedValueOnce("decrypted_refresh_token");
 
       const args = {
-        clerkUserId: "user_123",
+        userId: "user_123",
         platform: "twitter",
       };
 
@@ -148,7 +148,7 @@ describe("Convex Connections Functions", () => {
       ctx.runQuery = jest.fn().mockResolvedValue(null);
 
       const args = {
-        clerkUserId: "user_123",
+        userId: "user_123",
         platform: "twitter",
       };
 
@@ -172,7 +172,7 @@ describe("Convex Connections Functions", () => {
         .mockRejectedValue(new Error("Decryption failed"));
 
       const args = {
-        clerkUserId: "user_123",
+        userId: "user_123",
         platform: "twitter",
       };
 
@@ -205,7 +205,7 @@ describe("Convex Connections Functions", () => {
       const futureExpiry = Date.now() + 7200000; // 2 hours from now
       const connection = {
         _id: "conn_123",
-        clerkUserId: "user_123",
+        userId: "user_123",
         platform: "twitter",
         accessToken: "encrypted_token",
         refreshToken: "encrypted_refresh",
@@ -232,7 +232,7 @@ describe("Convex Connections Functions", () => {
       const pastExpiry = Date.now() - 1000; // Expired 1 second ago
       const connection = {
         _id: "conn_123",
-        clerkUserId: "user_123",
+        userId: "user_123",
         platform: "twitter",
         accessToken: "encrypted_token",
         refreshToken: "encrypted_refresh",

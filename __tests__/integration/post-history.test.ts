@@ -30,12 +30,12 @@ describe("Post History Integration Tests", () => {
       // Create mock user identity
       const asUser1 = t.withIdentity({
         subject: "user1",
-        tokenIdentifier: "clerk|user1",
+        tokenIdentifier: "betterauth|user1",
       });
 
       const asUser2 = t.withIdentity({
         subject: "user2",
-        tokenIdentifier: "clerk|user2",
+        tokenIdentifier: "betterauth|user2",
       });
 
       // Create posts for user1
@@ -68,7 +68,7 @@ describe("Post History Integration Tests", () => {
 
       const asUser = t.withIdentity({
         subject: "user1",
-        tokenIdentifier: "clerk|user1",
+        tokenIdentifier: "betterauth|user1",
       });
 
       const now = Date.now();
@@ -110,7 +110,7 @@ describe("Post History Integration Tests", () => {
 
       const asUser = t.withIdentity({
         subject: "user1",
-        tokenIdentifier: "clerk|user1",
+        tokenIdentifier: "betterauth|user1",
       });
 
       // Create Twitter post
@@ -134,7 +134,7 @@ describe("Post History Integration Tests", () => {
 
       const asUser = t.withIdentity({
         subject: "user1",
-        tokenIdentifier: "clerk|user1",
+        tokenIdentifier: "betterauth|user1",
       });
 
       const now = Date.now();
@@ -172,7 +172,7 @@ describe("Post History Integration Tests", () => {
 
       const asUser = t.withIdentity({
         subject: "user1",
-        tokenIdentifier: "clerk|user1",
+        tokenIdentifier: "betterauth|user1",
       });
 
       // Create a scheduled post
@@ -213,7 +213,7 @@ describe("Post History Integration Tests", () => {
 
       const asUser = t.withIdentity({
         subject: "user1",
-        tokenIdentifier: "clerk|user1",
+        tokenIdentifier: "betterauth|user1",
       });
 
       // Create a scheduled post

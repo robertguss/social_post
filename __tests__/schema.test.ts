@@ -11,7 +11,7 @@ describe('Convex Database Schema', () => {
     it('should have all required fields defined', () => {
       // Define expected schema structure
       const expectedFields = [
-        'clerkUserId',
+        'userId',
         'status',
         'twitterContent',
         'linkedInContent',
@@ -30,8 +30,8 @@ describe('Convex Database Schema', () => {
     });
 
     it('should have required fields as non-optional', () => {
-      // clerkUserId and status are required fields
-      const requiredFields = ['clerkUserId', 'status'];
+      // userId and status are required fields
+      const requiredFields = ['userId', 'status'];
 
       requiredFields.forEach((field) => {
         expect(field).toBeDefined();
@@ -45,19 +45,19 @@ describe('Convex Database Schema', () => {
       expect(v.optional(v.number())).toBeDefined();
     });
 
-    it('should have by_user index on clerkUserId', () => {
+    it('should have by_user index on userId', () => {
       const indexName = 'by_user';
-      const indexField = 'clerkUserId';
+      const indexField = 'userId';
 
       expect(indexName).toBe('by_user');
-      expect(indexField).toBe('clerkUserId');
+      expect(indexField).toBe('userId');
     });
   });
 
   describe('user_connections table', () => {
     it('should have all required fields defined', () => {
       const expectedFields = [
-        'clerkUserId',
+        'userId',
         'platform',
         'accessToken',
         'refreshToken',
@@ -72,7 +72,7 @@ describe('Convex Database Schema', () => {
     it('should have all fields as required (non-optional)', () => {
       // All fields in user_connections are required
       const requiredFields = [
-        'clerkUserId',
+        'userId',
         'platform',
         'accessToken',
         'refreshToken',
@@ -86,11 +86,11 @@ describe('Convex Database Schema', () => {
 
     it('should have by_user_platform composite index', () => {
       const indexName = 'by_user_platform';
-      const indexFields = ['clerkUserId', 'platform'];
+      const indexFields = ['userId', 'platform'];
 
       expect(indexName).toBe('by_user_platform');
       expect(indexFields).toHaveLength(2);
-      expect(indexFields[0]).toBe('clerkUserId');
+      expect(indexFields[0]).toBe('userId');
       expect(indexFields[1]).toBe('platform');
     });
   });

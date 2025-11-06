@@ -52,9 +52,9 @@ pnpm dlx convex dev
 #### .env.local (Next.js)
 
 ```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+# Better Auth
+BETTER_AUTH_SECRET=your_secret_key_here
+BETTER_AUTH_URL=http://localhost:3000
 
 # Convex
 NEXT_PUBLIC_CONVEX_URL=https://your-dev-deployment.convex.cloud
@@ -69,7 +69,7 @@ Set in Convex Dashboard → Settings → Environment Variables:
 
 ```bash
 # Auth
-CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-domain.clerk.accounts.dev
+BETTER_AUTH_SECRET=your_secret_key_here
 
 # OAuth
 TWITTER_CLIENT_ID=your_dev_twitter_client_id
@@ -126,13 +126,15 @@ social_post/
 │   ├── settings/              # Settings page
 │   ├── templates/             # Templates page
 │   └── api/                   # API routes
-│       └── auth/
-│           ├── twitter/
-│           │   └── callback/
-│           │       └── route.ts
-│           └── linkedin/
-│               └── callback/
-│                   └── route.ts
+│       ├── auth/
+│       │   └── [...all]/
+│       │       └── route.ts   # Better Auth routes
+│       ├── twitter/
+│       │   └── callback/
+│       │       └── route.ts
+│       └── linkedin/
+│           └── callback/
+│               └── route.ts
 ├── components/                # React components
 │   ├── ui/                    # shadcn/ui primitives
 │   │   ├── button.tsx
@@ -149,7 +151,7 @@ social_post/
 ├── convex/                    # Backend (Convex)
 │   ├── _generated/            # Auto-generated types
 │   ├── schema.ts              # Database schema
-│   ├── auth.config.ts         # Clerk config
+│   ├── auth.config.ts         # Better Auth config
 │   ├── posts.ts               # Post CRUD
 │   ├── publishing.ts          # Publishing actions
 │   ├── connections.ts         # OAuth connections
@@ -169,7 +171,7 @@ social_post/
 │   ├── integration/
 │   └── api/
 ├── __mocks__/                 # Test mocks
-├── middleware.ts              # Clerk route protection
+├── middleware.ts              # Better Auth route protection
 ├── jest.config.ts             # Jest configuration
 ├── vitest.config.ts           # Vitest configuration
 └── package.json
@@ -184,7 +186,7 @@ social_post/
 | **Styling** | Tailwind CSS 4 | Utility-first CSS |
 | **Components** | shadcn/ui | Accessible UI components |
 | **Backend** | Convex 1.28.0 | Database + serverless functions |
-| **Auth** | Clerk | User authentication |
+| **Auth** | Better Auth | User authentication |
 | **Language** | TypeScript 5 | Type safety |
 | **Testing** | Jest + Vitest | Unit + integration tests |
 | **Linting** | ESLint 9 | Code quality |
@@ -292,8 +294,8 @@ export const myQuery = query({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
-    // Use clerkUserId for queries
+    const userId = identity.subject;
+    // Use userId for queries
   },
 });
 ```
@@ -303,13 +305,13 @@ export const myQuery = query({
 // ✅ Good - Uses index
 const posts = await ctx.db
   .query("posts")
-  .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+  .withIndex("by_user", (q) => q.eq("userId", userId))
   .collect();
 
 // ❌ Bad - Full table scan
 const posts = await ctx.db
   .query("posts")
-  .filter((q) => q.eq(q.field("clerkUserId"), clerkUserId))
+  .filter((q) => q.eq(q.field("userId"), userId))
   .collect();
 ```
 
@@ -381,20 +383,20 @@ import { v } from "convex/values";
 
 export default defineSchema({
   posts: defineTable({
-    clerkUserId: v.string(),
+    userId: v.string(),
     status: v.string(),
     twitterContent: v.optional(v.string()),
     linkedInContent: v.optional(v.string()),
     // ...
-  }).index("by_user", ["clerkUserId"]),
+  }).index("by_user", ["userId"]),
 
   user_connections: defineTable({
-    clerkUserId: v.string(),
+    userId: v.string(),
     platform: v.string(),
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
-  }).index("by_user_platform", ["clerkUserId", "platform"]),
+  }).index("by_user_platform", ["userId", "platform"]),
 });
 ```
 
@@ -415,7 +417,7 @@ export const getPosts = query({
 
     return await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect();
   },
 });
@@ -431,7 +433,7 @@ export const getScheduledPosts = query({
 
     const posts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .filter((q) =>
         q.and(
           q.eq(q.field("status"), "Scheduled"),
@@ -460,7 +462,7 @@ export const createPost = mutation({
     if (!identity) throw new Error("Not authenticated");
 
     const postId = await ctx.db.insert("posts", {
-      clerkUserId: identity.subject,
+      userId: identity.subject,
       content: args.content,
       scheduledTime: args.scheduledTime,
       status: "Scheduled",
@@ -484,7 +486,7 @@ export const updatePost = mutation({
 
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Post not found");
-    if (post.clerkUserId !== identity.subject) {
+    if (post.userId !== identity.subject) {
       throw new Error("Unauthorized");
     }
 
@@ -505,7 +507,7 @@ export const deletePost = mutation({
 
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Post not found");
-    if (post.clerkUserId !== identity.subject) {
+    if (post.userId !== identity.subject) {
       throw new Error("Unauthorized");
     }
 
@@ -996,7 +998,7 @@ vercel --prod
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [shadcn/ui Documentation](https://ui.shadcn.com)
-- [Clerk Documentation](https://clerk.com/docs)
+- [Better Auth Documentation](https://www.better-auth.com/docs)
 
 ---
 

@@ -31,7 +31,7 @@ export const createPost = mutation({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Validation: At least one platform must be selected
     const hasTwitter = args.twitterContent && args.twitterScheduledTime;
@@ -71,7 +71,7 @@ export const createPost = mutation({
 
     // Create the post record
     const postId = await ctx.db.insert("posts", {
-      clerkUserId,
+      userId,
       status: "Scheduled",
       twitterContent: args.twitterContent || "",
       linkedInContent: args.linkedInContent || "",
@@ -156,14 +156,14 @@ export const updatePost = mutation({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Retrieve existing post and verify ownership
     const post = await ctx.db.get(args.postId);
     if (!post) {
       throw new Error("Post not found");
     }
-    if (post.clerkUserId !== clerkUserId) {
+    if (post.userId !== userId) {
       throw new Error("Unauthorized: You can only edit your own posts");
     }
 
@@ -295,14 +295,14 @@ export const deletePost = mutation({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Retrieve post and verify ownership
     const post = await ctx.db.get(args.postId);
     if (!post) {
       throw new Error("Post not found");
     }
-    if (post.clerkUserId !== clerkUserId) {
+    if (post.userId !== userId) {
       throw new Error("Unauthorized: You can only delete your own posts");
     }
 
@@ -351,7 +351,7 @@ export const clonePost = mutation({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Fetch original post by ID
     const originalPost = await ctx.db.get(args.postId);
@@ -360,13 +360,13 @@ export const clonePost = mutation({
     }
 
     // Verify original post belongs to authenticated user (security check)
-    if (originalPost.clerkUserId !== clerkUserId) {
+    if (originalPost.userId !== userId) {
       throw new Error("Unauthorized: You can only clone your own posts");
     }
 
     // Create new post object with cloned content fields
     const newPostId = await ctx.db.insert("posts", {
-      clerkUserId, // Use authenticated user's ID
+      userId, // Use authenticated user's ID
       status: "draft", // New post starts as draft
       twitterContent: originalPost.twitterContent || "",
       linkedInContent: originalPost.linkedInContent || "",
@@ -464,7 +464,7 @@ export const getPost = query({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Fetch post
     const post = await ctx.db.get(args.postId);
@@ -473,7 +473,7 @@ export const getPost = query({
     }
 
     // Verify ownership
-    if (post.clerkUserId !== clerkUserId) {
+    if (post.userId !== userId) {
       throw new Error("Unauthorized: You can only access your own posts");
     }
 
@@ -523,12 +523,12 @@ export const getPosts = query({
       throw new Error("Not authenticated");
     }
 
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Query with index for efficient lookup by user
     let postsQuery = ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId));
+      .withIndex("by_user", (q) => q.eq("userId", userId));
 
     // Apply filters
     if (args.startDate || args.endDate || args.platform) {

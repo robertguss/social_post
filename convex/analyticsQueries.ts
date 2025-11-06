@@ -8,7 +8,7 @@ import { v } from "convex/values";
 export const getPostForMetrics = internalMutation({
   args: {
     postId: v.id("posts"),
-    clerkUserId: v.string(),
+    userId: v.string(),
   },
   returns: v.union(
     v.object({
@@ -22,7 +22,7 @@ export const getPostForMetrics = internalMutation({
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId);
 
-    if (!post || post.clerkUserId !== args.clerkUserId) {
+    if (!post || post.userId !== args.userId) {
       return null;
     }
 
@@ -41,7 +41,7 @@ export const getPostForMetrics = internalMutation({
  */
 export const getPerformanceInsightsInternal = internalMutation({
   args: {
-    clerkUserId: v.string(),
+    userId: v.string(),
     platform: v.string(),
     dateRangeFilter: v.string(),
   },
@@ -83,7 +83,7 @@ export const getPerformanceInsightsInternal = internalMutation({
     // Get user's posts first
     const userPosts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", args.clerkUserId))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
     // Query performance records only for user's posts using by_post index

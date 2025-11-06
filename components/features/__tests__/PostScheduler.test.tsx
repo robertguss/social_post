@@ -55,7 +55,7 @@ describe("PostScheduler - QuickReschedule Integration", () => {
   const mockOriginalPost: Doc<"posts"> = {
     _id: "original-post-id" as unknown as Id<"posts">,
     _creationTime: Date.now(),
-    clerkUserId: "user1",
+    userId: "user1",
     status: "published",
     twitterContent: "Original Twitter content",
     linkedInContent: "Original LinkedIn content",

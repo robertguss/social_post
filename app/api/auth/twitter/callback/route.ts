@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
-import { auth } from "@clerk/nextjs/server";
+import { getToken } from "@/lib/auth-server";
 import { cookies } from "next/headers";
 
 /**
@@ -55,9 +55,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get Clerk user authentication
-    const { userId } = await auth();
-    if (!userId) {
+    // Get Better Auth token for authentication
+    const token = await getToken();
+    if (!token) {
       console.error("User not authenticated");
       return NextResponse.redirect(
         new URL(
@@ -83,15 +83,7 @@ export async function GET(request: NextRequest) {
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
     const convex = new ConvexHttpClient(convexUrl);
 
-    // Get Clerk token for Convex authentication
-    const { getToken } = await auth();
-    const clerkToken = await getToken({ template: "convex" });
-
-    if (!clerkToken) {
-      throw new Error("Failed to get Clerk token for Convex");
-    }
-
-    convex.setAuth(clerkToken);
+    convex.setAuth(token);
 
     // Save connection to Convex
     await convex.action(api.connections.saveConnection, {

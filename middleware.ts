@@ -1,16 +1,39 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const isProtectedRoute = createRouteMatcher(["/server", "/settings", "/schedule", "/history", "/dashboard", "/insights"]);
+/**
+ * Middleware for Better Auth route protection
+ *
+ * IMPORTANT: This middleware only does basic routing.
+ * Actual authentication validation happens in the AuthGuard component.
+ */
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect();
-});
+  // Allow all API routes to pass through
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // Define public routes that don't require authentication
+  const publicRoutes = ["/", "/login", "/signup"];
+
+  // Check if the current route is public
+  const isPublicRoute = publicRoutes.some(route => pathname === route);
+
+  // If it's a public route, allow access
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // For all other routes, let them through
+  // The AuthGuard component will handle authentication checks
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    // Match all routes except static files and Next.js internals
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)).*)",
   ],
 };

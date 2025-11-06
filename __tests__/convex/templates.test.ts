@@ -38,7 +38,7 @@ async function createTemplateMock(
   if (!identity) {
     throw new Error("Not authenticated");
   }
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Validate content is non-empty
   if (!args.content.trim()) {
@@ -48,7 +48,7 @@ async function createTemplateMock(
   // Check for duplicate template name for this user
   const existingTemplate = await ctx.db
     .query("templates")
-    .withIndex("by_user", (q: any) => q.eq("clerkUserId", clerkUserId))
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .filter((q: any) => q.eq(q.field("name"), args.name))
     .first();
 
@@ -58,7 +58,7 @@ async function createTemplateMock(
 
   // Create new template
   const templateId = await ctx.db.insert("templates", {
-    clerkUserId,
+    userId,
     name: args.name,
     content: args.content,
     tags: args.tags,
@@ -83,7 +83,7 @@ async function updateTemplateMock(
   if (!identity) {
     throw new Error("Not authenticated");
   }
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Get the template to verify ownership
   const template = await ctx.db.get(args.templateId);
@@ -92,7 +92,7 @@ async function updateTemplateMock(
   }
 
   // Verify user owns the template
-  if (template.clerkUserId !== clerkUserId) {
+  if (template.userId !== userId) {
     throw new Error("Unauthorized: You do not own this template");
   }
 
@@ -100,7 +100,7 @@ async function updateTemplateMock(
   if (args.name && args.name !== template.name) {
     const existingTemplate = await ctx.db
       .query("templates")
-      .withIndex("by_user", (q: any) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
       .filter((q: any) => q.eq(q.field("name"), args.name))
       .first();
 
@@ -138,7 +138,7 @@ async function deleteTemplateMock(
   if (!identity) {
     throw new Error("Not authenticated");
   }
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Get the template to verify ownership
   const template = await ctx.db.get(args.templateId);
@@ -147,7 +147,7 @@ async function deleteTemplateMock(
   }
 
   // Verify user owns the template
-  if (template.clerkUserId !== clerkUserId) {
+  if (template.userId !== userId) {
     throw new Error("Unauthorized: You do not own this template");
   }
 
@@ -169,12 +169,12 @@ async function getTemplatesMock(
   if (!identity) {
     throw new Error("Not authenticated");
   }
-  const clerkUserId = identity.subject;
+  const userId = identity.subject;
 
   // Query all user's templates using index
   let templates = await ctx.db
     .query("templates")
-    .withIndex("by_user", (q: any) => q.eq("clerkUserId", clerkUserId))
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .collect();
 
   // Filter by tag if specified
@@ -218,7 +218,7 @@ describe("createTemplate mutation - Success cases", () => {
 
     expect(templateId).toBe("mock-template-id");
     expect(mockContext.db.insert).toHaveBeenCalledWith("templates", {
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "My First Template",
       content: "This is a reusable content block.",
       tags: ["greeting", "intro"],
@@ -261,7 +261,7 @@ describe("createTemplate mutation - Success cases", () => {
 
     expect(templateId).toBe("mock-template-id");
     const insertCall = mockContext.db.insert.mock.calls[0];
-    expect(insertCall[1].clerkUserId).toBe("user_456");
+    expect(insertCall[1].userId).toBe("user_456");
   });
 });
 
@@ -343,7 +343,7 @@ describe("createTemplate mutation - Validation errors", () => {
           first: jest.fn().mockResolvedValue({
             _id: "existing-template",
             name: "Duplicate Name",
-            clerkUserId: "user_123",
+            userId: "user_123",
           }),
         }),
       }),
@@ -373,7 +373,7 @@ describe("updateTemplate mutation - Success cases", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Old Name",
       content: "Content",
       tags: ["tag1"],
@@ -407,7 +407,7 @@ describe("updateTemplate mutation - Success cases", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Template",
       content: "Old content",
       tags: [],
@@ -434,7 +434,7 @@ describe("updateTemplate mutation - Success cases", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Template",
       content: "Content",
       tags: ["old", "tags"],
@@ -461,7 +461,7 @@ describe("updateTemplate mutation - Success cases", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Old Name",
       content: "Old content",
       tags: ["old"],
@@ -535,7 +535,7 @@ describe("updateTemplate mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_456", // Different user
+      userId: "user_456", // Different user
       name: "Template",
       content: "Content",
       tags: [],
@@ -559,7 +559,7 @@ describe("updateTemplate mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Old Name",
       content: "Content",
       tags: [],
@@ -571,7 +571,7 @@ describe("updateTemplate mutation - Validation errors", () => {
           first: jest.fn().mockResolvedValue({
             _id: "another-template",
             name: "Existing Name",
-            clerkUserId: "user_123",
+            userId: "user_123",
           }),
         }),
       }),
@@ -594,7 +594,7 @@ describe("updateTemplate mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Template",
       content: "Old content",
       tags: [],
@@ -618,7 +618,7 @@ describe("updateTemplate mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Template",
       content: "Old content",
       tags: [],
@@ -648,7 +648,7 @@ describe("deleteTemplate mutation - Success cases", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Template to Delete",
       content: "Content",
       tags: [],
@@ -706,7 +706,7 @@ describe("deleteTemplate mutation - Validation errors", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_456", // Different user
+      userId: "user_456", // Different user
       name: "Template",
       content: "Content",
       tags: [],
@@ -734,7 +734,7 @@ describe("getTemplates query - Success cases", () => {
       {
         _id: "template-1",
         _creationTime: Date.now(),
-        clerkUserId: "user-123",
+        userId: "user-123",
         name: "Closing CTA",
         content: "Thanks for reading! Follow for more updates.",
         tags: ["closing", "cta"],
@@ -744,7 +744,7 @@ describe("getTemplates query - Success cases", () => {
       {
         _id: "template-2",
         _creationTime: Date.now(),
-        clerkUserId: "user-123",
+        userId: "user-123",
         name: "Hashtags Tech",
         content: "#webdev #javascript #coding #tech",
         tags: ["hashtags", "tech"],
@@ -754,7 +754,7 @@ describe("getTemplates query - Success cases", () => {
       {
         _id: "template-3",
         _creationTime: Date.now(),
-        clerkUserId: "user-123",
+        userId: "user-123",
         name: "BuildInPublic Intro",
         content: "Building in public, day 23...",
         tags: ["buildinpublic", "intro"],
@@ -906,7 +906,7 @@ describe("Name uniqueness validation", () => {
           first: jest.fn().mockResolvedValue({
             _id: "existing",
             name: "Unique Name",
-            clerkUserId: "user_123",
+            userId: "user_123",
           }),
         }),
       }),
@@ -928,7 +928,7 @@ describe("Name uniqueness validation", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Original Name",
       content: "Content",
       tags: [],
@@ -940,7 +940,7 @@ describe("Name uniqueness validation", () => {
           first: jest.fn().mockResolvedValue({
             _id: "another-template",
             name: "Taken Name",
-            clerkUserId: "user_123",
+            userId: "user_123",
           }),
         }),
       }),
@@ -961,7 +961,7 @@ describe("Name uniqueness validation", () => {
     });
     mockContext.db.get.mockResolvedValue({
       _id: "template-123",
-      clerkUserId: "user_123",
+      userId: "user_123",
       name: "Same Name",
       content: "Old content",
       tags: [],

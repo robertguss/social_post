@@ -69,7 +69,7 @@ jest.mock("../QueueEditModal", () => ({
 const mockActiveQueue = {
   _id: "queue1" as Id<"recurring_queues">,
   _creationTime: Date.now(),
-  clerkUserId: "user1",
+  userId: "user1",
   originalPostId: "post1" as Id<"posts">,
   status: "active",
   interval: 7,

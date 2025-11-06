@@ -163,7 +163,7 @@ describe("incrementTemplateUsage mutation", () => {
     });
 
     expect(template.usageCount).toBe(1);
-    expect(template.clerkUserId).toBe(userId);
+    expect(template.userId).toBe(userId);
   });
 
   test("preserves other template fields during update", async () => {
@@ -186,7 +186,7 @@ describe("incrementTemplateUsage mutation", () => {
     expect(updatedTemplate.name).toBe(initialTemplate.name);
     expect(updatedTemplate.content).toBe(initialTemplate.content);
     expect(updatedTemplate.tags).toEqual(initialTemplate.tags);
-    expect(updatedTemplate.clerkUserId).toBe(initialTemplate.clerkUserId);
+    expect(updatedTemplate.userId).toBe(initialTemplate.userId);
     expect(updatedTemplate._id).toBe(initialTemplate._id);
   });
 

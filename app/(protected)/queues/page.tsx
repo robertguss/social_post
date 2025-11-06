@@ -15,7 +15,7 @@ export const metadata = {
  * Queues Page
  *
  * Displays all user's recurring post queues with pause, resume, edit, and delete functionality.
- * Protected by Clerk middleware (configured in middleware.ts).
+ * Protected by Better Auth middleware (configured in middleware.ts).
  */
 export default function QueuesPage() {
   return (

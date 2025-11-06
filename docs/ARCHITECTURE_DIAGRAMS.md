@@ -24,12 +24,12 @@ graph TB
     subgraph "Frontend (Next.js)"
         UI[React Components]
         Pages[App Router Pages]
-        Providers[Clerk + Convex Providers]
+        Providers[Better Auth + Convex Providers]
     end
 
-    subgraph "Authentication (Clerk)"
-        ClerkAuth[Clerk Auth]
-        ClerkMiddleware[Middleware]
+    subgraph "Authentication (Better Auth)"
+        BetterAuth[Better Auth]
+        AuthMiddleware[Middleware]
     end
 
     subgraph "Backend (Convex)"
@@ -47,12 +47,12 @@ graph TB
     end
 
     UI --> Providers
-    Providers --> ClerkAuth
+    Providers --> BetterAuth
     Providers --> Queries
     UI --> Mutations
 
-    ClerkMiddleware --> Pages
-    ClerkAuth --> ClerkMiddleware
+    AuthMiddleware --> Pages
+    BetterAuth --> AuthMiddleware
 
     Queries --> DB
     Mutations --> DB
@@ -83,7 +83,7 @@ graph LR
     end
 
     subgraph "Auth & Security"
-        ClerkSDK[Clerk SDK]
+        BetterAuthSDK[Better Auth SDK]
         AES[AES-256-GCM Encryption]
     end
 
@@ -94,7 +94,7 @@ graph LR
     ConvexFunctions --> ConvexDB
     ConvexFunctions --> TypeScript
 
-    ClerkSDK --> NextJS
+    BetterAuthSDK --> NextJS
     AES --> ConvexFunctions
 ```
 
@@ -108,27 +108,27 @@ graph LR
 sequenceDiagram
     participant User
     participant Browser
-    participant ClerkMiddleware
-    participant ClerkAuth
+    participant AuthMiddleware
+    participant BetterAuth
     participant ConvexQuery
     participant Database
 
     User->>Browser: Access /dashboard
-    Browser->>ClerkMiddleware: HTTP Request
+    Browser->>AuthMiddleware: HTTP Request
 
     alt Not Authenticated
-        ClerkMiddleware->>Browser: Redirect to /sign-in
-        Browser->>ClerkAuth: Show Sign In
-        User->>ClerkAuth: Enter Credentials
-        ClerkAuth->>ClerkMiddleware: Set Auth Cookie
-        ClerkMiddleware->>Browser: Redirect to /dashboard
+        AuthMiddleware->>Browser: Redirect to /sign-in
+        Browser->>BetterAuth: Show Sign In
+        User->>BetterAuth: Enter Credentials
+        BetterAuth->>AuthMiddleware: Set Auth Cookie
+        AuthMiddleware->>Browser: Redirect to /dashboard
     else Authenticated
-        ClerkMiddleware->>Browser: Serve Page
+        AuthMiddleware->>Browser: Serve Page
     end
 
-    Browser->>ConvexQuery: Query with Clerk Token
+    Browser->>ConvexQuery: Query with Auth Token
     ConvexQuery->>ConvexQuery: ctx.auth.getUserIdentity()
-    ConvexQuery->>Database: Query with clerkUserId
+    ConvexQuery->>Database: Query with userId
     Database->>ConvexQuery: User Data
     ConvexQuery->>Browser: Return Data
     Browser->>User: Display Dashboard
@@ -140,8 +140,8 @@ sequenceDiagram
 graph TD
     A[Convex Function Called] --> B{Check ctx.auth}
     B -->|No identity| C[Throw 'Not authenticated']
-    B -->|Has identity| D[Extract clerkUserId]
-    D --> E[Query with clerkUserId filter]
+    B -->|Has identity| D[Extract userId]
+    D --> E[Query with userId filter]
     E --> F{Data belongs to user?}
     F -->|No| G[Throw 'Unauthorized']
     F -->|Yes| H[Return Data]
@@ -293,7 +293,7 @@ erDiagram
     posts {
         string _id PK
         number _creationTime
-        string clerkUserId FK
+        string userId FK
         string status
         string twitterContent
         string linkedInContent
@@ -311,7 +311,7 @@ erDiagram
     user_connections {
         string _id PK
         number _creationTime
-        string clerkUserId FK
+        string userId FK
         string platform
         string accessToken
         string refreshToken
@@ -321,7 +321,7 @@ erDiagram
     templates {
         string _id PK
         number _creationTime
-        string clerkUserId FK
+        string userId FK
         string name
         string content
         array tags
@@ -338,15 +338,15 @@ erDiagram
 ```mermaid
 graph LR
     subgraph "posts table"
-        PostsIndex["Index: by_user<br/>[clerkUserId]"]
+        PostsIndex["Index: by_user<br/>[userId]"]
     end
 
     subgraph "user_connections table"
-        ConnectionsIndex["Index: by_user_platform<br/>[clerkUserId, platform]"]
+        ConnectionsIndex["Index: by_user_platform<br/>[userId, platform]"]
     end
 
     subgraph "templates table"
-        TemplatesIndex["Index: by_user<br/>[clerkUserId]"]
+        TemplatesIndex["Index: by_user<br/>[userId]"]
     end
 
     PostsIndex --> |"Fast lookup by user"| Query1[getPosts]
@@ -492,7 +492,7 @@ gantt
 
 ```mermaid
 graph TD
-    RootLayout[app/layout.tsx<br/>Root Layout] --> Providers[ConvexClientProvider + ClerkProvider]
+    RootLayout[app/layout.tsx<br/>Root Layout] --> Providers[ConvexClientProvider + BetterAuthProvider]
 
     Providers --> Dashboard[app/dashboard/page.tsx]
     Providers --> Schedule[app/schedule/page.tsx]
@@ -630,11 +630,11 @@ graph TD
 ```mermaid
 graph TB
     subgraph "Layer 1: Authentication"
-        L1[Clerk JWT Verification]
+        L1[Better Auth JWT Verification]
     end
 
     subgraph "Layer 2: Authorization"
-        L2[clerkUserId Check]
+        L2[userId Check]
     end
 
     subgraph "Layer 3: Data Encryption"
@@ -671,8 +671,8 @@ graph TB
         ScheduledJobs[Scheduled Functions]
     end
 
-    subgraph "Clerk (Auth)"
-        ClerkService[Clerk Authentication]
+    subgraph "Better Auth (Auth)"
+        BetterAuthService[Better Auth Authentication]
     end
 
     subgraph "External Services"
@@ -682,7 +682,7 @@ graph TB
     end
 
     Users[Users] --> NextJSApp
-    NextJSApp --> ClerkService
+    NextJSApp --> BetterAuthService
     NextJSApp --> ConvexCloud
 
     ConvexCloud --> ConvexDB
@@ -747,7 +747,7 @@ graph LR
 
 - [Convex Architecture Docs](https://docs.convex.dev/production/architecture)
 - [Next.js App Router](https://nextjs.org/docs/app)
-- [Clerk Authentication Flow](https://clerk.com/docs/authentication/overview)
+- [Better Auth Documentation](https://www.better-auth.com/docs)
 - [Project PRD](./prd.md)
 - [Architecture Document](./architecture.md)
 - [API Reference](./API_REFERENCE.md)

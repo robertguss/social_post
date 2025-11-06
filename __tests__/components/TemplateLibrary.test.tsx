@@ -86,7 +86,7 @@ describe("TemplateLibrary Component", () => {
     {
       _id: "template1" as any,
       _creationTime: 1698768000000,
-      clerkUserId: "user123",
+      userId: "user123",
       name: "Launch Announcement",
       content: "Template for launch announcements",
       tags: ["launch", "announcement"],
@@ -96,7 +96,7 @@ describe("TemplateLibrary Component", () => {
     {
       _id: "template2" as any,
       _creationTime: 1698854400000,
-      clerkUserId: "user123",
+      userId: "user123",
       name: "Weekly Update",
       content: "Template for weekly updates",
       tags: ["weekly", "update"],

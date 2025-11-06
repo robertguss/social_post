@@ -17,7 +17,7 @@ export const createTemplate = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Validate content is non-empty
     if (!args.content.trim()) {
@@ -27,7 +27,7 @@ export const createTemplate = mutation({
     // Check for duplicate template name for this user
     const existingTemplate = await ctx.db
       .query("templates")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("name"), args.name))
       .first();
 
@@ -37,7 +37,7 @@ export const createTemplate = mutation({
 
     // Create new template
     const templateId = await ctx.db.insert("templates", {
-      clerkUserId,
+      userId,
       name: args.name,
       content: args.content,
       tags: args.tags,
@@ -65,7 +65,7 @@ export const updateTemplate = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Get the template to verify ownership
     const template = await ctx.db.get(args.templateId);
@@ -74,7 +74,7 @@ export const updateTemplate = mutation({
     }
 
     // Verify user owns the template
-    if (template.clerkUserId !== clerkUserId) {
+    if (template.userId !== userId) {
       throw new Error("Unauthorized: You do not own this template");
     }
 
@@ -82,7 +82,7 @@ export const updateTemplate = mutation({
     if (args.name && args.name !== template.name) {
       const existingTemplate = await ctx.db
         .query("templates")
-        .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .filter((q) => q.eq(q.field("name"), args.name))
         .first();
 
@@ -123,7 +123,7 @@ export const deleteTemplate = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Get the template to verify ownership
     const template = await ctx.db.get(args.templateId);
@@ -132,7 +132,7 @@ export const deleteTemplate = mutation({
     }
 
     // Verify user owns the template
-    if (template.clerkUserId !== clerkUserId) {
+    if (template.userId !== userId) {
       throw new Error("Unauthorized: You do not own this template");
     }
 
@@ -154,7 +154,7 @@ export const getTemplates = query({
     v.object({
       _id: v.id("templates"),
       _creationTime: v.number(),
-      clerkUserId: v.string(),
+      userId: v.string(),
       name: v.string(),
       content: v.string(),
       tags: v.array(v.string()),
@@ -168,12 +168,12 @@ export const getTemplates = query({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Query all user's templates using index
     let templates = await ctx.db
       .query("templates")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", clerkUserId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     // Filter by tag if specified
@@ -204,7 +204,7 @@ export const incrementTemplateUsage = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const clerkUserId = identity.subject;
+    const userId = identity.subject;
 
     // Get the template to verify ownership
     const template = await ctx.db.get(args.templateId);
@@ -213,7 +213,7 @@ export const incrementTemplateUsage = mutation({
     }
 
     // Verify user owns the template
-    if (template.clerkUserId !== clerkUserId) {
+    if (template.userId !== userId) {
       throw new Error("Unauthorized: You do not own this template");
     }
 

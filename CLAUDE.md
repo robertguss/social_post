@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Social Posting Scheduler** is a self-hosted social media scheduling application for scheduling and publishing content to X/Twitter and LinkedIn. Built with Next.js, Convex, and Clerk, it's designed as a single-user productivity tool to replace expensive subscription services.
+**Social Posting Scheduler** is a self-hosted social media scheduling application for scheduling and publishing content to X/Twitter and LinkedIn. Built with Next.js, Convex, and Better Auth, it's designed as a single-user productivity tool to replace expensive subscription services.
 
 ## Development Commands
 
@@ -40,8 +40,8 @@ pnpm dlx convex docs          # Open Convex documentation
 
 - **Frontend**: Next.js 15.5.4 (App Router), React 19, Tailwind CSS 4
 - **Backend**: Convex (database, queries, mutations, scheduled actions)
-- **Auth**: Clerk (single-user authentication)
-- **UI Components**: shadcn/ui (to be added)
+- **Auth**: Better Auth (single-user authentication)
+- **UI Components**: shadcn/ui
 - **Language**: TypeScript throughout
 
 ### Repository Structure
@@ -49,7 +49,7 @@ pnpm dlx convex docs          # Open Convex documentation
 ```console
 social_post/
 ├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout with Clerk + Convex providers
+│   ├── layout.tsx          # Root layout with Better Auth + Convex providers
 │   ├── page.tsx            # Home page
 │   ├── globals.css         # Tailwind CSS
 │   └── (server)/           # Server-rendered routes
@@ -59,11 +59,11 @@ social_post/
 │   └── ConvexClientProvider.tsx
 ├── convex/                 # Backend logic (Convex)
 │   ├── schema.ts           # Database schema
-│   ├── auth.config.ts      # Clerk integration config
+│   ├── auth.ts             # Better Auth integration config
 │   ├── myFunctions.ts      # Example functions
 │   └── _generated/         # Auto-generated Convex types
 ├── hooks/                  # Custom React/Convex hooks
-├── middleware.ts           # Clerk route protection
+├── middleware.ts           # Better Auth route protection
 └── docs/                   # Architecture and PRD
 ```
 
@@ -78,9 +78,9 @@ social_post/
 
 **Authentication Flow**:
 
-- Clerk handles auth on frontend via `middleware.ts`
+- Better Auth handles auth on frontend via `middleware.ts`
 - Convex functions use `ctx.auth.getUserIdentity()` to verify users
-- All data must be scoped to `clerkUserId` to ensure single-user isolation
+- All data must be scoped to `userId` to ensure single-user isolation
 
 **Scheduled Publishing Architecture**:
 The core feature is time-based post publishing:
@@ -96,25 +96,25 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 
 Stores scheduled and published content. Key fields:
 
-- `clerkUserId`: string (Clerk user ID)
+- `userId`: string (Better Auth user ID)
 - `status`: "draft" | "scheduled" | "publishing" | "published" | "failed"
 - `twitterContent`, `linkedInContent`: string (platform-specific content)
 - `twitterScheduledTime`, `linkedInScheduledTime`: number (timestamps)
 - `url`: string (optional, for auto-commenting)
 - `errorMessage`, `retryCount`: for error handling
 
-**Index**: `by_user` on `["clerkUserId"]`
+**Index**: `by_user` on `["userId"]`
 
 ### user_connections
 
 Stores encrypted OAuth tokens for external platforms. Key fields:
 
-- `clerkUserId`: string
+- `userId`: string
 - `platform`: "twitter" | "linkedin"
 - `accessToken`, `refreshToken`: string (must be encrypted)
 - `expiresAt`: number (timestamp)
 
-**Index**: `by_user_platform` on `["clerkUserId", "platform"]`
+**Index**: `by_user_platform` on `["userId", "platform"]`
 
 ## Convex Function Patterns
 
@@ -137,7 +137,7 @@ export const myQuery = query({
     // Query with index
     return await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
   },
 });
@@ -150,7 +150,7 @@ export const myQuery = query({
 ```typescript
 const identity = await ctx.auth.getUserIdentity();
 if (!identity) throw new Error("Not authenticated");
-const clerkUserId = identity.subject; // Use this for data access
+const userId = identity.subject; // Use this for data access
 ```
 
 ### Scheduling Posts (Critical Pattern)
@@ -280,7 +280,7 @@ The project uses `@/*` for imports from the root directory (configured in `tscon
 
 ## Important Notes
 
-- This is a **single-user application** - all data must be scoped to the authenticated user's `clerkUserId`
+- This is a **single-user application** - all data must be scoped to the authenticated user's `userId`
 - **Scheduled functions are the core feature** - publishing must happen reliably at scheduled times
 - **Mobile-responsive design is required** - the user will schedule posts from mobile
 - The workflow is optimized for **batch content creation**: user writes Twitter version first (280 char limit), then expands for LinkedIn

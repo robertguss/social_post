@@ -28,7 +28,7 @@ Zero recurring subscription costs, custom-built for specific workflow needs, ful
 
 ### Background Context
 
-The product is a productivity tool, requiring a simple, fast UI to minimize clicks and avoid feature creep until the core workflow is solid. The architecture is defined as a Serverless Fullstack using Next.js, Convex (for database and scheduled functions), and Clerk (for authentication).
+The product is a productivity tool, requiring a simple, fast UI to minimize clicks and avoid feature creep until the core workflow is solid. The architecture is defined as a Serverless Fullstack using Next.js, Convex (for database and scheduled functions), and Better Auth (for authentication).
 
 ### Change Log
 
@@ -43,7 +43,7 @@ The product is a productivity tool, requiring a simple, fast UI to minimize clic
 
 ### Functional
 
-1. **FR1 (Authentication):** The system must support single-user authentication and secure session management via Clerk.
+1. **FR1 (Authentication):** The system must support single-user authentication and secure session management via Better Auth.
 2. **FR2 (Platform Connection):** The system must allow users to establish OAuth flows for X/Twitter and LinkedIn.
 3. **FR3 (Content Input):** The system must provide a text input field for post content with separate character counters for X (280 max) and LinkedIn (3,000 max).
 4. **FR4 (URL Handling):** The system must have a separate URL field, which is used for auto-posting as the first comment (LinkedIn) or as a thread reply (X).
@@ -74,7 +74,7 @@ The application should prioritize utility and efficiency for the solo content cr
 
 ### Core Screens and Views
 
-- **Authentication Screen:** Login/Signup (Clerk integration)
+- **Authentication Screen:** Login/Signup (Better Auth integration)
 - **Connection Manager:** For linking X/Twitter and LinkedIn
 - **Post Creation Form:** The primary, integrated workspace.
 - **Dashboard/List View:** Main view for scheduled and pending posts.
@@ -133,9 +133,9 @@ The MVP is sequenced into a single, comprehensive Epic to deliver core schedulin
 
 ##### Acceptance Criteria
 
-1. The Next.js project runs with the Clerk/Convex context provided.
-2. A user can successfully sign up and log in via Clerk/Next.js components.
-3. The main app route is protected by Clerk middleware.
+1. The Next.js project runs with the Better Auth/Convex context provided.
+2. A user can successfully sign up and log in via Better Auth/Next.js components.
+3. The main app route is protected by Better Auth middleware.
 4. The foundational Convex database is initialized with the `posts` and `user_connections` tables defined in the schema.
 
 #### Story 1.2 Secure X/Twitter OAuth Integration
@@ -145,7 +145,7 @@ The MVP is sequenced into a single, comprehensive Epic to deliver core schedulin
 ##### Acceptance Criteria
 
 1. The UI displays a button to initiate the X/Twitter OAuth flow.
-2. Upon successful OAuth, a single `user_connections` record is created for X/Twitter linked to the Clerk user ID.
+2. Upon successful OAuth, a single `user_connections` record is created for X/Twitter linked to the Better Auth user ID.
 3. The API credentials (`accessToken`, `refreshToken`) are stored and secured.
 4. The UI displays the X/Twitter connection status (active/needs re-auth).
 

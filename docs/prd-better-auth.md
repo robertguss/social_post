@@ -26,11 +26,11 @@
 - User preference management
 
 **Current Authentication Architecture**:
-- Clerk handles authentication on frontend via `middleware.ts`
+- Better Auth handles authentication on frontend via `middleware.ts`
 - Protected routes: `/server`, `/settings`, `/schedule`, `/history`, `/dashboard`, `/insights`
 - Convex functions verify users with `ctx.auth.getUserIdentity()`
-- All data scoped to `clerkUserId` field in 8 database tables
-- Convex integration via `ConvexProviderWithClerk` and `convex/auth.config.ts`
+- All data scoped to `userId` field in 8 database tables
+- Convex integration via Better Auth provider and `convex/auth.config.ts`
 
 ### 1.2 Available Documentation Analysis
 
@@ -42,13 +42,13 @@
 - External API integration requirements
 - Security requirements
 
-✅ **Convex Schema** (`convex/schema.ts`) - Complete database schema with 8 tables all using `clerkUserId`
+✅ **Convex Schema** (`convex/schema.ts`) - Complete database schema with 8 tables all using `userId`
 
 ✅ **Implementation Files**:
-- `middleware.ts` - Clerk route protection
-- `convex/auth.config.ts` - Clerk JWT configuration
-- `app/layout.tsx` - ClerkProvider setup
-- `components/ConvexClientProvider.tsx` - Convex+Clerk integration
+- `middleware.ts` - Better Auth route protection
+- `convex/auth.config.ts` - Better Auth JWT configuration
+- `app/layout.tsx` - Better Auth provider setup
+- `components/ConvexClientProvider.tsx` - Convex+Better Auth integration
 
 **Documentation Status**: ✅ Sufficient for proceeding with PRD
 
@@ -65,7 +65,7 @@ Replace Clerk authentication system with Better Auth across the entire applicati
 ✅ **Major Impact (architectural changes required)**
 
 **Rationale**: This enhancement affects:
-- All 8 database tables (migration from `clerkUserId` to Better Auth user IDs)
+- All 8 database tables (migration from `clerkUserId` to `userId`)
 - All Convex functions (17 files using `ctx.auth.getUserIdentity()`)
 - Frontend authentication providers and middleware
 - Scheduled functions that rely on user identity
@@ -87,9 +87,9 @@ Replace Clerk authentication system with Better Auth across the entire applicati
 
 #### Background Context
 
-The application currently uses Clerk for authentication, which works well but creates vendor lock-in and adds complexity through its proprietary integration. Convex now officially supports Better Auth through the `@convex-dev/better-auth` package (https://github.com/get-convex/better-auth), offering a more open, TypeScript-first authentication solution.
+The application previously used Clerk for authentication, which worked well but created vendor lock-in and added complexity through its proprietary integration. The migration to Better Auth, which Convex officially supports through the `@convex-dev/better-auth` package (https://github.com/get-convex/better-auth), provides a more open, TypeScript-first authentication solution.
 
-Better Auth is a comprehensive authentication framework for TypeScript that supports email/password, social OAuth, two-factor authentication, and multi-tenant features. It's framework-agnostic and designed for ease of implementation. The migration to Better Auth will align the application with Convex's evolving ecosystem while maintaining the same security and functionality standards.
+Better Auth is a comprehensive authentication framework for TypeScript that supports email/password, social OAuth, two-factor authentication, and multi-tenant features. It's framework-agnostic and designed for ease of implementation. The migration to Better Auth aligns the application with Convex's evolving ecosystem while maintaining the same security and functionality standards.
 
 This migration is strategically important as it:
 1. Reduces dependency on proprietary authentication services
