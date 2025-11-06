@@ -3,7 +3,10 @@
     "allow": [
       "mcp__shadcn__get_project_registries",
       "mcp__shadcn__list_items_in_registries",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:labs.convex.dev)",
+      "WebFetch(domain:www.better-auth.com)",
+      "WebFetch(domain:github.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

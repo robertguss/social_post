@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as aiAssistant from "../aiAssistant.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsQueries from "../analyticsQueries.js";
 import type * as connections from "../connections.js";
@@ -15,6 +16,7 @@ import type * as dashboard from "../dashboard.js";
 import type * as drafts from "../drafts.js";
 import type * as encryption from "../encryption.js";
 import type * as encryptionHelpers from "../encryptionHelpers.js";
+import type * as gemini from "../gemini.js";
 import type * as notifications from "../notifications.js";
 import type * as postingPreferences from "../postingPreferences.js";
 import type * as posts from "../posts.js";
@@ -41,6 +43,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  aiAssistant: typeof aiAssistant;
   analytics: typeof analytics;
   analyticsQueries: typeof analyticsQueries;
   connections: typeof connections;
@@ -48,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   drafts: typeof drafts;
   encryption: typeof encryption;
   encryptionHelpers: typeof encryptionHelpers;
+  gemini: typeof gemini;
   notifications: typeof notifications;
   postingPreferences: typeof postingPreferences;
   posts: typeof posts;

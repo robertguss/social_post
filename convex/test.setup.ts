@@ -10,4 +10,5 @@ export const modules = {
   posts: async () => import("./posts"),
   userPreferences: async () => import("./userPreferences"),
   gemini: async () => import("./gemini"),
+  aiAssistant: async () => import("./aiAssistant"),
 };

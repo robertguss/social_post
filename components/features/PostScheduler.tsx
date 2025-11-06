@@ -18,6 +18,8 @@ import { QuickReschedule } from "./QuickReschedule";
 import { LinkedInFormattingHints } from "./LinkedInFormattingHints";
 import { PreviewModal } from "./PreviewModal";
 import { RecommendedTimes } from "./RecommendedTimes";
+import { AIAssistantButton, type AIFeatureType } from "./AIAssistantButton";
+import { AISuggestionPanel } from "./AISuggestionPanel";
 import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -64,6 +66,11 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const updatePost = useMutation(api.posts.updatePost);
   const incrementTemplateUsage = useMutation(api.templates.incrementTemplateUsage);
   const saveDraft = useMutation(api.drafts.saveDraft);
+
+  // AI Assistant mutations
+  const adjustTone = useMutation(api.aiAssistant.adjustTone);
+  const expandForLinkedIn = useMutation(api.aiAssistant.expandForLinkedIn);
+  const generateHashtags = useMutation(api.aiAssistant.generateHashtags);
 
   // Fetch original post if this is a cloned post
   const originalPost = useQuery(
@@ -117,6 +124,14 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     }
     return true;
   });
+
+  // AI Assistant state
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [selectedAIFeature, setSelectedAIFeature] = useState<AIFeatureType | undefined>();
+  const [isAILoading, setIsAILoading] = useState(false);
+  const [aiSuggestion, setAISuggestion] = useState<string | undefined>();
+  const [aiWarning, setAIWarning] = useState<string | undefined>();
+  const [showAISuggestionPanel, setShowAISuggestionPanel] = useState(false);
 
   // Twitter character count (280 max, warning at 260) using platform-specific rules
   const twitterCharCount = getTwitterCharacterCount(twitterContent);
@@ -285,6 +300,137 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     setTimeout(() => {
       linkedInTextareaRef.current?.focus();
     }, 0);
+  };
+
+  /**
+   * Handle AI feature selection
+   */
+  const handleAIFeatureSelect = async (feature: AIFeatureType) => {
+    // Close the AI Assistant popover
+    setIsAIAssistantOpen(false);
+    setSelectedAIFeature(feature);
+
+    // Validate active field
+    if (!activeField) {
+      toast.error("Please select a text field first");
+      return;
+    }
+
+    // Get content from active field
+    const content = activeField === "twitter" ? twitterContent : linkedInContent;
+
+    // Validate content
+    if (!content.trim()) {
+      toast.error("Please enter some content first");
+      return;
+    }
+
+    // Set loading state and show suggestion panel
+    setIsAILoading(true);
+    setAISuggestion(undefined);
+    setAIWarning(undefined);
+    setShowAISuggestionPanel(true);
+
+    try {
+      let suggestion: string | string[];
+      let warning: string | undefined;
+
+      // Call appropriate AI action based on feature
+      switch (feature) {
+        case "tone":
+          // Default to "professional" tone for now
+          // TODO (Story 7.3): Add tone selector UI
+          const toneResult = await adjustTone({ content, tone: "professional" });
+          suggestion = toneResult.content;
+          warning = toneResult.warning;
+          break;
+
+        case "expand":
+          if (activeField !== "twitter") {
+            toast.error("Expand for LinkedIn only works with Twitter content");
+            setShowAISuggestionPanel(false);
+            return;
+          }
+          suggestion = await expandForLinkedIn({ twitterContent: content });
+          break;
+
+        case "hashtags":
+          const hashtags = await generateHashtags({ content, count: 5 });
+          // Format hashtags as a string to append to content
+          suggestion = `${content}\n\n${hashtags.map(tag => `#${tag}`).join(" ")}`;
+          break;
+
+        default:
+          throw new Error(`Unknown AI feature: ${feature}`);
+      }
+
+      // Display suggestion and warning
+      setAISuggestion(typeof suggestion === "string" ? suggestion : suggestion.join(" "));
+      setAIWarning(warning);
+
+      // Show warning toast if present
+      if (warning) {
+        toast.warning("Character Limit Exceeded", {
+          description: warning,
+          duration: 6000,
+        });
+      }
+
+      setIsAILoading(false);
+    } catch (error) {
+      console.error("AI feature error:", error);
+      toast.error(error instanceof Error ? error.message : "AI service temporarily unavailable");
+      setIsAILoading(false);
+      setShowAISuggestionPanel(false);
+    }
+  };
+
+  /**
+   * Handle AI suggestion accept
+   */
+  const handleAISuggestionAccept = (content: string) => {
+    if (!activeField) return;
+
+    // Update active field content
+    if (activeField === "twitter") {
+      setTwitterContent(content);
+    } else {
+      setLinkedInContent(content);
+    }
+
+    // Show success toast
+    toast.success("AI suggestion applied", {
+      description: "Your content has been updated",
+      duration: 3000,
+    });
+
+    // Close suggestion panel
+    setShowAISuggestionPanel(false);
+    setAISuggestion(undefined);
+    setAIWarning(undefined);
+    setSelectedAIFeature(undefined);
+
+    // Focus the updated textarea
+    setTimeout(() => {
+      const textarea = activeField === "twitter" ? twitterTextareaRef : linkedInTextareaRef;
+      textarea.current?.focus();
+    }, 0);
+  };
+
+  /**
+   * Handle AI suggestion reject
+   */
+  const handleAISuggestionReject = () => {
+    toast("Suggestion discarded", {
+      description: "Your original content remains unchanged",
+      duration: 2000,
+    });
+
+    // Close suggestion panel
+    setShowAISuggestionPanel(false);
+    setAISuggestion(undefined);
+    setAIWarning(undefined);
+    setSelectedAIFeature(undefined);
   };
 
   /**
@@ -531,7 +677,14 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
                 {/* Twitter Content */}
                 <div className="space-y-2">
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    <AIAssistantButton
+                      onFeatureSelect={handleAIFeatureSelect}
+                      isLoading={isAILoading}
+                      disabled={!enableTwitter || !twitterContent.trim()}
+                      isOpen={isAIAssistantOpen && activeField === "twitter"}
+                      onOpenChange={setIsAIAssistantOpen}
+                    />
                     <Button
                       type="button"
                       variant="outline"
@@ -548,6 +701,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                     placeholder="What's happening?"
                     value={twitterContent}
                     onChange={(e) => setTwitterContent(e.target.value)}
+                    onFocus={() => setActiveField("twitter")}
                     disabled={!enableTwitter}
                     className="min-h-[120px] resize-y"
                   />
@@ -645,22 +799,32 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                       </Button>
                     )}
                     <div className="flex-1" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenTemplatePicker("linkedin")}
-                      disabled={!enableLinkedIn}
-                    >
-                      <IconTemplate className="mr-2 h-4 w-4" />
-                      Insert Template
-                    </Button>
+                    <div className="flex gap-2">
+                      <AIAssistantButton
+                        onFeatureSelect={handleAIFeatureSelect}
+                        isLoading={isAILoading}
+                        disabled={!enableLinkedIn || !linkedInContent.trim()}
+                        isOpen={isAIAssistantOpen && activeField === "linkedin"}
+                        onOpenChange={setIsAIAssistantOpen}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenTemplatePicker("linkedin")}
+                        disabled={!enableLinkedIn}
+                      >
+                        <IconTemplate className="mr-2 h-4 w-4" />
+                        Insert Template
+                      </Button>
+                    </div>
                   </div>
                   <Textarea
                     ref={linkedInTextareaRef}
                     placeholder="Share your professional insights..."
                     value={linkedInContent}
                     onChange={(e) => setLinkedInContent(e.target.value)}
+                    onFocus={() => setActiveField("linkedin")}
                     disabled={!enableLinkedIn}
                     className="min-h-[120px] resize-y"
                   />
@@ -919,6 +1083,19 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         twitterEnabled={enableTwitter}
         linkedInEnabled={enableLinkedIn}
         twitterCharacterCount={twitterCharCount}
+      />
+
+      {/* AI Suggestion Panel */}
+      <AISuggestionPanel
+        isOpen={showAISuggestionPanel}
+        onClose={() => setShowAISuggestionPanel(false)}
+        originalContent={activeField === "twitter" ? twitterContent : linkedInContent}
+        suggestion={aiSuggestion}
+        warning={aiWarning}
+        isLoading={isAILoading}
+        featureType={selectedAIFeature}
+        onAccept={handleAISuggestionAccept}
+        onReject={handleAISuggestionReject}
       />
     </Card>
   );
