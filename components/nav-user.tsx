@@ -5,7 +5,7 @@ import {
   IconLogout,
   IconSettings,
 } from "@tabler/icons-react"
-import { useClerk } from "@clerk/nextjs"
+import { authClient } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 
 import {
@@ -39,11 +39,10 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-  const { signOut } = useClerk()
   const router = useRouter()
 
   const handleSignOut = async () => {
-    await signOut()
+    await authClient.signOut()
     router.push("/")
   }
 

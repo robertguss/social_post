@@ -1,10 +1,10 @@
 "use client";
 
 import { Authenticated, Unauthenticated } from "convex/react";
-import { SignUpButton } from "@clerk/nextjs";
-import { SignInButton } from "@clerk/nextjs";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -30,16 +30,16 @@ function SignInForm() {
       <p className="text-center">
         Log in to schedule your social media posts
       </p>
-      <SignInButton mode="modal">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">
+      <Link href="/login">
+        <Button className="w-full">
           Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">
+        </Button>
+      </Link>
+      <Link href="/signup">
+        <Button variant="outline" className="w-full">
           Sign up
-        </button>
-      </SignUpButton>
+        </Button>
+      </Link>
     </div>
   );
 }
