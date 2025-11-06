@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ import {
 } from "@/components/ui/card";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from") || "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -41,8 +44,8 @@ export default function LoginPage() {
       }
 
       if (data) {
-        // Redirect to dashboard on successful login
-        router.push("/dashboard");
+        // Redirect to the page they were trying to access, or dashboard
+        router.push(from);
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
@@ -53,7 +56,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <AuthGuard requireUnauth>
+      <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
@@ -109,5 +113,6 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
+    </AuthGuard>
   );
 }
