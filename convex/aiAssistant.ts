@@ -180,11 +180,7 @@ export const adjustTone = action({
     }
 
     // Check rate limit status before executing AI request
-    const rateLimitStatus: {
-      isExceeded: boolean;
-      remaining: number;
-      limit: number;
-    } = await ctx.runQuery(
+    const rateLimitStatus = await ctx.runQuery(
       internal.aiUsageTracking.getRateLimitStatus,
       {
         userId,
@@ -389,11 +385,7 @@ export const expandForLinkedIn = action({
     }
 
     // Check rate limit status before executing AI request
-    const rateLimitStatus: {
-      isExceeded: boolean;
-      remaining: number;
-      limit: number;
-    } = await ctx.runQuery(
+    const rateLimitStatus = await ctx.runQuery(
       internal.aiUsageTracking.getRateLimitStatus,
       {
         userId,
@@ -671,11 +663,7 @@ export const generateHashtags = action({
     }
 
     // Check rate limit status before executing AI request
-    const rateLimitStatus: {
-      isExceeded: boolean;
-      remaining: number;
-      limit: number;
-    } = await ctx.runQuery(
+    const rateLimitStatus = await ctx.runQuery(
       internal.aiUsageTracking.getRateLimitStatus,
       {
         userId,

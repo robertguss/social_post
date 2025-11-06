@@ -11,7 +11,7 @@
  * @module convex/aiUsageTracking
  */
 
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -250,7 +250,7 @@ export const logAIUsage = internalMutation({
  * });
  * // Returns: { requestCount: 850, limit: 1000, percentUsed: 85, ... }
  */
-export const getRateLimitStatus = query({
+export const getRateLimitStatus = internalQuery({
   args: {
     userId: v.string(),
     timeWindow: v.union(v.literal("day"), v.literal("month")),
