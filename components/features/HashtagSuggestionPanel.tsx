@@ -122,7 +122,7 @@ export function HashtagSuggestionPanel({
   hashtags,
   isLoading,
   platform,
-  onInsertHashtag,
+  onInsertHashtag: _onInsertHashtag, // eslint-disable-line @typescript-eslint/no-unused-vars
   onInsertAll,
   onCancel,
   checkCharacterLimit,

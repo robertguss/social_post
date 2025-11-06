@@ -18,6 +18,13 @@ jest.mock("convex/react", () => ({
 
 const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 
+// Helper to create a mock mutation with required withOptimisticUpdate method
+const createMockMutation = () => {
+  const mockFn = jest.fn() as any;
+  mockFn.withOptimisticUpdate = jest.fn().mockReturnValue(mockFn);
+  return mockFn;
+};
+
 describe("PostHistory Component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -470,7 +477,7 @@ describe("PostHistory Component", () => {
         },
       ];
 
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(posts);
@@ -504,7 +511,7 @@ describe("PostHistory Component", () => {
         },
       ];
 
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(posts);
@@ -534,7 +541,7 @@ describe("PostHistory Component", () => {
         },
       ];
 
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(posts);
@@ -564,7 +571,7 @@ describe("PostHistory Component", () => {
         },
       ];
 
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(posts);
@@ -596,7 +603,7 @@ describe("PostHistory Component", () => {
     ];
 
     it("should show confirmation dialog when Delete button is clicked", async () => {
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(scheduledPost);
@@ -615,7 +622,7 @@ describe("PostHistory Component", () => {
     });
 
     it("should close dialog when Cancel button is clicked", async () => {
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(scheduledPost);
@@ -664,7 +671,7 @@ describe("PostHistory Component", () => {
     });
 
     it("should not open post details modal when Delete button is clicked", async () => {
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(scheduledPost);
@@ -702,7 +709,7 @@ describe("PostHistory Component", () => {
     ];
 
     it("should open edit modal when Edit button is clicked", async () => {
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(scheduledPost);
@@ -718,7 +725,7 @@ describe("PostHistory Component", () => {
     });
 
     it("should not open post details modal when Edit button is clicked", async () => {
-      const mockDeletePost = jest.fn();
+      const mockDeletePost = createMockMutation();
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(scheduledPost);

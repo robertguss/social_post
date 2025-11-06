@@ -81,7 +81,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const args = { userId: "user_123" };
-      const result = await refreshLinkedInToken.handler(ctx as any, args);
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, args);
 
       expect(result.success).toBe(true);
       expect(result.expiresAt).toBeGreaterThan(Date.now());
@@ -129,7 +129,7 @@ describe("LinkedIn Token Refresh", () => {
         }),
       });
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -169,7 +169,7 @@ describe("LinkedIn Token Refresh", () => {
       });
 
       const beforeTime = Date.now();
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -199,7 +199,7 @@ describe("LinkedIn Token Refresh", () => {
         text: jest.fn().mockResolvedValue("invalid_grant"),
       });
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -225,7 +225,7 @@ describe("LinkedIn Token Refresh", () => {
         text: jest.fn().mockResolvedValue("invalid_token"),
       });
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -237,7 +237,7 @@ describe("LinkedIn Token Refresh", () => {
       const ctx = createMockActionContext();
       ctx.runQuery = jest.fn().mockResolvedValue(null);
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -287,7 +287,7 @@ describe("LinkedIn Token Refresh", () => {
           }),
         });
 
-      const resultPromise = refreshLinkedInToken.handler(ctx as any, {
+      const resultPromise = (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -331,7 +331,7 @@ describe("LinkedIn Token Refresh", () => {
           }),
         });
 
-      const resultPromise = refreshLinkedInToken.handler(ctx as any, {
+      const resultPromise = (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -359,7 +359,7 @@ describe("LinkedIn Token Refresh", () => {
         text: jest.fn().mockResolvedValue("Access denied"),
       });
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -384,7 +384,7 @@ describe("LinkedIn Token Refresh", () => {
         text: jest.fn().mockResolvedValue("Service down"),
       });
 
-      const resultPromise = refreshLinkedInToken.handler(ctx as any, {
+      const resultPromise = (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -443,7 +443,7 @@ describe("LinkedIn Token Refresh", () => {
         });
       });
 
-      const resultPromise = refreshLinkedInToken.handler(ctx as any, {
+      const resultPromise = (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -472,7 +472,7 @@ describe("LinkedIn Token Refresh", () => {
         return new Promise(() => {}); // Never resolves
       });
 
-      const resultPromise = refreshLinkedInToken.handler(ctx as any, {
+      const resultPromise = (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -521,7 +521,7 @@ describe("LinkedIn Token Refresh", () => {
         }),
       });
 
-      await refreshLinkedInToken.handler(ctx as any, {
+      await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -555,7 +555,7 @@ describe("LinkedIn Token Refresh", () => {
         }),
       });
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -581,7 +581,7 @@ describe("LinkedIn Token Refresh", () => {
         }),
       });
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -602,7 +602,7 @@ describe("LinkedIn Token Refresh", () => {
       });
       ctx.runAction = jest.fn().mockResolvedValue("decrypted_refresh");
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 
@@ -621,7 +621,7 @@ describe("LinkedIn Token Refresh", () => {
       });
       ctx.runAction = jest.fn().mockResolvedValue("decrypted_refresh");
 
-      const result = await refreshLinkedInToken.handler(ctx as any, {
+      const result = await (refreshLinkedInToken as any).handler(ctx as any, {
         userId: "user_123",
       });
 

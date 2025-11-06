@@ -12,7 +12,7 @@
  * - First-time tooltip displays
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AIAssistantButton } from "../AIAssistantButton";
 
@@ -80,7 +80,7 @@ describe("AIAssistantButton", () => {
 
   describe("Popover Menu", () => {
     it("should open popover menu when button is clicked", async () => {
-      const user = userEvent.setup();
+      userEvent.setup();
 
       render(
         <AIAssistantButton

@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Id, Doc } from "@/convex/_generated/dataModel";
 
 /**
  * Posting Preferences Settings Page
@@ -130,8 +130,8 @@ export default function PostingPreferencesPage() {
                         <div className="space-y-2">
                           <p className="text-sm font-medium">Example: Twitter on Monday</p>
                           {defaultRecommendations
-                            .filter((rec) => rec.source !== "user preference")
-                            .map((rec, index) => (
+                            .filter((rec: Doc<"posting_time_recommendations">) => rec.source !== "user preference")
+                            .map((rec: Doc<"posting_time_recommendations">, index: number) => (
                               <div
                                 key={index}
                                 className="flex items-center justify-between rounded-lg border p-3"
@@ -188,7 +188,7 @@ export default function PostingPreferencesPage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {userPreferences.map((pref) => (
+                        {userPreferences.map((pref: Doc<"posting_preferences">) => (
                           <div
                             key={pref._id}
                             className="flex items-center justify-between rounded-lg border p-3"
@@ -201,7 +201,7 @@ export default function PostingPreferencesPage() {
                                 </span>
                               </div>
                               <div className="mt-1 space-y-1">
-                                {pref.customTimeRanges.map((range, index) => (
+                                {pref.customTimeRanges.map((range: { startHour: number; endHour: number }, index: number) => (
                                   <p key={index} className="text-sm text-muted-foreground">
                                     {formatTimeRange(range.startHour, range.endHour)}
                                   </p>

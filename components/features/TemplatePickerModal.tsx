@@ -51,7 +51,7 @@ export function TemplatePickerModal({
    */
   const allTags = useMemo(() => {
     if (!templates) return [];
-    const tagSet = new Set(templates.flatMap((template) => template.tags));
+    const tagSet = new Set(templates.flatMap((template: Doc<"templates">) => template.tags));
     return Array.from(tagSet).sort();
   }, [templates]);
 
@@ -74,7 +74,7 @@ export function TemplatePickerModal({
 
     // Filter by selected tags (AND logic)
     if (selectedTags.length > 0) {
-      filtered = filtered.filter((template) =>
+      filtered = filtered.filter((template: Doc<"templates">) =>
         selectedTags.every((tag) => template.tags.includes(tag))
       );
     }
@@ -83,7 +83,7 @@ export function TemplatePickerModal({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (template) =>
+        (template: Doc<"templates">) =>
           template.name.toLowerCase().includes(query) ||
           template.content.toLowerCase().includes(query)
       );
@@ -248,7 +248,7 @@ export function TemplatePickerModal({
           {/* Templates list */}
           {filteredTemplates.length > 0 && (
             <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-              {filteredTemplates.map((template) => (
+              {filteredTemplates.map((template: Doc<"templates">) => (
                 <div
                   key={template._id}
                   className="border rounded-lg p-4 hover:bg-accent transition-colors cursor-pointer"
@@ -262,7 +262,7 @@ export function TemplatePickerModal({
                       </p>
                       {template.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {template.tags.map((tag) => (
+                          {template.tags.map((tag: string) => (
                             <Badge key={tag} variant="secondary" className="text-xs">
                               #{tag}
                             </Badge>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RecommendedTimes } from "../RecommendedTimes";
 import { useQuery } from "convex/react";
@@ -20,7 +20,7 @@ jest.mock("@tabler/icons-react", () => ({
 // Mock shadcn/ui Tooltip component
 jest.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
   TooltipContent: ({ children }: { children: React.ReactNode }) => (

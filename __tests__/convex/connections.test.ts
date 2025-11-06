@@ -62,7 +62,7 @@ describe("Convex Connections Functions", () => {
         expiresAt: Date.now() + 7200000,
       };
 
-      const result = await saveConnection.handler(ctx as any, args);
+      const result = await (saveConnection as any).handler(ctx as any, args);
 
       expect(ctx.auth.getUserIdentity).toHaveBeenCalled();
       expect(ctx.runAction).toHaveBeenCalledTimes(2);
@@ -82,7 +82,7 @@ describe("Convex Connections Functions", () => {
       };
 
       await expect(
-        saveConnection.handler(ctx as any, args)
+        (saveConnection as any).handler(ctx as any, args)
       ).rejects.toThrow("Not authenticated");
     });
 
@@ -104,7 +104,7 @@ describe("Convex Connections Functions", () => {
       };
 
       await expect(
-        saveConnection.handler(ctx as any, args)
+        (saveConnection as any).handler(ctx as any, args)
       ).rejects.toThrow("Failed to save connection");
     });
   });
@@ -131,7 +131,7 @@ describe("Convex Connections Functions", () => {
         platform: "twitter",
       };
 
-      const result = await getDecryptedConnection.handler(ctx as any, args);
+      const result = await (getDecryptedConnection as any).handler(ctx as any, args);
 
       expect(result).toEqual({
         accessToken: "decrypted_access_token",
@@ -152,7 +152,7 @@ describe("Convex Connections Functions", () => {
         platform: "twitter",
       };
 
-      const result = await getDecryptedConnection.handler(ctx as any, args);
+      const result = await (getDecryptedConnection as any).handler(ctx as any, args);
 
       expect(result).toBeNull();
       expect(ctx.runAction).not.toHaveBeenCalled();
@@ -177,7 +177,7 @@ describe("Convex Connections Functions", () => {
       };
 
       await expect(
-        getDecryptedConnection.handler(ctx as any, args)
+        (getDecryptedConnection as any).handler(ctx as any, args)
       ).rejects.toThrow("Failed to retrieve or decrypt connection");
     });
   });
@@ -191,7 +191,7 @@ describe("Convex Connections Functions", () => {
 
       const args = { platform: "twitter" };
 
-      const result = await getConnectionStatus.handler(ctx as any, args);
+      const result = await (getConnectionStatus as any).handler(ctx as any, args);
 
       expect(result).toEqual({
         connected: false,
@@ -217,7 +217,7 @@ describe("Convex Connections Functions", () => {
 
       const args = { platform: "twitter" };
 
-      const result = await getConnectionStatus.handler(ctx as any, args);
+      const result = await (getConnectionStatus as any).handler(ctx as any, args);
 
       expect(result).toEqual({
         connected: true,
@@ -244,7 +244,7 @@ describe("Convex Connections Functions", () => {
 
       const args = { platform: "twitter" };
 
-      const result = await getConnectionStatus.handler(ctx as any, args);
+      const result = await (getConnectionStatus as any).handler(ctx as any, args);
 
       expect(result).toEqual({
         connected: true,
@@ -260,7 +260,7 @@ describe("Convex Connections Functions", () => {
       const args = { platform: "twitter" };
 
       await expect(
-        getConnectionStatus.handler(ctx as any, args)
+        (getConnectionStatus as any).handler(ctx as any, args)
       ).rejects.toThrow("Not authenticated");
     });
   });

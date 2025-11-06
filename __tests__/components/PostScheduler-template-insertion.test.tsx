@@ -99,10 +99,17 @@ jest.mock("@/components/ui/datetime-picker", () => ({
 
 const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
 
+// Helper to create a mock mutation with required withOptimisticUpdate method
+const createMockMutation = () => {
+  const mockFn = jest.fn() as any;
+  mockFn.withOptimisticUpdate = jest.fn().mockReturnValue(mockFn);
+  return mockFn;
+};
+
 describe("PostScheduler Component - Template Insertion", () => {
-  const mockCreatePost = jest.fn();
-  const mockUpdatePost = jest.fn();
-  const mockIncrementTemplateUsage = jest.fn();
+  const mockCreatePost = createMockMutation();
+  const mockUpdatePost = createMockMutation();
+  const mockIncrementTemplateUsage = createMockMutation();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -111,7 +118,7 @@ describe("PostScheduler Component - Template Insertion", () => {
       if (mutationFn === "mockUpdatePost") return mockUpdatePost;
       if (mutationFn === "mockIncrementTemplateUsage")
         return mockIncrementTemplateUsage;
-      return jest.fn();
+      return createMockMutation();
     });
     mockIncrementTemplateUsage.mockResolvedValue(true);
   });
@@ -366,7 +373,7 @@ describe("PostScheduler Component - Template Insertion", () => {
 
       // Content should remain at 3000 chars (not exceed)
       await waitFor(() => {
-        expect(linkedInTextarea.value.length).toBeLessThanOrEqual(3000);
+        expect((linkedInTextarea as HTMLTextAreaElement).value.length).toBeLessThanOrEqual(3000);
       });
     });
   });

@@ -378,19 +378,19 @@ describe("publishTwitterPost action", () => {
 
     it("should NOT retry permanent errors (401, 403, 400)", async () => {
       // Test 401
-      const status401 = 401;
+      const status401: number = 401;
       const isTransient401 =
         status401 === 429 || (status401 >= 500 && status401 < 600);
       expect(isTransient401).toBe(false);
 
       // Test 403
-      const status403 = 403;
+      const status403: number = 403;
       const isTransient403 =
         status403 === 429 || (status403 >= 500 && status403 < 600);
       expect(isTransient403).toBe(false);
 
       // Test 400
-      const status400 = 400;
+      const status400: number = 400;
       const isTransient400 =
         status400 === 429 || (status400 >= 500 && status400 < 600);
       expect(isTransient400).toBe(false);

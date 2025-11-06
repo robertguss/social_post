@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Id, Doc } from "@/convex/_generated/dataModel";

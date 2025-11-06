@@ -9,7 +9,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TemplateFormModal } from "@/components/features/TemplateFormModal";
 import { useMutation } from "convex/react";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 
 // Mock Convex API
@@ -37,11 +37,18 @@ jest.mock("sonner", () => ({
 
 const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
 
+// Helper to create a mock mutation with required withOptimisticUpdate method
+const createMockMutation = () => {
+  const mockFn = jest.fn() as any;
+  mockFn.withOptimisticUpdate = jest.fn().mockReturnValue(mockFn);
+  return mockFn;
+};
+
 describe("TemplateFormModal Component", () => {
   const mockOnClose = jest.fn();
   const mockOnSuccess = jest.fn();
-  const mockCreateTemplate = jest.fn();
-  const mockUpdateTemplate = jest.fn();
+  const mockCreateTemplate = createMockMutation();
+  const mockUpdateTemplate = createMockMutation();
 
   const mockTemplate: Doc<"templates"> = {
     _id: "template1" as any,

@@ -8,7 +8,7 @@
  */
 
 import { convexTest } from "convex-test";
-import { expect, test, describe, beforeEach } from "vitest";
+import { expect, test, describe, beforeEach, vi } from "vitest";
 import { api, internal } from "@/convex/_generated/api";
 import schema from "@/convex/schema";
 import { Id } from "@/convex/_generated/dataModel";

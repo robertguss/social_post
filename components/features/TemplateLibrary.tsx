@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Doc, Id } from "@/convex/_generated/dataModel";
+import { Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateFormModal } from "./TemplateFormModal";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export function TemplateLibrary() {
    */
   const allTags = useMemo(() => {
     if (!templates) return [];
-    const tagSet = new Set(templates.flatMap((template) => template.tags));
+    const tagSet = new Set(templates.flatMap((template: Doc<"templates">) => template.tags));
     return Array.from(tagSet).sort();
   }, [templates]);
 
@@ -87,7 +88,7 @@ export function TemplateLibrary() {
 
     // Filter by selected tags (AND logic)
     if (selectedTags.length > 0) {
-      filtered = filtered.filter((template) =>
+      filtered = filtered.filter((template: Doc<"templates">) =>
         selectedTags.every((tag) => template.tags.includes(tag))
       );
     }
@@ -96,7 +97,7 @@ export function TemplateLibrary() {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (template) =>
+        (template: Doc<"templates">) =>
           template.name.toLowerCase().includes(query) ||
           template.content.toLowerCase().includes(query)
       );
@@ -245,7 +246,7 @@ export function TemplateLibrary() {
                 <span className="text-sm font-medium">Filter by tags:</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {allTags.map((tag) => {
+                {allTags.map((tag: string) => {
                   const isSelected = selectedTags.includes(tag);
                   return (
                     <Badge
@@ -337,7 +338,7 @@ export function TemplateLibrary() {
       {/* Templates grid */}
       {filteredTemplates.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredTemplates.map((template) => (
+          {filteredTemplates.map((template: Doc<"templates">) => (
             <TemplateCard
               key={template._id}
               template={template}

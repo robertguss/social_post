@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,13 +129,13 @@ export function PostHistory() {
     ? (drafts || [])
     : statusFilter === "all" || !statusFilter
       ? (posts || [])
-      : (posts || []).filter(p => p.status.toLowerCase() === statusFilter.toLowerCase());
+      : (posts || []).filter((p: Doc<"posts">) => p.status.toLowerCase() === statusFilter.toLowerCase());
 
   // Find selected post for modal
-  const selectedPost = posts?.find((p) => p._id === selectedPostId);
+  const selectedPost = posts?.find((p: Doc<"posts">) => p._id === selectedPostId);
 
   // Find post to edit
-  const editPost = posts?.find((p) => p._id === editPostId);
+  const editPost = posts?.find((p: Doc<"posts">) => p._id === editPostId);
 
   /**
    * Handle delete confirmation
@@ -552,7 +553,7 @@ export function PostHistory() {
 
           {/* Posts List */}
           <div className="space-y-4">
-            {displayPosts.map((post) => (
+            {displayPosts.map((post: Doc<"posts">) => (
               <Card
                 key={post._id}
                 className="cursor-pointer hover:shadow-md transition-shadow"

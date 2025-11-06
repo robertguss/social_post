@@ -36,6 +36,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -48,6 +50,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -60,6 +64,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -76,6 +82,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -92,6 +100,8 @@ describe("TemplateCard Component", () => {
           template={templateWithoutTags}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={templateWithoutTags.usageCount}
+          lastUsedAt={templateWithoutTags.lastUsedAt}
         />
       );
 
@@ -107,6 +117,8 @@ describe("TemplateCard Component", () => {
           template={templateWithLongContent}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={templateWithLongContent.usageCount}
+          lastUsedAt={templateWithLongContent.lastUsedAt}
         />
       );
 
@@ -126,6 +138,8 @@ describe("TemplateCard Component", () => {
           template={templateWithShortContent}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={templateWithShortContent.usageCount}
+          lastUsedAt={templateWithShortContent.lastUsedAt}
         />
       );
 
@@ -138,6 +152,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -155,6 +171,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -171,6 +189,8 @@ describe("TemplateCard Component", () => {
           template={mockTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={mockTemplate.usageCount}
+          lastUsedAt={mockTemplate.lastUsedAt}
         />
       );
 
@@ -191,6 +211,8 @@ describe("TemplateCard Component", () => {
           template={unusedTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={unusedTemplate.usageCount}
+          lastUsedAt={unusedTemplate.lastUsedAt}
         />
       );
 
@@ -205,6 +227,8 @@ describe("TemplateCard Component", () => {
           template={popularTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={popularTemplate.usageCount}
+          lastUsedAt={popularTemplate.lastUsedAt}
         />
       );
 
@@ -222,6 +246,8 @@ describe("TemplateCard Component", () => {
           template={specialCharsTemplate}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          usageCount={specialCharsTemplate.usageCount}
+          lastUsedAt={specialCharsTemplate.lastUsedAt}
         />
       );
 

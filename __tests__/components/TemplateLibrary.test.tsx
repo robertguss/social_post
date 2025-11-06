@@ -79,8 +79,15 @@ jest.mock("@/components/features/TemplateFormModal", () => ({
 const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
 
+// Helper to create a mock mutation with required withOptimisticUpdate method
+const createMockMutation = () => {
+  const mockFn = jest.fn() as any;
+  mockFn.withOptimisticUpdate = jest.fn().mockReturnValue(mockFn);
+  return mockFn;
+};
+
 describe("TemplateLibrary Component", () => {
-  const mockDeleteTemplate = jest.fn();
+  const mockDeleteTemplate = createMockMutation();
 
   const mockTemplates = [
     {
