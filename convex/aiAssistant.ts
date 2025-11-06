@@ -538,23 +538,131 @@ export const expandForLinkedIn = action({
 });
 
 /**
- * Generate Hashtags - Placeholder Action
+ * Helper function to create hashtag generation prompt
+ */
+function getHashtagPrompt(
+  content: string,
+  platform: "twitter" | "linkedin",
+  count: number,
+): string {
+  const platformGuidance =
+    platform === "twitter"
+      ? "short, punchy hashtags (1-2 words) that are trending and casual"
+      : "longer, professional hashtags (2-3 words) that are industry-relevant and descriptive";
+
+  return `You are a social media hashtag expert. Analyze the following content and generate ${count} relevant hashtags.
+
+Platform: ${platform.toUpperCase()}
+Content: "${content}"
+
+Requirements:
+1. Generate exactly ${count} hashtags
+2. Hashtags should be ${platformGuidance}
+3. Hashtags must be relevant to the content's main topics and keywords
+4. Use popular, searchable hashtags that increase discoverability
+5. Return hashtags WITHOUT the # prefix (e.g., "AI" not "#AI")
+6. Return ONLY a JSON array of strings, no additional text or explanation
+7. Each hashtag should use proper capitalization (e.g., "TechInnovation" not "techinnovation")
+
+Example format: ["Hashtag1", "Hashtag2", "Hashtag3"]
+
+Generate hashtags now:`.trim();
+}
+
+/**
+ * Helper function to parse and validate hashtags from Gemini response
+ */
+function parseHashtags(responseText: string, count: number): string[] {
+  try {
+    // Try parsing as JSON array first
+    const parsed = JSON.parse(responseText);
+    if (Array.isArray(parsed)) {
+      return validateHashtags(parsed, count);
+    }
+  } catch {
+    // JSON parsing failed, try fallback parsing
+  }
+
+  // Fallback: Extract hashtags from text (split by commas, newlines, or array brackets)
+  const cleaned = responseText
+    .replace(/[\[\]"'`]/g, "") // Remove brackets and quotes
+    .replace(/\n/g, ",") // Replace newlines with commas
+    .trim();
+
+  const hashtags = cleaned
+    .split(/[,\n]/)
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+
+  return validateHashtags(hashtags, count);
+}
+
+/**
+ * Helper function to validate and clean hashtags
+ */
+function validateHashtags(hashtags: string[], requestedCount: number): string[] {
+  const validHashtags: string[] = [];
+
+  for (const tag of hashtags) {
+    // Remove # prefix if Gemini included it
+    let cleaned = tag.trim().replace(/^#/, "");
+
+    // Validate format: only letters, numbers, underscores (no spaces or special chars)
+    if (!/^[a-zA-Z0-9_]+$/.test(cleaned)) {
+      // Try removing invalid characters
+      cleaned = cleaned.replace(/[^a-zA-Z0-9_]/g, "");
+    }
+
+    // Skip if still invalid or empty
+    if (!cleaned || !/^[a-zA-Z0-9_]+$/.test(cleaned)) {
+      continue;
+    }
+
+    // Skip duplicates (case-insensitive check)
+    if (
+      validHashtags.some(
+        (existing) => existing.toLowerCase() === cleaned.toLowerCase(),
+      )
+    ) {
+      continue;
+    }
+
+    validHashtags.push(cleaned);
+
+    // Stop when we have enough valid hashtags
+    if (validHashtags.length >= requestedCount) {
+      break;
+    }
+  }
+
+  // If we couldn't generate enough valid hashtags, throw error
+  if (validHashtags.length === 0) {
+    throw new Error("Unable to generate valid hashtags for this content");
+  }
+
+  return validHashtags;
+}
+
+/**
+ * Generate Hashtags - AI-Powered Action
  *
- * Generates relevant hashtags based on post content.
- * This is a placeholder that returns mock data for UI development (Story 7.2).
- * Actual Gemini integration will be implemented in Story 7.5.
+ * Generates relevant hashtags based on post content using Google's Gemini AI.
+ * Provides platform-specific suggestions optimized for Twitter or LinkedIn.
  *
  * @param {string} content - Post content to analyze for hashtag generation
- * @param {number} count - Number of hashtags to generate (default: 5)
+ * @param {number} count - Number of hashtags to generate (default: 5, range: 1-20)
+ * @param {string} platform - Target platform: "twitter" or "linkedin" (optional)
  * @returns {string[]} Array of hashtag suggestions (without # prefix)
  *
  * @throws {Error} If user is not authenticated
- * @throws {Error} If content is empty
+ * @throws {Error} If content is empty or exceeds maximum length
+ * @throws {Error} If count is not between 1 and 20
  *
  * @example
  * const hashtags = await ctx.runAction(api.aiAssistant.generateHashtags, {
  *   content: "Just launched our new AI-powered feature!",
- *   count: 5
+ *   count: 5,
+ *   platform: "twitter"
  * });
  * // Returns: ["AI", "ProductLaunch", "Innovation", "TechNews", "Startup"]
  */
@@ -562,6 +670,7 @@ export const generateHashtags = action({
   args: {
     content: v.string(),
     count: v.optional(v.number()),
+    platform: v.optional(v.union(v.literal("twitter"), v.literal("linkedin"))),
   },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
@@ -571,15 +680,25 @@ export const generateHashtags = action({
       throw new Error("Not authenticated");
     }
 
-    const { content, count = 5 } = args;
+    const { content, count = 5, platform = "twitter" } = args;
     const userId = identity.subject;
     const requestId = `hashtags-${userId.slice(0, 8)}-${Date.now()}`;
+    const startTime = Date.now();
 
-    console.log(`[AI Assistant ${requestId}] Generate ${count} hashtags for content length: ${content.length}`);
+    console.log(
+      `[AI Assistant ${requestId}] Generate ${count} hashtags | Platform: ${platform} | Content length: ${content.length} chars`,
+    );
 
     // Validation: Content cannot be empty
     if (!content.trim()) {
       throw new Error("Content cannot be empty");
+    }
+
+    // Validation: Check maximum length
+    if (content.length > LINKEDIN_MAX_CHARS) {
+      throw new Error(
+        `Content exceeds maximum length of ${LINKEDIN_MAX_CHARS} characters`,
+      );
     }
 
     // Validation: Count must be reasonable
@@ -588,36 +707,98 @@ export const generateHashtags = action({
     }
 
     try {
-      // TODO (Story 7.5): Replace with actual Gemini API call
-      // For now, return mock hashtags based on common keywords
+      // Call Gemini API with retry logic
+      const hashtags = await withRetry(async () => {
+        const model = getGeminiModel();
+        const prompt = getHashtagPrompt(content, platform, count);
 
-      const mockHashtags = [
-        "Tech",
-        "Innovation",
-        "Productivity",
-        "Development",
-        "SocialMedia",
-        "ContentCreation",
-        "DigitalMarketing",
-        "Startup",
-        "Growth",
-        "Business",
-        "Technology",
-        "AI",
-        "Automation",
-        "Software",
-        "WebDev",
-      ];
+        console.log(`[AI Assistant ${requestId}] Sending request to Gemini API`);
 
-      // Return requested number of hashtags (without # prefix)
-      const selectedHashtags = mockHashtags.slice(0, Math.min(count, mockHashtags.length));
+        // Generate content with timeout
+        const result = await withTimeout(
+          model.generateContent(prompt),
+          AI_API_TIMEOUT_MS,
+        );
 
-      console.log(`[AI Assistant ${requestId}] Success! Generated ${selectedHashtags.length} hashtags`);
+        const responseText = result.response.text().trim();
 
-      return selectedHashtags;
+        console.log(
+          `[AI Assistant ${requestId}] Received response | Raw length: ${responseText.length} chars`,
+        );
+
+        // Parse and validate hashtags
+        const parsedHashtags = parseHashtags(responseText, count);
+
+        return parsedHashtags;
+      });
+
+      const duration = Date.now() - startTime;
+
+      console.log(
+        `[AI Assistant ${requestId}] Success! | Duration: ${duration}ms | ` +
+          `Generated ${hashtags.length} hashtags: [${hashtags.join(", ")}]`,
+      );
+
+      return hashtags;
     } catch (error) {
-      console.error(`[AI Assistant ${requestId}] Error:`, error);
-      throw new Error("AI service temporarily unavailable");
+      const duration = Date.now() - startTime;
+      console.error(
+        `[AI Assistant ${requestId}] Error after ${duration}ms:`,
+        error,
+      );
+
+      // Handle specific error types with user-friendly messages
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      // Don't wrap validation errors
+      if (
+        errorMessage.includes("Unable to generate") ||
+        errorMessage.includes("Content cannot be empty") ||
+        errorMessage.includes("Hashtag count must be")
+      ) {
+        throw error;
+      }
+
+      if (errorMessage.includes("GEMINI_API_KEY not configured")) {
+        throw new Error(
+          "AI service configuration error. Please contact support.",
+        );
+      } else if (
+        errorMessage.includes("API_KEY_INVALID") ||
+        errorMessage.includes("401") ||
+        errorMessage.includes("Invalid API key")
+      ) {
+        throw new Error(
+          "AI service configuration error. Please contact support.",
+        );
+      } else if (
+        errorMessage.includes("429") ||
+        errorMessage.includes("RESOURCE_EXHAUSTED") ||
+        errorMessage.includes("rate limit")
+      ) {
+        throw new Error(
+          "AI service rate limit exceeded. Please wait a few minutes and try again.",
+        );
+      } else if (
+        errorMessage.includes("timeout") ||
+        errorMessage.includes("DEADLINE_EXCEEDED")
+      ) {
+        throw new Error(
+          "AI request timed out. Please try again or check your network connection.",
+        );
+      } else if (
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("ECONNREFUSED") ||
+        errorMessage.includes("ETIMEDOUT") ||
+        errorMessage.includes("network")
+      ) {
+        throw new Error(
+          "Network error connecting to AI service. Please check your internet connection and try again.",
+        );
+      } else {
+        throw new Error("AI service temporarily unavailable. Please try again.");
+      }
     }
   },
 });

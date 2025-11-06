@@ -1028,3 +1028,454 @@ describe("AI Assistant - expandForLinkedIn Action", () => {
     });
   });
 });
+
+describe("AI Assistant - generateHashtags Action", () => {
+  let t: ReturnType<typeof convexTest>;
+
+  beforeEach(async () => {
+    // Set up test environment with schema and modules
+    t = convexTest(schema, modules);
+
+    // Set mock environment variable for Gemini API
+    process.env.GEMINI_API_KEY = "test-api-key-12345";
+
+    // Reset mock to default hashtag response
+    vi.mocked(
+      (await import("@google/generative-ai")).GoogleGenerativeAI,
+    ).mockImplementation(
+      () =>
+        ({
+          getGenerativeModel: () => ({
+            generateContent: async (prompt: string) => {
+              // Check if prompt contains platform-specific keywords
+              const promptStr = String(prompt);
+              let hashtags: string[];
+
+              if (promptStr.includes("TWITTER")) {
+                // Twitter hashtags: short and punchy
+                hashtags = ["AI", "Tech", "Innovation", "Startup", "ProductLaunch"];
+              } else if (promptStr.includes("LINKEDIN")) {
+                // LinkedIn hashtags: longer and professional
+                hashtags = ["ArtificialIntelligence", "TechnologyInnovation", "ProfessionalDevelopment", "IndustryTrends", "CareerGrowth"];
+              } else {
+                // Default hashtags
+                hashtags = ["Tech", "Innovation", "Productivity", "Development", "Growth"];
+              }
+
+              // Return hashtags as JSON array (respecting requested count)
+              const countMatch = promptStr.match(/generate (\d+) hashtags/i);
+              const requestedCount = countMatch ? parseInt(countMatch[1]) : 5;
+              const selectedHashtags = hashtags.slice(0, requestedCount);
+
+              return {
+                response: {
+                  text: () => JSON.stringify(selectedHashtags),
+                },
+              };
+            },
+          }),
+        }) as any,
+    );
+  });
+
+  describe("Authentication", () => {
+    test("should reject unauthenticated requests", async () => {
+      await expect(
+        t.action(api.aiAssistant.generateHashtags, {
+          content: "Test content for hashtags",
+          count: 5,
+        }),
+      ).rejects.toThrow("Not authenticated");
+    });
+
+    test("should accept authenticated requests", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Just launched our new AI-powered feature!",
+        count: 5,
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Input Validation", () => {
+    test("should reject empty content", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      await expect(
+        asUser.action(api.aiAssistant.generateHashtags, {
+          content: "",
+          count: 5,
+        }),
+      ).rejects.toThrow("Content cannot be empty");
+    });
+
+    test("should reject content with only whitespace", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      await expect(
+        asUser.action(api.aiAssistant.generateHashtags, {
+          content: "   \n\t  ",
+          count: 5,
+        }),
+      ).rejects.toThrow("Content cannot be empty");
+    });
+
+    test("should reject content exceeding maximum length", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+      const longContent = "a".repeat(3001); // 3001 chars (exceeds LinkedIn limit)
+
+      await expect(
+        asUser.action(api.aiAssistant.generateHashtags, {
+          content: longContent,
+          count: 5,
+        }),
+      ).rejects.toThrow("Content exceeds maximum length of 3000 characters");
+    });
+
+    test("should reject count < 1", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      await expect(
+        asUser.action(api.aiAssistant.generateHashtags, {
+          content: "Test content",
+          count: 0,
+        }),
+      ).rejects.toThrow("Hashtag count must be between 1 and 20");
+    });
+
+    test("should reject count > 20", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      await expect(
+        asUser.action(api.aiAssistant.generateHashtags, {
+          content: "Test content",
+          count: 21,
+        }),
+      ).rejects.toThrow("Hashtag count must be between 1 and 20");
+    });
+
+    test("should accept valid count values", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Test count = 1
+      const result1 = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 1,
+      });
+      expect(result1.length).toBe(1);
+
+      // Test count = 20
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => JSON.stringify(Array.from({ length: 20 }, (_, i) => `Tag${i + 1}`)),
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      const result20 = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 20,
+      });
+      expect(result20.length).toBe(20);
+    });
+  });
+
+  describe("Platform-Specific Generation", () => {
+    test("should generate Twitter-specific hashtags", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Just launched our new AI-powered feature!",
+        count: 5,
+        platform: "twitter",
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      // Twitter hashtags should be short (1-2 words)
+      expect(result.every(tag => tag.length <= 20)).toBe(true);
+    });
+
+    test("should generate LinkedIn-specific hashtags", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Just launched our new AI-powered feature!",
+        count: 5,
+        platform: "linkedin",
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      // LinkedIn hashtags can be longer (2-3 words)
+    });
+
+    test("should default to twitter platform if not specified", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 5,
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe("Hashtag Format Validation", () => {
+    test("should return hashtags without # prefix", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 5,
+      });
+
+      // All hashtags should NOT start with #
+      expect(result.every(tag => !tag.startsWith("#"))).toBe(true);
+    });
+
+    test("should remove # prefix if Gemini includes it", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock Gemini to return hashtags WITH # prefix
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => JSON.stringify(["#AI", "#Tech", "#Innovation"]),
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 3,
+      });
+
+      // Hashtags should have # prefix removed
+      expect(result).toEqual(["AI", "Tech", "Innovation"]);
+    });
+
+    test("should validate hashtag characters (only letters, numbers, underscores)", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock Gemini to return hashtags with invalid characters
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => JSON.stringify(["Tech Innovation", "AI@Work", "Valid_Tag", "123Start"]),
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 4,
+      });
+
+      // Should filter out invalid hashtags and clean valid ones
+      expect(result.every(tag => /^[a-zA-Z0-9_]+$/.test(tag))).toBe(true);
+    });
+
+    test("should remove duplicate hashtags (case-insensitive)", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock Gemini to return duplicate hashtags
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => JSON.stringify(["AI", "Tech", "ai", "TECH", "Innovation"]),
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 5,
+      });
+
+      // Should remove duplicates (case-insensitive)
+      const lowerCaseResult = result.map(tag => tag.toLowerCase());
+      const uniqueTags = new Set(lowerCaseResult);
+      expect(lowerCaseResult.length).toBe(uniqueTags.size);
+    });
+  });
+
+  describe("Response Parsing", () => {
+    test("should parse valid JSON array response", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 5,
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    test("should handle non-JSON response with fallback parsing", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock Gemini to return non-JSON format (comma-separated)
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => "AI, Tech, Innovation, Startup, Growth",
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 5,
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    test("should handle response with newlines and brackets", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock Gemini to return hashtags with array brackets and newlines
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => '["AI"\n"Tech"\n"Innovation"]',
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+        count: 3,
+      });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    test("should throw error if no valid hashtags can be generated", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock Gemini to return invalid response
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async () => ({
+                response: {
+                  text: () => "!!!@@@###$$$",
+                },
+              }),
+            }),
+          }) as any,
+      );
+
+      await expect(
+        asUser.action(api.aiAssistant.generateHashtags, {
+          content: "Test content",
+          count: 5,
+        }),
+      ).rejects.toThrow("Unable to generate valid hashtags for this content");
+    });
+  });
+
+  describe("Default Parameters", () => {
+    test("should use default count of 5 if not specified", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      const result = await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.length).toBeLessThanOrEqual(5);
+    });
+
+    test("should use default platform of twitter if not specified", async () => {
+      const asUser = t.withIdentity({ subject: "user123" });
+
+      // Mock tracks if TWITTER keyword is in prompt
+      let promptIncludedTwitter = false;
+      vi.mocked(
+        (await import("@google/generative-ai")).GoogleGenerativeAI,
+      ).mockImplementationOnce(
+        () =>
+          ({
+            getGenerativeModel: () => ({
+              generateContent: async (prompt: string) => {
+                promptIncludedTwitter = String(prompt).includes("TWITTER");
+                return {
+                  response: {
+                    text: () => JSON.stringify(["AI", "Tech", "Innovation"]),
+                  },
+                };
+              },
+            }),
+          }) as any,
+      );
+
+      await asUser.action(api.aiAssistant.generateHashtags, {
+        content: "Test content",
+      });
+
+      expect(promptIncludedTwitter).toBe(true);
+    });
+  });
+});

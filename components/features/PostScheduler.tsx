@@ -20,6 +20,7 @@ import { PreviewModal } from "./PreviewModal";
 import { RecommendedTimes } from "./RecommendedTimes";
 import { AIAssistantButton, type AIFeatureType } from "./AIAssistantButton";
 import { AISuggestionPanel } from "./AISuggestionPanel";
+import { HashtagSuggestionPanel } from "./HashtagSuggestionPanel";
 import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -132,6 +133,11 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const [aiSuggestion, setAISuggestion] = useState<string | undefined>();
   const [aiWarning, setAIWarning] = useState<string | undefined>();
   const [showAISuggestionPanel, setShowAISuggestionPanel] = useState(false);
+
+  // Hashtag generation state
+  const [isHashtagsLoading, setIsHashtagsLoading] = useState(false);
+  const [generatedHashtags, setGeneratedHashtags] = useState<string[] | undefined>();
+  const [showHashtagPanel, setShowHashtagPanel] = useState(false);
 
   // Twitter character count (280 max, warning at 260) using platform-specific rules
   const twitterCharCount = getTwitterCharacterCount(twitterContent);
@@ -364,10 +370,24 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
           break;
 
         case "hashtags":
-          const hashtags = await generateHashtags({ content, count: 5 });
-          // Format hashtags as a string to append to content
-          suggestion = `${content}\n\n${hashtags.map(tag => `#${tag}`).join(" ")}`;
-          break;
+          // For hashtags, we use a separate panel instead of AISuggestionPanel
+          setIsHashtagsLoading(true);
+          setGeneratedHashtags(undefined);
+          setShowHashtagPanel(true);
+
+          try {
+            const platform = activeField === "twitter" ? "twitter" : "linkedin";
+            const hashtags = await generateHashtags({ content, count: 5, platform });
+            setGeneratedHashtags(hashtags);
+            setIsHashtagsLoading(false);
+          } catch (error) {
+            console.error("Hashtag generation error:", error);
+            toast.error(error instanceof Error ? error.message : "Failed to generate hashtags");
+            setIsHashtagsLoading(false);
+            setShowHashtagPanel(false);
+          }
+          // Return early to skip the AISuggestionPanel logic below
+          return;
 
         default:
           throw new Error(`Unknown AI feature: ${feature}`);
@@ -440,6 +460,150 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     setAISuggestion(undefined);
     setAIWarning(undefined);
     setSelectedAIFeature(undefined);
+  };
+
+  /**
+   * Insert hashtag at cursor position or append to content
+   */
+  const insertHashtagAtCursor = (hashtag: string, content: string, textareaRef: React.RefObject<HTMLTextAreaElement>): string => {
+    const hashtagWithPrefix = `#${hashtag}`;
+    const textarea = textareaRef.current;
+    const cursorPos = textarea?.selectionStart;
+
+    if (cursorPos !== undefined && cursorPos >= 0) {
+      // Insert at cursor position
+      const before = content.substring(0, cursorPos);
+      const after = content.substring(cursorPos);
+      const newContent = `${before}${hashtagWithPrefix} ${after}`;
+
+      // Update cursor position after state update
+      setTimeout(() => {
+        textarea?.focus();
+        const newCursorPos = cursorPos + hashtagWithPrefix.length + 1;
+        textarea?.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+
+      return newContent;
+    } else {
+      // Append at end
+      return content.trim() ? `${content.trim()} ${hashtagWithPrefix}` : hashtagWithPrefix;
+    }
+  };
+
+  /**
+   * Handle insert single hashtag
+   */
+  const handleInsertHashtag = (hashtag: string) => {
+    if (!activeField) return;
+
+    const isTwitter = activeField === "twitter";
+    const currentContent = isTwitter ? twitterContent : linkedInContent;
+    const maxChars = isTwitter ? TWITTER_MAX_CHARS : LINKEDIN_MAX_CHARS;
+    const textareaRef = isTwitter ? twitterTextareaRef : linkedInTextareaRef;
+
+    // Check character limit
+    const hashtagWithSpace = `#${hashtag} `;
+    if (currentContent.length + hashtagWithSpace.length > maxChars) {
+      toast.error("Cannot insert hashtag: would exceed character limit", {
+        description: `${isTwitter ? "Twitter" : "LinkedIn"} has a ${maxChars} character limit`,
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Insert hashtag
+    const newContent = insertHashtagAtCursor(hashtag, currentContent, textareaRef);
+
+    // Update state
+    if (isTwitter) {
+      setTwitterContent(newContent);
+    } else {
+      setLinkedInContent(newContent);
+    }
+
+    toast.success(`Inserted #${hashtag}`);
+  };
+
+  /**
+   * Handle insert all hashtags
+   */
+  const handleInsertAllHashtags = (hashtags: string[]) => {
+    if (!activeField || hashtags.length === 0) return;
+
+    const isTwitter = activeField === "twitter";
+    const currentContent = isTwitter ? twitterContent : linkedInContent;
+    const maxChars = isTwitter ? TWITTER_MAX_CHARS : LINKEDIN_MAX_CHARS;
+
+    // Format all hashtags
+    const hashtagsText = hashtags.map(tag => `#${tag}`).join(" ");
+    const newContent = currentContent.trim()
+      ? `${currentContent.trim()} ${hashtagsText}`
+      : hashtagsText;
+
+    // Check character limit
+    if (newContent.length > maxChars) {
+      toast.error("Cannot insert hashtags: would exceed character limit", {
+        description: `${isTwitter ? "Twitter" : "LinkedIn"} has a ${maxChars} character limit`,
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Update state
+    if (isTwitter) {
+      setTwitterContent(newContent);
+    } else {
+      setLinkedInContent(newContent);
+    }
+
+    toast.success(`Inserted ${hashtags.length} hashtag${hashtags.length !== 1 ? "s" : ""}`);
+
+    // Close hashtag panel
+    setShowHashtagPanel(false);
+    setGeneratedHashtags(undefined);
+
+    // Focus textarea
+    setTimeout(() => {
+      const textarea = isTwitter ? twitterTextareaRef : linkedInTextareaRef;
+      textarea.current?.focus();
+    }, 0);
+  };
+
+  /**
+   * Handle hashtag panel cancel
+   */
+  const handleHashtagPanelCancel = () => {
+    setShowHashtagPanel(false);
+    setGeneratedHashtags(undefined);
+    toast("Hashtags discarded", {
+      description: "Your content remains unchanged",
+      duration: 2000,
+    });
+  };
+
+  /**
+   * Check if inserting hashtags would exceed character limit
+   */
+  const checkHashtagCharacterLimit = (hashtags: string[]): { exceeds: boolean; message?: string } => {
+    if (!activeField) return { exceeds: false };
+
+    const isTwitter = activeField === "twitter";
+    const currentContent = isTwitter ? twitterContent : linkedInContent;
+    const maxChars = isTwitter ? TWITTER_MAX_CHARS : LINKEDIN_MAX_CHARS;
+
+    const hashtagsText = hashtags.map(tag => `#${tag}`).join(" ");
+    const newContent = currentContent.trim()
+      ? `${currentContent.trim()} ${hashtagsText}`
+      : hashtagsText;
+
+    if (newContent.length > maxChars) {
+      return {
+        exceeds: true,
+        message: `Would exceed ${isTwitter ? "Twitter" : "LinkedIn"}'s ${maxChars} character limit (${newContent.length} chars)`,
+      };
+    }
+
+    return { exceeds: false };
   };
 
   /**
@@ -1046,6 +1210,19 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         featureType={selectedAIFeature}
         onAccept={handleAISuggestionAccept}
         onReject={handleAISuggestionReject}
+      />
+
+      {/* Hashtag Suggestion Panel */}
+      <HashtagSuggestionPanel
+        isOpen={showHashtagPanel}
+        onClose={() => setShowHashtagPanel(false)}
+        hashtags={generatedHashtags}
+        isLoading={isHashtagsLoading}
+        platform={activeField === "twitter" ? "twitter" : "linkedin"}
+        onInsertHashtag={handleInsertHashtag}
+        onInsertAll={handleInsertAllHashtags}
+        onCancel={handleHashtagPanelCancel}
+        checkCharacterLimit={checkHashtagCharacterLimit}
       />
     </Card>
   );
