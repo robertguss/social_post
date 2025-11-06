@@ -160,8 +160,7 @@ describe("aiUsageTracking - Database Operations", () => {
       expect(logId).toBeDefined();
 
       // Verify the log was stored correctly
-      const logs = await t.query(internal.aiUsageTracking.getUserUsageStats, {});
-      // Note: This query requires auth, so we'd need to mock auth context
+      // Note: getUserUsageStats requires auth, so we'd need to mock auth context
       // For now, verify logId is returned
     });
 

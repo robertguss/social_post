@@ -2,6 +2,7 @@ import { mutation, query, internalMutation, internalQuery } from "./_generated/s
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { Expression } from "convex/server";
 
 /**
  * Create a new scheduled post for X/Twitter and/or LinkedIn
@@ -533,7 +534,7 @@ export const getPosts = query({
     // Apply filters
     if (args.startDate || args.endDate || args.platform) {
       postsQuery = postsQuery.filter((q) => {
-        const conditions = [];
+        const conditions: Expression<boolean>[] = [];
 
         // Date range filter based on platform
         if (args.platform === "linkedin") {

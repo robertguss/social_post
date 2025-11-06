@@ -55,7 +55,12 @@ export const getRecommendedTimes = query({
       .collect();
 
     // 3. Combine user preferences (high priority) with research-based recommendations
-    let combinedRecommendations = [];
+    type Recommendation = {
+      hourRanges: { startHour: number; endHour: number; }[];
+      engagementScore: number;
+      source: string;
+    };
+    let combinedRecommendations: Recommendation[] = [];
 
     // Add custom preferences as top recommendations with high engagement score
     if (userPreferences.length > 0) {

@@ -163,7 +163,7 @@ describe("deleteDraft mutation - logic validation", () => {
 describe("Draft workflow integration - logic validation", () => {
   it("should support create -> update -> delete workflow", () => {
     // Simulate draft lifecycle
-    const workflows = [];
+    const workflows: string[] = [];
 
     // Create draft
     workflows.push("create");

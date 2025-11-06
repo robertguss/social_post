@@ -1,7 +1,7 @@
 import { mutation, query, internalMutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
 import { cronJobs } from "convex/server";
 
 /**
@@ -595,7 +595,7 @@ export const getQueues = query({
     // Include original post data in response
     const queuesWithPosts = await Promise.all(
       queues.map(async (queue) => {
-        const originalPost = await ctx.db.get(queue.originalPostId);
+        const originalPost = await ctx.db.get(queue.originalPostId) as Doc<"posts"> | null;
         if (!originalPost) {
           throw new Error(`Original post ${queue.originalPostId} not found for queue ${queue._id}`);
         }
