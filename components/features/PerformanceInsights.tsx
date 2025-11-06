@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 
@@ -43,10 +43,6 @@ export function PerformanceInsights() {
   const [dateRange, setDateRange] = useState<"7days" | "30days" | "alltime">("30days");
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
-
-import { useAction } from "convex/react";
-
-// ... other imports and code ...
 
   const getPerformanceInsights = useAction(
     api.analytics.getPerformanceInsights

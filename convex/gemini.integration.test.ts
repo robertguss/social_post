@@ -42,7 +42,7 @@ describe("Gemini API - Integration Tests", () => {
           `[Integration Test] Success! Response: "${result.message.substring(0, 100)}..."`,
         );
       },
-      { timeout: 15000 },
+      15000,
     ); // 15s timeout for real API call
 
     test.skipIf(!hasRealApiKey)(
@@ -61,7 +61,7 @@ describe("Gemini API - Integration Tests", () => {
         expect(result.message).not.toContain("[object Object]");
         expect(result.message).not.toContain("undefined");
       },
-      { timeout: 15000 },
+      15000,
     );
 
     test.skipIf(!hasRealApiKey)(
@@ -89,7 +89,7 @@ describe("Gemini API - Integration Tests", () => {
           `[Integration Test] Admin test success! Duration: ${result.durationMs}ms`,
         );
       },
-      { timeout: 15000 },
+      15000,
     );
 
     test.skipIf(hasRealApiKey)(

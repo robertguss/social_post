@@ -79,8 +79,8 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   );
 
   // Platform selection state
-  const [enableTwitter, setEnableTwitter] = useState(true);
-  const [enableLinkedIn, setEnableLinkedIn] = useState(true);
+  const [enableTwitter, setEnableTwitter] = useState(false);
+  const [enableLinkedIn, setEnableLinkedIn] = useState(false);
 
   // Twitter form state
   const [twitterContent, setTwitterContent] = useState("");
@@ -648,7 +648,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
           {/* Tabbed Platform Interface */}
           <Tabs defaultValue="twitter" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="twitter" className="gap-2">
                 <IconBrandX className="w-4 h-4" />
                 Twitter
@@ -656,9 +656,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               <TabsTrigger value="linkedin" className="gap-2">
                 <IconBrandLinkedin className="w-4 h-4" />
                 LinkedIn
-              </TabsTrigger>
-              <TabsTrigger value="both" className="gap-2">
-                Both Platforms
               </TabsTrigger>
             </TabsList>
 
@@ -897,62 +894,6 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                 <Label htmlFor="also-twitter" className="text-sm cursor-pointer">
                   Also post to Twitter
                 </Label>
-              </div>
-            </TabsContent>
-
-            {/* Both Platforms Tab */}
-            <TabsContent value="both" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Twitter Summary */}
-                  <div className="border-2 border-[#1DA1F2] rounded-lg p-4 bg-[#1DA1F2]/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <IconBrandX className="w-5 h-5 text-[#1DA1F2]" />
-                        <h3 className="font-semibold">Twitter</h3>
-                      </div>
-                      <Switch
-                        checked={enableTwitter}
-                        onCheckedChange={setEnableTwitter}
-                      />
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <p className={twitterContent.trim() ? "text-green-600" : "text-muted-foreground"}>
-                        {twitterContent.trim() ? "✓ Content set" : "○ No content"}
-                      </p>
-                      <p className={twitterScheduledTime ? "text-green-600" : "text-muted-foreground"}>
-                        {twitterScheduledTime ? `✓ ${formatScheduledTime(twitterScheduledTime)}` : "○ No time set"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* LinkedIn Summary */}
-                  <div className="border-2 border-[#0A66C2] rounded-lg p-4 bg-[#0A66C2]/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <IconBrandLinkedin className="w-5 h-5 text-[#0A66C2]" />
-                        <h3 className="font-semibold">LinkedIn</h3>
-                      </div>
-                      <Switch
-                        checked={enableLinkedIn}
-                        onCheckedChange={setEnableLinkedIn}
-                      />
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <p className={linkedInContent.trim() ? "text-green-600" : "text-muted-foreground"}>
-                        {linkedInContent.trim() ? "✓ Content set" : "○ No content"}
-                      </p>
-                      <p className={linkedInScheduledTime ? "text-green-600" : "text-muted-foreground"}>
-                        {linkedInScheduledTime ? `✓ ${formatScheduledTime(linkedInScheduledTime)}` : "○ No time set"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-sm text-muted-foreground text-center">
-                  Switch to individual platform tabs to edit content and scheduling
-                </p>
               </div>
             </TabsContent>
           </Tabs>

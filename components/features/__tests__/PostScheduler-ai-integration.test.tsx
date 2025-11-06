@@ -38,10 +38,11 @@ vi.mock("convex/react", async () => {
   const actual = await vi.importActual("convex/react");
   return {
     ...actual,
-    useMutation: (action: any) => {
-      if (action.toString().includes("adjustTone")) return mockAdjustTone;
-      if (action.toString().includes("expandForLinkedIn")) return mockExpandForLinkedIn;
-      if (action.toString().includes("generateHashtags")) return mockGenerateHashtags;
+    useMutation: (action: unknown) => {
+      const actionStr = String(action);
+      if (actionStr.includes("adjustTone")) return mockAdjustTone;
+      if (actionStr.includes("expandForLinkedIn")) return mockExpandForLinkedIn;
+      if (actionStr.includes("generateHashtags")) return mockGenerateHashtags;
       return vi.fn();
     },
     useQuery: () => undefined,
