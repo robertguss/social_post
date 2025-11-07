@@ -382,7 +382,13 @@ export const getUserUsageStats = query({
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return empty stats if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return {
+        today: { requests: 0, cost: 0 },
+        thisMonth: { requests: 0, cost: 0 },
+        byFeature: [],
+      };
     }
 
     const userId = identity.subject;
@@ -507,7 +513,18 @@ export const getAdminUsageStats = query({
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return empty admin stats if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return {
+        totals: {
+          today: { requests: 0, cost: 0 },
+          thisMonth: { requests: 0, cost: 0 },
+          allTime: { requests: 0, cost: 0 },
+        },
+        byFeature: [],
+        topUsers: [],
+        recentActivity: [],
+      };
     }
 
     // Note: For single-user app, admin = authenticated user

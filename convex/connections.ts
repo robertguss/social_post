@@ -248,7 +248,12 @@ export const getConnectionStatus = query({
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return default disconnected state if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return {
+        connected: false,
+        needsReauth: false,
+      };
     }
 
     const userId = identity.subject;

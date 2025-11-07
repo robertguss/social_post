@@ -83,7 +83,9 @@ export const getDrafts = query({
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return empty array if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return [];
     }
 
     // Query drafts using index
@@ -129,7 +131,9 @@ export const getDraftById = query({
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return null if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return null;
     }
 
     const draft = await ctx.db.get(args.draftId);

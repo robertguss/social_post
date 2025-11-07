@@ -17,7 +17,14 @@ export const getDashboardStats = query({
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return default stats if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return {
+        totalPosts: 0,
+        scheduledPosts: 0,
+        publishedPosts: 0,
+        failedPosts: 0,
+      };
     }
 
     const userId = identity.subject;
@@ -84,7 +91,9 @@ export const getRecentPosts = query({
     // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return empty array if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return [];
     }
 
     const userId = identity.subject;

@@ -18,7 +18,11 @@ export const getUserPreferences = query({
   ),
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) {
+      // Return null if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return null;
+    }
 
     const prefs = await ctx.db
       .query("user_preferences")

@@ -166,7 +166,9 @@ export const getTemplates = query({
     // Verify user authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return empty array if user is not authenticated
+      // This allows the UI to render gracefully while AuthGuard handles redirects
+      return [];
     }
     const userId = identity.subject;
 
