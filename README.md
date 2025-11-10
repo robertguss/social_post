@@ -21,6 +21,64 @@ A self-hosted social media scheduling application for scheduling and publishing 
 - **Mobile Responsive** - Optimized for scheduling on the go
 - **Analytics Dashboard** - Track published, scheduled, and failed posts
 
+---
+
+<div align="center">
+
+## 📬 Join the Refactoring AI Newsletter
+
+[![Subscribe](https://img.shields.io/badge/Subscribe-Refactoring%20AI-blue?style=for-the-badge&logo=substack&logoColor=white)](https://refactoringai.substack.com/)
+
+<a href="https://refactoringai.substack.com/">
+  <img src="./public/refactoring-ai.webp" alt="Refactoring AI Newsletter" width="600px" />
+</a>
+
+<h3>I teach developers how to ship their ideas in days with AI</h3>
+
+<p><strong>Master modern full-stack development with AI-powered tools and techniques</strong></p>
+
+<p><strong>✨ What You'll Learn:</strong></p>
+
+<p>
+🚀 I've taught over 50,000 developers to date.<br/>
+🎯 Top 1% TypeScript engineers globally on GitHub.<br/>
+🤖 Learn how to use AI coding agents like Claude Code effectively
+</p>
+
+[**→ Subscribe Now (It's Free!)**](https://refactoringai.substack.com/)
+
+</div>
+
+---
+
+<div align="center">
+
+## 🚀 Built with the AI Starter Kit
+
+[![GitHub](https://img.shields.io/badge/View_on_GitHub-AI_Starter_Kit-181717?style=for-the-badge&logo=github)](https://github.com/robertguss/ai-starter-kit)
+
+<p><strong>SocialPost was built using the AI Starter Kit</strong> - a production-ready foundation for building full-stack applications with modern tools.</p>
+
+<p><strong>What the Starter Kit Provides:</strong></p>
+
+<p>
+⚡ Next.js 16 with App Router and React 19<br/>
+🔄 Convex real-time database with zero infrastructure<br/>
+🔐 Better Auth authentication (email/password + OAuth ready)<br/>
+🎨 20+ pre-installed shadcn/ui components<br/>
+✅ Complete testing setup with Vitest<br/>
+📚 Comprehensive documentation and examples<br/>
+🤖 Optimized for AI coding agents like Claude Code
+</p>
+
+<p><strong>Perfect for rapidly building:</strong> SaaS apps, dashboards, real-time tools, and production applications</p>
+
+[**→ Get the AI Starter Kit**](https://github.com/robertguss/ai-starter-kit)
+
+</div>
+
+---
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
