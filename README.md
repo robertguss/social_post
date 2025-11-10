@@ -1,4 +1,4 @@
-# Social Posting Scheduler
+# SocialPost
 
 A self-hosted social media scheduling application for scheduling and publishing content to X/Twitter and LinkedIn. Built with Next.js, Convex, and Better Auth as a single-user productivity tool to replace expensive subscription services.
 
