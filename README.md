@@ -73,7 +73,7 @@ A self-hosted social media scheduling application for scheduling and publishing 
 
 <p><strong>Perfect for rapidly building:</strong> SaaS apps, dashboards, real-time tools, and production applications</p>
 
-[**→ Get the AI Starter Kit**](https://github.com/robertguss/ai-starter-kit)
+[**→ Get the FREE AI Starter Kit**](https://github.com/robertguss/ai-starter-kit)
 
 </div>
 
