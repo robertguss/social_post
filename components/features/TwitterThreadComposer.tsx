@@ -105,8 +105,8 @@ function SortableTweetItem({
       <button
         type="button"
         className={cn(
-          "absolute -left-10 top-4 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors",
-          disabled && "cursor-not-allowed opacity-50"
+          "absolute -left-10 top-4 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-primary hover:scale-110 transition-all duration-150",
+          disabled && "cursor-not-allowed opacity-50 hover:text-muted-foreground hover:scale-100"
         )}
         {...attributes}
         {...listeners}

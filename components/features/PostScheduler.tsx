@@ -834,7 +834,13 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const isSubmitDisabled =
     isSubmitting ||
     (!enableTwitter && !enableLinkedIn) ||
-    (enableTwitter && (isTwitterOverLimit || !twitterContent.trim() || !twitterScheduledTime)) ||
+    (enableTwitter && (
+      (isThreadMode
+        ? (isThreadOverLimit || !hasThreadContent)
+        : (isTwitterOverLimit || !twitterContent.trim())
+      ) ||
+      !twitterScheduledTime
+    )) ||
     (enableLinkedIn && (isLinkedInOverLimit || !linkedInContent.trim() || !linkedInScheduledTime));
 
   return (
@@ -1198,7 +1204,10 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               variant="secondary"
               className="flex-1"
               onClick={handleSaveDraft}
-              disabled={isSavingDraft || (!twitterContent.trim() && !linkedInContent.trim())}
+              disabled={isSavingDraft || (
+                (isThreadMode ? !hasThreadContent : !twitterContent.trim()) &&
+                !linkedInContent.trim()
+              )}
               aria-label="Save as draft"
             >
               <IconDeviceFloppy className="mr-2 h-4 w-4" />
@@ -1209,7 +1218,10 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               variant="outline"
               className="flex-1"
               onClick={() => setIsPreviewModalOpen(true)}
-              disabled={!twitterContent.trim() && !linkedInContent.trim()}
+              disabled={
+                (isThreadMode ? !hasThreadContent : !twitterContent.trim()) &&
+                !linkedInContent.trim()
+              }
               aria-label="Preview post"
             >
               <IconEye className="mr-2 h-4 w-4" />
