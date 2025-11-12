@@ -133,9 +133,10 @@ function SortableTweetItem({
         {/* Character Counter */}
         <div className="flex items-center justify-between">
           <CharacterCounter
-            count={charCount}
-            max={MAX_CHARS_PER_TWEET}
-            warnAt={260}
+            currentCount={charCount}
+            maxCount={MAX_CHARS_PER_TWEET}
+            warningThreshold={260}
+            platform="twitter"
           />
 
           {/* Action Buttons */}

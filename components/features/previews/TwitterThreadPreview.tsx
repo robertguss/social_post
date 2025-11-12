@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Repeat2, Share } from "lucide-react";
+import { Heart, MessageCircle, Repeat2 } from "lucide-react";
 import { getTwitterCharacterCount } from "@/lib/utils/characterCount";
 
 interface TwitterThreadPreviewProps {

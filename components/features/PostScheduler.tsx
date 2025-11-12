@@ -44,6 +44,7 @@ import {
 interface PostData {
   _id: Id<"posts">;
   twitterContent?: string;
+  twitterThread?: string[];
   linkedInContent?: string;
   twitterScheduledTime?: number;
   linkedInScheduledTime?: number;
@@ -170,9 +171,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   useEffect(() => {
     if (mode === "edit" && postData) {
       // Pre-fill Twitter fields - check for thread or single tweet
-      if ((postData as any).twitterThread && (postData as any).twitterThread.length > 0) {
+      if (postData.twitterThread && postData.twitterThread.length > 0) {
         setIsThreadMode(true);
-        setTwitterThread((postData as any).twitterThread);
+        setTwitterThread(postData.twitterThread);
       } else if (postData.twitterContent) {
         setIsThreadMode(false);
         setTwitterContent(postData.twitterContent);
