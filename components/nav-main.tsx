@@ -32,7 +32,6 @@ export function NavMain({
               asChild
               tooltip="Schedule Post"
               isActive={pathname === "/schedule"}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground min-w-8 duration-200 ease-linear"
             >
               <Link href="/schedule">
                 <IconCalendarEvent />
