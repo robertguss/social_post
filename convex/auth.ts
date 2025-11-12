@@ -27,6 +27,9 @@ export const createAuth = (
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
+      // Disable signups if DISABLE_SIGNUPS environment variable is set to "true"
+      // This allows single-user deployments while keeping the open source version multi-user
+      disableSignUp: process.env.DISABLE_SIGNUPS === "true",
     },
     plugins: [
       // The Convex plugin is required for Convex compatibility

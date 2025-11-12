@@ -81,6 +81,7 @@ social_post/
 - Better Auth handles auth on frontend via `middleware.ts`
 - Convex functions use `ctx.auth.getUserIdentity()` to verify users
 - All data must be scoped to `userId` to ensure single-user isolation
+- **Single-User Mode**: Set `DISABLE_SIGNUPS=true` and `NEXT_PUBLIC_DISABLE_SIGNUPS=true` to prevent new user signups while keeping login functional for existing users
 
 **Scheduled Publishing Architecture**:
 The core feature is time-based post publishing:
@@ -241,6 +242,25 @@ Critical for reliability:
 - Use Convex environment variables for API keys (never in code/repo)
 - All Convex functions must verify user authentication
 - Never return another user's data
+
+### Single-User Mode Configuration
+
+To restrict signups to a single user (useful for personal deployments):
+
+**Environment Variables:**
+- `DISABLE_SIGNUPS=true` - Disables the Better Auth signup API endpoint (backend)
+- `NEXT_PUBLIC_DISABLE_SIGNUPS=true` - Hides signup UI and shows "Signups Closed" message (frontend)
+
+**Implementation:**
+- `convex/auth.ts:32` - Better Auth `disableSignUp` option controlled by `DISABLE_SIGNUPS`
+- `app/(auth)/signup/page.tsx:21` - Checks `NEXT_PUBLIC_DISABLE_SIGNUPS` to show closed message
+- `app/(auth)/login/page.tsx:21` - Conditionally hides signup link if signups disabled
+
+**Usage:**
+1. Deploy the application without these variables set
+2. Create your user account
+3. Add these environment variables to production to prevent additional signups
+4. Existing users can continue to login normally
 
 ## Cursor Rules Reference
 

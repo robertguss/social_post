@@ -17,6 +17,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// Check if signups are disabled via environment variable
+const signupsDisabled = process.env.NEXT_PUBLIC_DISABLE_SIGNUPS === "true";
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const fromParam = searchParams.get("from") || "/dashboard";
@@ -111,15 +114,17 @@ function LoginForm() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/signup"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Sign up
-              </Link>
-            </p>
+            {!signupsDisabled && (
+              <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/signup"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Sign up
+                </Link>
+              </p>
+            )}
           </CardFooter>
         </form>
       </Card>

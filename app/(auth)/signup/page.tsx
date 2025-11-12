@@ -17,6 +17,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// Check if signups are disabled via environment variable
+const signupsDisabled = process.env.NEXT_PUBLIC_DISABLE_SIGNUPS === "true";
+
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -68,6 +71,48 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+
+  // If signups are disabled, show a message instead of the form
+  if (signupsDisabled) {
+    return (
+      <AuthGuard requireUnauth>
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold">Signups Closed</CardTitle>
+              <CardDescription>
+                New user registrations are currently disabled for this instance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-md bg-muted p-4 text-sm">
+                <p className="mb-2">
+                  This is a single-user instance of Social Post Scheduler.
+                </p>
+                <p>
+                  If you&apos;d like to run your own instance, check out the{" "}
+                  <a
+                    href="https://github.com/robertguss/social_post"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    open source repository
+                  </a>
+                  .
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Link href="/login" className="w-full">
+                <Button className="w-full">Back to Login</Button>
+              </Link>
+            </CardFooter>
+          </Card>
+        </div>
+      </AuthGuard>
+    );
+  }
 
   return (
     <AuthGuard requireUnauth>

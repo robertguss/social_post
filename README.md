@@ -193,6 +193,10 @@ NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
 # OAuth Callback Base URL
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+# Single-User Mode (optional - set to "true" to disable new signups)
+DISABLE_SIGNUPS=false
+NEXT_PUBLIC_DISABLE_SIGNUPS=false
 ```
 
 Add to Convex Dashboard (Settings → Environment Variables):
@@ -216,6 +220,9 @@ ENCRYPTION_KEY=your_base64_encoded_32_byte_key
 # Telegram Notifications (optional)
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
+
+# Single-User Mode (optional - set to "true" to disable new signups)
+DISABLE_SIGNUPS=false
 ```
 
 ### Generate Encryption Key
@@ -226,6 +233,34 @@ openssl rand -base64 32
 ```
 
 Copy the output to `ENCRYPTION_KEY` in Convex environment variables.
+
+### Single-User Mode
+
+By default, the application allows multiple users to sign up. If you want to restrict your deployment to a single user (yourself), you can enable single-user mode:
+
+**How it works:**
+- Set `DISABLE_SIGNUPS=true` and `NEXT_PUBLIC_DISABLE_SIGNUPS=true` in your environment variables
+- The signup API endpoint will reject new registration attempts
+- The signup page will display a "Signups Closed" message
+- The "Sign up" link on the login page will be hidden
+- Existing users can continue to log in normally
+
+**To enable:**
+
+1. **For production deployments**, add to your `.env.production` or Vercel environment variables:
+   ```bash
+   DISABLE_SIGNUPS=true
+   NEXT_PUBLIC_DISABLE_SIGNUPS=true
+   ```
+
+2. **For Convex production**, add to Convex Dashboard → Production → Settings → Environment Variables:
+   ```bash
+   DISABLE_SIGNUPS=true
+   ```
+
+3. Create your account first, then enable single-user mode to lock it down
+
+**Use case:** This is perfect if you're deploying SocialPost as a personal productivity tool and want to ensure no one else can create an account on your instance.
 
 ## Development
 
