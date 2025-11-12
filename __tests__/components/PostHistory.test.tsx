@@ -648,7 +648,8 @@ describe("PostHistory Component", () => {
     });
 
     it("should call deletePost mutation when Delete is confirmed", async () => {
-      const mockDeletePost = jest.fn().mockResolvedValue(undefined);
+      const mockDeletePost = createMockMutation();
+      mockDeletePost.mockResolvedValue(undefined);
       const mockUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
       mockUseMutation.mockReturnValue(mockDeletePost);
       mockUseQuery.mockReturnValue(scheduledPost);

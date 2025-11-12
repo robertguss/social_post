@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Id, Doc } from "@/convex/_generated/dataModel";
@@ -111,6 +112,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
   // Preview modal state
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+
+  // Thread mode switch confirmation dialog state
+  const [showThreadModeConfirmDialog, setShowThreadModeConfirmDialog] = useState(false);
 
   // Clone indicator state
   const [showCloneBadge, setShowCloneBadge] = useState(!!postData?.clonedFromPostId);
@@ -321,6 +325,29 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     setTimeout(() => {
       linkedInTextareaRef.current?.focus();
     }, 0);
+  };
+
+  /**
+   * Handle thread mode toggle - switches between single-tweet and thread modes
+   */
+  const handleThreadModeToggle = () => {
+    setIsThreadMode(!isThreadMode);
+    // Reset content when switching modes
+    if (!isThreadMode) {
+      // Switching to thread mode - move single tweet to first tweet
+      if (twitterContent.trim()) {
+        setTwitterThread([twitterContent]);
+      } else {
+        setTwitterThread([""]);
+      }
+    } else {
+      // Switching to single tweet mode - use first tweet
+      if (twitterThread.length > 0 && twitterThread[0].trim()) {
+        setTwitterContent(twitterThread[0]);
+      } else {
+        setTwitterContent("");
+      }
+    }
   };
 
   /**
@@ -906,23 +933,20 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                       variant={isThreadMode ? "default" : "outline"}
                       size="sm"
                       onClick={() => {
-                        setIsThreadMode(!isThreadMode);
-                        // Reset content when switching modes
-                        if (!isThreadMode) {
-                          // Switching to thread mode - move single tweet to first tweet
-                          if (twitterContent.trim()) {
-                            setTwitterThread([twitterContent]);
-                          } else {
-                            setTwitterThread([""]);
-                          }
-                        } else {
-                          // Switching to single tweet mode - use first tweet
-                          if (twitterThread.length > 0 && twitterThread[0].trim()) {
-                            setTwitterContent(twitterThread[0]);
-                          } else {
-                            setTwitterContent("");
+                        // Check if switching from thread mode to single-tweet mode
+                        if (isThreadMode) {
+                          // Count non-empty tweets
+                          const nonEmptyTweets = twitterThread.filter(tweet => tweet.trim() !== "");
+
+                          // If there are multiple non-empty tweets, show confirmation dialog
+                          if (nonEmptyTweets.length > 1) {
+                            setShowThreadModeConfirmDialog(true);
+                            return;
                           }
                         }
+
+                        // Proceed with the mode switch
+                        handleThreadModeToggle();
                       }}
                       className="gap-2"
                     >
@@ -1261,6 +1285,35 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         linkedInEnabled={enableLinkedIn}
         twitterCharacterCount={twitterCharCount}
       />
+
+      {/* Thread Mode Confirmation Dialog */}
+      <Dialog open={showThreadModeConfirmDialog} onOpenChange={setShowThreadModeConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard Extra Tweets?</DialogTitle>
+            <DialogDescription>
+              You have multiple tweets in your thread. Switching to single-tweet mode will keep only the first tweet and discard the rest. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowThreadModeConfirmDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowThreadModeConfirmDialog(false);
+                handleThreadModeToggle();
+              }}
+            >
+              Discard and Switch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* AI Suggestion Panel */}
       <AISuggestionPanel

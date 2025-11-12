@@ -1,4 +1,3 @@
-import { describe, it, expect } from '@jest/globals';
 import { v } from 'convex/values';
 import schema from '@/convex/schema';
 
