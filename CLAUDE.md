@@ -248,15 +248,18 @@ Critical for reliability:
 To restrict signups to a single user (useful for personal deployments):
 
 **Environment Variables:**
+
 - `DISABLE_SIGNUPS=true` - Disables the Better Auth signup API endpoint (backend)
 - `NEXT_PUBLIC_DISABLE_SIGNUPS=true` - Hides signup UI and shows "Signups Closed" message (frontend)
 
 **Implementation:**
+
 - `convex/auth.ts:32` - Better Auth `disableSignUp` option controlled by `DISABLE_SIGNUPS`
 - `app/(auth)/signup/page.tsx:21` - Checks `NEXT_PUBLIC_DISABLE_SIGNUPS` to show closed message
 - `app/(auth)/login/page.tsx:21` - Conditionally hides signup link if signups disabled
 
 **Usage:**
+
 1. Deploy the application without these variables set
 2. Create your user account
 3. Add these environment variables to production to prevent additional signups
