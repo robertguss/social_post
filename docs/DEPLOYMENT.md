@@ -53,14 +53,14 @@ Complete guide for deploying and operating the Social Posting Scheduler in produ
 
 ### Service Providers
 
-| Service | Provider | Purpose |
-|---------|----------|---------|
-| **Frontend Hosting** | Vercel | Next.js deployment, CDN, SSL |
-| **Backend & Database** | Convex | Serverless functions, realtime DB |
-| **Authentication** | Better Auth | User auth, session management |
-| **Domain & DNS** | Cloudflare/Route53 | DNS management |
-| **Monitoring** | Sentry/LogRocket | Error tracking, performance |
-| **Uptime Monitoring** | BetterUptime/UptimeRobot | Health checks |
+| Service                | Provider                 | Purpose                           |
+| ---------------------- | ------------------------ | --------------------------------- |
+| **Frontend Hosting**   | Vercel                   | Next.js deployment, CDN, SSL      |
+| **Backend & Database** | Convex                   | Serverless functions, realtime DB |
+| **Authentication**     | Better Auth              | User auth, session management     |
+| **Domain & DNS**       | Cloudflare/Route53       | DNS management                    |
+| **Monitoring**         | Sentry/LogRocket         | Error tracking, performance       |
+| **Uptime Monitoring**  | BetterUptime/UptimeRobot | Health checks                     |
 
 ---
 
@@ -118,7 +118,8 @@ pnpm dlx convex deploy --prod
 ```
 
 **Output:**
-```
+
+```text
 ✓ Deployed functions to production
 ✓ Deployment URL: https://your-project.convex.cloud
 ```
@@ -180,12 +181,12 @@ For encrypted tokens migration:
 ```typescript
 // In Convex Dashboard console (Production)
 await ctx.runAction(internal.encryption.migrateTokensToEncrypted, {
-  dryRun: true  // Test first
+  dryRun: true, // Test first
 });
 
 // If successful, run actual migration
 await ctx.runAction(internal.encryption.migrateTokensToEncrypted, {
-  dryRun: false
+  dryRun: false,
 });
 ```
 
@@ -240,6 +241,7 @@ git push origin main
 ```
 
 **Output:**
+
 ```
 ✓ Deployed to production
    https://yourdomain.vercel.app
@@ -264,11 +266,13 @@ git push origin main
    - Navigate to **Settings** → **User authentication settings**
 
 2. **Update Callback URL**
+
    ```
    https://yourdomain.com/api/auth/twitter/callback
    ```
 
 3. **Update Website URL**
+
    ```
    https://yourdomain.com
    ```
@@ -289,6 +293,7 @@ git push origin main
    - Navigate to **Auth** tab
 
 2. **Update Redirect URLs**
+
    ```
    https://yourdomain.com/api/auth/linkedin/callback
    ```
@@ -367,11 +372,13 @@ GEMINI_API_KEY=xxxxxx
 ### Generating Secrets
 
 **Encryption Key:**
+
 ```bash
 openssl rand -base64 32
 ```
 
 **Telegram Bot:**
+
 ```bash
 # 1. Message @BotFather on Telegram
 # 2. Send /newbot
@@ -400,20 +407,22 @@ https://api.telegram.org/bot<TOKEN>/getUpdates
 
 Add these DNS records:
 
-| Type | Name | Value |
-|------|------|-------|
-| A | @ | 76.76.21.21 |
-| CNAME | www | cname.vercel-dns.com |
-| TXT | @ | Vercel verification code |
+| Type  | Name | Value                    |
+| ----- | ---- | ------------------------ |
+| A     | @    | 76.76.21.21              |
+| CNAME | www  | cname.vercel-dns.com     |
+| TXT   | @    | Vercel verification code |
 
 ### SSL Certificate
 
 **Automatic (Vercel):**
+
 - SSL certificate auto-provisioned
 - Auto-renewal
 - No manual configuration needed
 
 **Custom Certificate:**
+
 - Vercel Pro plan required
 - Upload certificate in Domain Settings
 
@@ -449,6 +458,7 @@ Sentry.init({
 ### Logging Strategy
 
 **Convex Functions:**
+
 ```typescript
 export const myFunction = action({
   handler: async (ctx, args) => {
@@ -470,6 +480,7 @@ export const myFunction = action({
 ```
 
 **View Logs:**
+
 - Convex Dashboard → Logs
 - Filter by level, time, function
 - Export logs for analysis
@@ -500,11 +511,13 @@ Monitor: `https://yourdomain.com/api/health`
 ### Performance Monitoring
 
 **Vercel Analytics:**
+
 - Automatic with Vercel deployment
 - View in Vercel Dashboard → Analytics
 - Tracks Core Web Vitals, page loads
 
 **Custom Metrics:**
+
 ```typescript
 import { track } from "@vercel/analytics";
 
@@ -512,7 +525,9 @@ export function PostScheduler() {
   const handleSubmit = async () => {
     const start = performance.now();
 
-    await createPost({ /* ... */ });
+    await createPost({
+      /* ... */
+    });
 
     const duration = performance.now() - start;
     track("post_scheduled", { duration });
@@ -527,11 +542,13 @@ export function PostScheduler() {
 ### Database Backups
 
 **Automated Backups (Convex):**
+
 - Convex automatically backs up data
 - Point-in-time recovery available
 - Contact Convex support for restoration
 
 **Manual Export:**
+
 ```bash
 # Export production data
 pnpm dlx convex export --prod > backup-$(date +%Y%m%d).jsonl
@@ -581,23 +598,23 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'X-Frame-Options',
-            value: 'DENY',
+            key: "X-Frame-Options",
+            value: "DENY",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
           },
           {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
         ],
       },
@@ -639,6 +656,7 @@ export function checkRateLimit(userId: string): boolean {
 ### Security Audit
 
 **Quarterly Checklist:**
+
 - [ ] Review OAuth scopes and permissions
 - [ ] Rotate encryption keys
 - [ ] Audit user access logs
@@ -655,6 +673,7 @@ export function checkRateLimit(userId: string): boolean {
 ### Database Optimization
 
 **Index Usage:**
+
 ```typescript
 // Always use indexes for queries
 const posts = await ctx.db
@@ -664,18 +683,20 @@ const posts = await ctx.db
 ```
 
 **Query Limits:**
+
 ```typescript
 // Paginate large result sets
 const posts = await ctx.db
   .query("posts")
   .withIndex("by_user", (q) => q.eq("userId", userId))
   .order("desc")
-  .take(20);  // Limit to 20 results
+  .take(20); // Limit to 20 results
 ```
 
 ### Frontend Optimization
 
 **Code Splitting:**
+
 ```typescript
 import dynamic from 'next/dynamic';
 
@@ -685,6 +706,7 @@ const PostScheduler = dynamic(() => import('@/components/features/PostScheduler'
 ```
 
 **Image Optimization:**
+
 ```typescript
 import Image from 'next/image';
 
@@ -698,6 +720,7 @@ import Image from 'next/image';
 ```
 
 **Bundle Analysis:**
+
 ```bash
 # Analyze bundle size
 ANALYZE=true pnpm run build
@@ -706,11 +729,13 @@ ANALYZE=true pnpm run build
 ### Caching Strategy
 
 **Convex Queries:**
+
 - Queries automatically cached by Convex client
 - Cache invalidated on data changes
 - No manual cache management needed
 
 **Next.js Caching:**
+
 ```typescript
 // Static generation
 export const revalidate = 3600; // Revalidate every hour
@@ -729,22 +754,27 @@ export default async function Page() {
 **Posts Not Publishing:**
 
 1. **Check Convex Logs**
+
    ```
    Convex Dashboard → Production → Logs
    Filter by function: publishTwitterPost or publishLinkedInPost
    ```
 
 2. **Verify OAuth Tokens**
+
    ```typescript
    // In Convex console
    const connections = await ctx.db.query("user_connections").collect();
-   console.log(connections.map(c => ({
-     platform: c.platform,
-     expiresAt: new Date(c.expiresAt).toISOString(),
-   })));
+   console.log(
+     connections.map((c) => ({
+       platform: c.platform,
+       expiresAt: new Date(c.expiresAt).toISOString(),
+     })),
+   );
    ```
 
 3. **Check Scheduled Functions**
+
    ```
    Convex Dashboard → Production → Scheduled Functions
    Verify functions are scheduled
@@ -757,6 +787,7 @@ export default async function Page() {
    - HTTPS in production
 
 2. **Check Environment Variables**
+
    ```bash
    # Verify in Convex Dashboard
    TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET
@@ -782,6 +813,7 @@ vercel --prod --debug
 ### Performance Issues
 
 **Slow Queries:**
+
 ```typescript
 // Add timing logs
 const start = Date.now();
@@ -790,6 +822,7 @@ console.log(`Query took ${Date.now() - start}ms`);
 ```
 
 **High Memory Usage:**
+
 - Check for memory leaks in Convex functions
 - Limit query result sizes
 - Use pagination for large datasets
@@ -820,18 +853,21 @@ vercel rollback <deployment-url>
 ### Regular Tasks
 
 **Weekly:**
+
 - Review error logs
 - Check failed posts
 - Verify OAuth connections
 - Review performance metrics
 
 **Monthly:**
+
 - Database cleanup (old posts)
 - Security updates
 - Dependency updates
 - Backup verification
 
 **Quarterly:**
+
 - Security audit
 - Performance review
 - Infrastructure cost review
@@ -844,7 +880,7 @@ vercel rollback <deployment-url>
 ```typescript
 export const cleanupOldPosts = internalMutation({
   handler: async (ctx) => {
-    const cutoffDate = Date.now() - (90 * 24 * 60 * 60 * 1000); // 90 days
+    const cutoffDate = Date.now() - 90 * 24 * 60 * 60 * 1000; // 90 days
 
     const oldPosts = await ctx.db
       .query("posts")
