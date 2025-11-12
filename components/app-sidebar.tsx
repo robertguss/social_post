@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import {
-  IconCalendarEvent,
   IconClock,
   IconDashboard,
   IconHelp,
@@ -33,11 +32,6 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       icon: IconDashboard,
-    },
-    {
-      title: "Schedule Post",
-      url: "/schedule",
-      icon: IconCalendarEvent,
     },
     {
       title: "Post History",
