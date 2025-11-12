@@ -12,6 +12,7 @@ export const saveDraft = mutation({
   args: {
     draftId: v.optional(v.id("posts")),
     twitterContent: v.string(),
+    twitterThread: v.optional(v.array(v.string())),
     linkedInContent: v.string(),
     url: v.optional(v.string()),
   },
@@ -37,6 +38,7 @@ export const saveDraft = mutation({
 
       await ctx.db.patch(args.draftId, {
         twitterContent: args.twitterContent,
+        twitterThread: args.twitterThread,
         linkedInContent: args.linkedInContent,
         url: args.url,
         lastEditedTime: now,
@@ -49,6 +51,7 @@ export const saveDraft = mutation({
         userId: identity.subject,
         status: "draft",
         twitterContent: args.twitterContent,
+        twitterThread: args.twitterThread,
         linkedInContent: args.linkedInContent,
         url: args.url,
         lastEditedTime: now,
@@ -74,6 +77,7 @@ export const getDrafts = query({
       userId: v.string(),
       status: v.string(),
       twitterContent: v.optional(v.string()),
+      twitterThread: v.optional(v.array(v.string())),
       linkedInContent: v.optional(v.string()),
       url: v.optional(v.string()),
       lastEditedTime: v.optional(v.number()),
@@ -122,6 +126,7 @@ export const getDraftById = query({
       userId: v.string(),
       status: v.string(),
       twitterContent: v.optional(v.string()),
+      twitterThread: v.optional(v.array(v.string())),
       linkedInContent: v.optional(v.string()),
       url: v.optional(v.string()),
       lastEditedTime: v.optional(v.number()),

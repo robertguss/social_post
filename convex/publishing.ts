@@ -59,7 +59,7 @@ export const publishTwitterPost = internalAction({
       console.log(`[Publishing] Starting publication of post ${args.postId}`);
 
       // Step 3: Retrieve and decrypt OAuth tokens
-      const connection = await ctx.runAction(
+      let connection = await ctx.runAction(
         internal.connections.getDecryptedConnection,
         {
           userId: post.userId,
@@ -71,6 +71,53 @@ export const publishTwitterPost = internalAction({
         throw new Error(
           "Twitter connection not found. Please reconnect your Twitter account."
         );
+      }
+
+      // Step 3a: Check token expiration and refresh if needed
+      // Twitter tokens expire after 2 hours, so refresh if expiring within 30 minutes
+      const now = Date.now();
+      const thirtyMinutesInMs = 30 * 60 * 1000;
+      const tokenExpiresIn = connection.expiresAt - now;
+
+      if (tokenExpiresIn < thirtyMinutesInMs) {
+        console.log(
+          `[Publishing] Token expires in ${Math.round(tokenExpiresIn / (60 * 1000))} minutes, refreshing...`
+        );
+
+        const refreshResult = await ctx.runAction(
+          internal.tokenRefresh.refreshTwitterToken,
+          { userId: post.userId }
+        );
+
+        if (!refreshResult.success) {
+          if (refreshResult.needsReauth) {
+            throw new Error(
+              "Twitter token expired and refresh failed. Please reconnect your Twitter account in the settings."
+            );
+          }
+          throw new Error(
+            `Failed to refresh Twitter token: ${refreshResult.error || "Unknown error"}`
+          );
+        }
+
+        console.log(
+          `[Publishing] Successfully refreshed Twitter token for post ${args.postId}`
+        );
+
+        // Retrieve the connection again after refresh to get new access token
+        connection = await ctx.runAction(
+          internal.connections.getDecryptedConnection,
+          {
+            userId: post.userId,
+            platform: "twitter",
+          }
+        );
+
+        if (!connection) {
+          throw new Error(
+            "Failed to retrieve Twitter connection after token refresh"
+          );
+        }
       }
 
       const accessToken = connection.accessToken;

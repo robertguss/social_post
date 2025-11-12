@@ -123,22 +123,15 @@ export default function SettingsPage() {
                 </div>
 
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Smart Content Pre-fill</CardTitle>
-                    <CardDescription>
-                      Automatically pre-populate LinkedIn content with your Twitter content
-                      for easy expansion
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="enable-pre-pop" className="text-base">
-                          Enable Smart Content Pre-fill
+                      <div className="space-y-1 flex-1 pr-4">
+                        <Label htmlFor="enable-pre-pop" className="text-base font-semibold">
+                          Smart Content Pre-fill
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          When enabled, a button will appear to copy your Twitter content to
-                          LinkedIn after you finish typing
+                          Automatically copy your Twitter content to LinkedIn for easy expansion.
+                          When enabled, a button will appear after you finish typing.
                         </p>
                       </div>
                       <Switch
