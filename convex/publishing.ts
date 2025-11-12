@@ -75,30 +75,80 @@ export const publishTwitterPost = internalAction({
 
       const accessToken = connection.accessToken;
 
-      // Step 4: Publish text post to X API
-      const tweetId = await publishTweet(
-        accessToken,
-        post.twitterContent || ""
-      );
+      // Step 4: Check if this is a thread or single tweet
+      const isThread = post.twitterThread && post.twitterThread.length > 0;
+      let tweetIds: string[] = [];
+      let firstTweetId: string;
 
-      console.log(
-        `[Publishing] Successfully published tweet ${tweetId} for post ${args.postId}`
-      );
+      if (isThread) {
+        // Publish thread sequentially
+        console.log(
+          `[Publishing] Publishing thread with ${post.twitterThread!.length} tweets for post ${args.postId}`
+        );
 
-      // Step 5: Post URL as reply thread (if provided)
-      if (post.url && post.url.trim() !== "") {
-        try {
-          await publishTweetReply(accessToken, post.url, tweetId);
+        // Publish first tweet
+        firstTweetId = await publishTweet(accessToken, post.twitterThread![0]);
+        tweetIds.push(firstTweetId);
+        console.log(`[Publishing] Published tweet 1/${post.twitterThread!.length}: ${firstTweetId}`);
+
+        // Publish remaining tweets as replies
+        let previousTweetId = firstTweetId;
+        for (let i = 1; i < post.twitterThread!.length; i++) {
+          const replyTweetId = await publishTweetReply(
+            accessToken,
+            post.twitterThread![i],
+            previousTweetId
+          );
+          tweetIds.push(replyTweetId);
           console.log(
-            `[Publishing] Successfully posted URL reply for post ${args.postId}`
+            `[Publishing] Published tweet ${i + 1}/${post.twitterThread!.length}: ${replyTweetId}`
           );
-        } catch (urlError) {
-          // Log URL reply error but don't fail the entire post
-          console.error(
-            `[Publishing] Failed to post URL reply for post ${args.postId}:`,
-            urlError instanceof Error ? urlError.message : "Unknown error"
-          );
-          // Continue to mark main post as published
+          previousTweetId = replyTweetId;
+        }
+
+        console.log(
+          `[Publishing] Successfully published thread with ${tweetIds.length} tweets for post ${args.postId}`
+        );
+
+        // Post URL as final reply in thread (if provided)
+        if (post.url && post.url.trim() !== "") {
+          try {
+            await publishTweetReply(accessToken, post.url, previousTweetId);
+            console.log(
+              `[Publishing] Successfully posted URL reply at end of thread for post ${args.postId}`
+            );
+          } catch (urlError) {
+            console.error(
+              `[Publishing] Failed to post URL reply for post ${args.postId}:`,
+              urlError instanceof Error ? urlError.message : "Unknown error"
+            );
+          }
+        }
+      } else {
+        // Publish single tweet (legacy/backward compatible)
+        firstTweetId = await publishTweet(
+          accessToken,
+          post.twitterContent || ""
+        );
+        tweetIds.push(firstTweetId);
+
+        console.log(
+          `[Publishing] Successfully published single tweet ${firstTweetId} for post ${args.postId}`
+        );
+
+        // Post URL as reply (if provided)
+        if (post.url && post.url.trim() !== "") {
+          try {
+            await publishTweetReply(accessToken, post.url, firstTweetId);
+            console.log(
+              `[Publishing] Successfully posted URL reply for post ${args.postId}`
+            );
+          } catch (urlError) {
+            console.error(
+              `[Publishing] Failed to post URL reply for post ${args.postId}:`,
+              urlError instanceof Error ? urlError.message : "Unknown error"
+            );
+          }
         }
       }
 
@@ -106,7 +156,8 @@ export const publishTwitterPost = internalAction({
       await ctx.runMutation(internal.posts.updatePostStatus, {
         postId: args.postId,
         status: "Published",
-        twitterPostId: tweetId,
+        twitterPostId: firstTweetId,
+        twitterPostIds: tweetIds,
         errorMessage: undefined, // Clear any previous error messages
       });
 
@@ -184,15 +235,16 @@ async function publishTweet(
  * Post a tweet as a reply to create a thread
  *
  * @param accessToken - Decrypted OAuth access token
- * @param text - Reply text (typically the URL)
+ * @param text - Reply text
  * @param inReplyToTweetId - The tweet ID to reply to
+ * @returns The reply tweet ID from X API
  * @throws Error if API call fails
  */
 async function publishTweetReply(
   accessToken: string,
   text: string,
   inReplyToTweetId: string
-): Promise<void> {
+): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -221,6 +273,14 @@ async function publishTweetReply(
         `X API Error ${response.status}: ${errorBody}`
       );
     }
+
+    const data = await response.json();
+
+    if (!data.data?.id) {
+      throw new Error("X API response missing tweet ID for reply");
+    }
+
+    return data.data.id;
   } catch (error) {
     clearTimeout(timeoutId);
 

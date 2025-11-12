@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CharacterCounter } from "@/components/ui/CharacterCounter";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Id, Doc } from "@/convex/_generated/dataModel";
@@ -20,6 +21,7 @@ import { RecommendedTimes } from "./RecommendedTimes";
 import { AIAssistantButton, type AIFeatureType } from "./AIAssistantButton";
 import { AISuggestionPanel } from "./AISuggestionPanel";
 import { HashtagSuggestionPanel } from "./HashtagSuggestionPanel";
+import { TwitterThreadComposer } from "./TwitterThreadComposer";
 import { IconTemplate, IconInfoCircle, IconX, IconCalendar, IconEye, IconDeviceFloppy, IconBrandX, IconBrandLinkedin, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -43,6 +45,7 @@ import {
 interface PostData {
   _id: Id<"posts">;
   twitterContent?: string;
+  twitterThread?: string[];
   linkedInContent?: string;
   twitterScheduledTime?: number;
   linkedInScheduledTime?: number;
@@ -82,7 +85,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   // Removed explicit enable/disable toggles for better UX
 
   // Twitter form state
+  const [isThreadMode, setIsThreadMode] = useState(false);
   const [twitterContent, setTwitterContent] = useState("");
+  const [twitterThread, setTwitterThread] = useState<string[]>([""]);
   const [twitterScheduledTime, setTwitterScheduledTime] = useState<Date | undefined>();
 
   // LinkedIn form state
@@ -107,6 +112,9 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
   // Preview modal state
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+
+  // Thread mode switch confirmation dialog state
+  const [showThreadModeConfirmDialog, setShowThreadModeConfirmDialog] = useState(false);
 
   // Clone indicator state
   const [showCloneBadge, setShowCloneBadge] = useState(!!postData?.clonedFromPostId);
@@ -140,10 +148,16 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const [showHashtagPanel, setShowHashtagPanel] = useState(false);
 
   // Twitter character count (280 max, warning at 260) using platform-specific rules
-  const twitterCharCount = getTwitterCharacterCount(twitterContent);
+  const twitterCharCount = isThreadMode
+    ? 0 // Character count doesn't apply to threads (each tweet has its own limit)
+    : getTwitterCharacterCount(twitterContent);
   const TWITTER_MAX_CHARS = 280;
   const TWITTER_WARNING_THRESHOLD = 260;
-  const isTwitterOverLimit = twitterCharCount > TWITTER_MAX_CHARS;
+  const isTwitterOverLimit = !isThreadMode && twitterCharCount > TWITTER_MAX_CHARS;
+
+  // Thread validation
+  const hasThreadContent = isThreadMode && twitterThread.some(t => t.trim() !== "");
+  const isThreadOverLimit = isThreadMode && twitterThread.some(t => getTwitterCharacterCount(t) > TWITTER_MAX_CHARS);
 
   // LinkedIn character count (3,000 max, warning at 2,900) using platform-specific rules
   const linkedInCharCount = getLinkedInCharacterCount(linkedInContent);
@@ -152,7 +166,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const isLinkedInOverLimit = linkedInCharCount > LINKEDIN_MAX_CHARS;
 
   // Derived state: platforms are enabled if they have content
-  const enableTwitter = twitterContent.trim().length > 0;
+  const enableTwitter = isThreadMode ? hasThreadContent : twitterContent.trim().length > 0;
   const enableLinkedIn = linkedInContent.trim().length > 0;
 
   /**
@@ -160,10 +174,15 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
    */
   useEffect(() => {
     if (mode === "edit" && postData) {
-      // Pre-fill Twitter fields
-      if (postData.twitterContent) {
+      // Pre-fill Twitter fields - check for thread or single tweet
+      if (postData.twitterThread && postData.twitterThread.length > 0) {
+        setIsThreadMode(true);
+        setTwitterThread(postData.twitterThread);
+      } else if (postData.twitterContent) {
+        setIsThreadMode(false);
         setTwitterContent(postData.twitterContent);
       }
+
       if (postData.twitterScheduledTime) {
         setTwitterScheduledTime(new Date(postData.twitterScheduledTime));
       }
@@ -306,6 +325,29 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
     setTimeout(() => {
       linkedInTextareaRef.current?.focus();
     }, 0);
+  };
+
+  /**
+   * Handle thread mode toggle - switches between single-tweet and thread modes
+   */
+  const handleThreadModeToggle = () => {
+    setIsThreadMode(!isThreadMode);
+    // Reset content when switching modes
+    if (!isThreadMode) {
+      // Switching to thread mode - move single tweet to first tweet
+      if (twitterContent.trim()) {
+        setTwitterThread([twitterContent]);
+      } else {
+        setTwitterThread([""]);
+      }
+    } else {
+      // Switching to single tweet mode - use first tweet
+      if (twitterThread.length > 0 && twitterThread[0].trim()) {
+        setTwitterContent(twitterThread[0]);
+      } else {
+        setTwitterContent("");
+      }
+    }
   };
 
   /**
@@ -685,13 +727,25 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
     // Twitter validation (if enabled)
     if (enableTwitter) {
-      if (!twitterContent.trim()) {
-        setError("Twitter content is required");
-        return;
-      }
-      if (isTwitterOverLimit) {
-        setError("Twitter content exceeds 280 character limit");
-        return;
+      if (isThreadMode) {
+        const nonEmptyTweets = twitterThread.filter(t => t.trim() !== "");
+        if (nonEmptyTweets.length === 0) {
+          setError("Twitter thread cannot be empty");
+          return;
+        }
+        if (isThreadOverLimit) {
+          setError("One or more tweets in the thread exceed 280 character limit");
+          return;
+        }
+      } else {
+        if (!twitterContent.trim()) {
+          setError("Twitter content is required");
+          return;
+        }
+        if (isTwitterOverLimit) {
+          setError("Twitter content exceeds 280 character limit");
+          return;
+        }
       }
       if (!twitterScheduledTime) {
         setError("Please select a Twitter scheduled time");
@@ -721,6 +775,7 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
       // Build mutation args based on platform selection
       const mutationArgs: {
         twitterContent?: string;
+        twitterThread?: string[];
         linkedInContent?: string;
         twitterScheduledTime?: number;
         linkedInScheduledTime?: number;
@@ -729,7 +784,11 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
 
       // Add Twitter fields if enabled
       if (enableTwitter && twitterScheduledTime) {
-        mutationArgs.twitterContent = twitterContent;
+        if (isThreadMode) {
+          mutationArgs.twitterThread = twitterThread.filter(t => t.trim() !== "");
+        } else {
+          mutationArgs.twitterContent = twitterContent;
+        }
         mutationArgs.twitterScheduledTime = twitterScheduledTime.getTime();
       }
 
@@ -803,7 +862,13 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
   const isSubmitDisabled =
     isSubmitting ||
     (!enableTwitter && !enableLinkedIn) ||
-    (enableTwitter && (isTwitterOverLimit || !twitterContent.trim() || !twitterScheduledTime)) ||
+    (enableTwitter && (
+      (isThreadMode
+        ? (isThreadOverLimit || !hasThreadContent)
+        : (isTwitterOverLimit || !twitterContent.trim())
+      ) ||
+      !twitterScheduledTime
+    )) ||
     (enableLinkedIn && (isLinkedInOverLimit || !linkedInContent.trim() || !linkedInScheduledTime));
 
   return (
@@ -860,45 +925,82 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
                     <IconBrandX className="w-6 h-6 text-[#1DA1F2]" />
                     <Label className="text-base font-semibold">Twitter/X Content</Label>
                   </div>
-                </div>
 
-                {/* Twitter Content */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-end gap-2">
-                    <AIAssistantButton
-                      onFeatureSelect={handleAIFeatureSelect}
-                      isLoading={isAILoading}
-                      disabled={!twitterContent.trim()}
-                      isOpen={isAIAssistantOpen && activeField === "twitter"}
-                      onOpenChange={setIsAIAssistantOpen}
-                    />
+                  {/* Thread Mode Toggle */}
+                  <div className="flex items-center gap-2">
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={isThreadMode ? "default" : "outline"}
                       size="sm"
-                      onClick={() => handleOpenTemplatePicker("twitter")}
+                      onClick={() => {
+                        // Check if switching from thread mode to single-tweet mode
+                        if (isThreadMode) {
+                          // Count non-empty tweets
+                          const nonEmptyTweets = twitterThread.filter(tweet => tweet.trim() !== "");
+
+                          // If there are multiple non-empty tweets, show confirmation dialog
+                          if (nonEmptyTweets.length > 1) {
+                            setShowThreadModeConfirmDialog(true);
+                            return;
+                          }
+                        }
+
+                        // Proceed with the mode switch
+                        handleThreadModeToggle();
+                      }}
+                      className="gap-2"
                     >
-                      <IconTemplate className="mr-2 h-4 w-4" />
-                      Insert Template
+                      <IconBrandX className="h-4 w-4" />
+                      {isThreadMode ? "Thread Mode" : "Single Tweet"}
                     </Button>
                   </div>
-                  <Textarea
-                    ref={twitterTextareaRef}
-                    placeholder="What's happening?"
-                    value={twitterContent}
-                    onChange={(e) => setTwitterContent(e.target.value)}
-                    onFocus={() => setActiveField("twitter")}
-                    className="min-h-[120px] resize-y"
-                  />
-                  <div className="flex justify-end">
-                    <CharacterCounter
-                      currentCount={twitterCharCount}
-                      maxCount={TWITTER_MAX_CHARS}
-                      warningThreshold={TWITTER_WARNING_THRESHOLD}
-                      platform="twitter"
-                    />
-                  </div>
                 </div>
+
+                {/* Twitter Content - Conditional Rendering */}
+                {isThreadMode ? (
+                  <TwitterThreadComposer
+                    value={twitterThread}
+                    onChange={setTwitterThread}
+                    disabled={isSubmitting}
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-end gap-2">
+                      <AIAssistantButton
+                        onFeatureSelect={handleAIFeatureSelect}
+                        isLoading={isAILoading}
+                        disabled={!twitterContent.trim()}
+                        isOpen={isAIAssistantOpen && activeField === "twitter"}
+                        onOpenChange={setIsAIAssistantOpen}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenTemplatePicker("twitter")}
+                      >
+                        <IconTemplate className="mr-2 h-4 w-4" />
+                        Insert Template
+                      </Button>
+                    </div>
+                    <Textarea
+                      ref={twitterTextareaRef}
+                      placeholder="What's happening?"
+                      value={twitterContent}
+                      onChange={(e) => setTwitterContent(e.target.value)}
+                      onFocus={() => setActiveField("twitter")}
+                      className="min-h-[120px] resize-y"
+                    />
+                    <div className="flex justify-end">
+                      <CharacterCounter
+                        currentCount={twitterCharCount}
+                        maxCount={TWITTER_MAX_CHARS}
+                        warningThreshold={TWITTER_WARNING_THRESHOLD}
+                        platform="twitter"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Twitter Scheduling */}
@@ -1127,7 +1229,10 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               variant="secondary"
               className="flex-1"
               onClick={handleSaveDraft}
-              disabled={isSavingDraft || (!twitterContent.trim() && !linkedInContent.trim())}
+              disabled={isSavingDraft || (
+                (isThreadMode ? !hasThreadContent : !twitterContent.trim()) &&
+                !linkedInContent.trim()
+              )}
               aria-label="Save as draft"
             >
               <IconDeviceFloppy className="mr-2 h-4 w-4" />
@@ -1138,7 +1243,10 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
               variant="outline"
               className="flex-1"
               onClick={() => setIsPreviewModalOpen(true)}
-              disabled={!twitterContent.trim() && !linkedInContent.trim()}
+              disabled={
+                (isThreadMode ? !hasThreadContent : !twitterContent.trim()) &&
+                !linkedInContent.trim()
+              }
               aria-label="Preview post"
             >
               <IconEye className="mr-2 h-4 w-4" />
@@ -1170,12 +1278,42 @@ export function PostScheduler({ mode = "create", postData, onSuccess }: PostSche
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         twitterContent={twitterContent}
+        twitterThread={isThreadMode ? twitterThread : undefined}
         linkedInContent={linkedInContent}
         url={url}
         twitterEnabled={enableTwitter}
         linkedInEnabled={enableLinkedIn}
         twitterCharacterCount={twitterCharCount}
       />
+
+      {/* Thread Mode Confirmation Dialog */}
+      <Dialog open={showThreadModeConfirmDialog} onOpenChange={setShowThreadModeConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard Extra Tweets?</DialogTitle>
+            <DialogDescription>
+              You have multiple tweets in your thread. Switching to single-tweet mode will keep only the first tweet and discard the rest. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowThreadModeConfirmDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowThreadModeConfirmDialog(false);
+                handleThreadModeToggle();
+              }}
+            >
+              Discard and Switch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* AI Suggestion Panel */}
       <AISuggestionPanel

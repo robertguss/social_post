@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TemplateFormModal } from "../TemplateFormModal";
 import { useMutation } from "convex/react";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 
 // Mock Convex hooks
 jest.mock("convex/react", () => ({

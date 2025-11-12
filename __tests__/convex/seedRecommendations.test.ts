@@ -5,7 +5,6 @@
  */
 
 import { convexTest } from "convex-test";
-import { expect, test, describe, beforeEach } from "@jest/globals";
 import schema from "@/convex/schema";
 import { internal } from "@/convex/_generated/api";
 import { api } from "@/convex/_generated/api";

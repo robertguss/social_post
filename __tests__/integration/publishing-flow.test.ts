@@ -9,8 +9,6 @@
  * - Final failure handling after max retries
  */
 
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
-
 // Mock Convex context for integration testing
 const mockContext = {
   db: {
@@ -479,7 +477,7 @@ describe("End-to-End Publishing Flow", () => {
     });
 
     it("should not post URL reply if URL is empty", async () => {
-      const url = "";
+      const url: string = "";
       const shouldPostUrlReply = !!(url && url.trim() !== "");
 
       expect(shouldPostUrlReply).toBe(false);
@@ -598,3 +596,5 @@ describe("End-to-End Publishing Flow", () => {
     });
   });
 });
+
+export {};

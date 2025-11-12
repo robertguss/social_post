@@ -7,12 +7,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TwitterPreview } from "./previews/TwitterPreview";
+import { TwitterThreadPreview } from "./previews/TwitterThreadPreview";
 import { LinkedInPreview } from "./previews/LinkedInPreview";
 
 interface PreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   twitterContent: string;
+  twitterThread?: string[];
   linkedInContent: string;
   url?: string;
   twitterEnabled: boolean;
@@ -24,6 +26,7 @@ export function PreviewModal({
   isOpen,
   onClose,
   twitterContent,
+  twitterThread,
   linkedInContent,
   url,
   twitterEnabled,
@@ -33,8 +36,14 @@ export function PreviewModal({
   // Determine if we show one or both previews
   const showBothPlatforms = twitterEnabled && linkedInEnabled;
 
+  // Check if this is a thread or single tweet
+  const isThread = twitterThread && twitterThread.length > 0 && twitterThread.some(t => t.trim() !== "");
+
   // Handle empty content
-  const hasContent = twitterContent.trim() || linkedInContent.trim();
+  const hasTwitterContent = isThread
+    ? twitterThread.some(t => t.trim() !== "")
+    : twitterContent.trim() !== "";
+  const hasContent = hasTwitterContent || linkedInContent.trim();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -63,13 +72,19 @@ export function PreviewModal({
                 : "grid-cols-1 max-w-2xl mx-auto"
             }`}
           >
-            {/* Twitter Preview */}
+            {/* Twitter Preview - Show thread or single tweet */}
             {twitterEnabled && (
-              <TwitterPreview
-                content={twitterContent}
-                url={url}
-                characterCount={twitterCharacterCount}
-              />
+              <>
+                {isThread ? (
+                  <TwitterThreadPreview tweets={twitterThread!} url={url} />
+                ) : (
+                  <TwitterPreview
+                    content={twitterContent}
+                    url={url}
+                    characterCount={twitterCharacterCount}
+                  />
+                )}
+              </>
             )}
 
             {/* LinkedIn Preview */}

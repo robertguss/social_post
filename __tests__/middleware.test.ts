@@ -1,5 +1,3 @@
-import { describe, it, expect } from '@jest/globals';
-
 /**
  * Unit tests for Better Auth middleware configuration
  * Verifies route protection logic

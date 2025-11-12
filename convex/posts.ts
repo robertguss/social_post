@@ -20,6 +20,7 @@ import { Expression } from "convex/server";
 export const createPost = mutation({
   args: {
     twitterContent: v.optional(v.string()),
+    twitterThread: v.optional(v.array(v.string())),
     linkedInContent: v.optional(v.string()),
     twitterScheduledTime: v.optional(v.number()),
     linkedInScheduledTime: v.optional(v.number()),
@@ -35,7 +36,7 @@ export const createPost = mutation({
     const userId = identity.subject;
 
     // Validation: At least one platform must be selected
-    const hasTwitter = args.twitterContent && args.twitterScheduledTime;
+    const hasTwitter = (args.twitterContent || args.twitterThread) && args.twitterScheduledTime;
     const hasLinkedIn = args.linkedInContent && args.linkedInScheduledTime;
 
     if (!hasTwitter && !hasLinkedIn) {
@@ -44,12 +45,35 @@ export const createPost = mutation({
 
     // Twitter validation (if selected)
     if (hasTwitter) {
-      if (args.twitterContent!.trim() === "") {
-        throw new Error("Twitter content cannot be empty");
+      // Validate thread if present
+      if (args.twitterThread && args.twitterThread.length > 0) {
+        // Filter out empty tweets
+        const nonEmptyTweets = args.twitterThread.filter(t => t.trim() !== "");
+
+        if (nonEmptyTweets.length === 0) {
+          throw new Error("Twitter thread cannot be empty");
+        }
+
+        if (nonEmptyTweets.length > 25) {
+          throw new Error("Twitter thread cannot exceed 25 tweets");
+        }
+
+        // Validate each tweet
+        for (let i = 0; i < nonEmptyTweets.length; i++) {
+          if (nonEmptyTweets[i].length > 280) {
+            throw new Error(`Tweet ${i + 1} exceeds 280 character limit`);
+          }
+        }
+      } else if (args.twitterContent) {
+        // Validate single tweet
+        if (args.twitterContent.trim() === "") {
+          throw new Error("Twitter content cannot be empty");
+        }
+        if (args.twitterContent.length > 280) {
+          throw new Error("Twitter content exceeds 280 character limit");
+        }
       }
-      if (args.twitterContent!.length > 280) {
-        throw new Error("Twitter content exceeds 280 character limit");
-      }
+
       const now = Date.now();
       if (args.twitterScheduledTime! <= now) {
         throw new Error("Twitter scheduled time must be in the future");
@@ -70,11 +94,17 @@ export const createPost = mutation({
       }
     }
 
+    // Filter empty tweets from thread if present
+    const cleanedThread = args.twitterThread
+      ? args.twitterThread.filter(t => t.trim() !== "")
+      : undefined;
+
     // Create the post record
     const postId = await ctx.db.insert("posts", {
       userId,
       status: "Scheduled",
       twitterContent: args.twitterContent || "",
+      twitterThread: cleanedThread,
       linkedInContent: args.linkedInContent || "",
       twitterScheduledTime: args.twitterScheduledTime,
       linkedInScheduledTime: args.linkedInScheduledTime,
@@ -83,6 +113,7 @@ export const createPost = mutation({
       errorMessage: undefined,
       retryCount: 0,
       twitterPostId: undefined,
+      twitterPostIds: undefined,
       linkedInPostId: undefined,
     });
 
@@ -145,6 +176,7 @@ export const updatePost = mutation({
   args: {
     postId: v.id("posts"),
     twitterContent: v.optional(v.string()),
+    twitterThread: v.optional(v.array(v.string())),
     linkedInContent: v.optional(v.string()),
     twitterScheduledTime: v.optional(v.number()),
     linkedInScheduledTime: v.optional(v.number()),
@@ -174,7 +206,7 @@ export const updatePost = mutation({
     }
 
     // Validation: At least one platform must be selected
-    const hasTwitter = args.twitterContent && args.twitterScheduledTime;
+    const hasTwitter = (args.twitterContent || args.twitterThread) && args.twitterScheduledTime;
     const hasLinkedIn = args.linkedInContent && args.linkedInScheduledTime;
 
     if (!hasTwitter && !hasLinkedIn) {
@@ -183,12 +215,32 @@ export const updatePost = mutation({
 
     // Twitter validation (if selected)
     if (hasTwitter) {
-      if (args.twitterContent!.trim() === "") {
-        throw new Error("Twitter content cannot be empty");
+      // Validate thread if present
+      if (args.twitterThread && args.twitterThread.length > 0) {
+        const nonEmptyTweets = args.twitterThread.filter(t => t.trim() !== "");
+
+        if (nonEmptyTweets.length === 0) {
+          throw new Error("Twitter thread cannot be empty");
+        }
+
+        if (nonEmptyTweets.length > 25) {
+          throw new Error("Twitter thread cannot exceed 25 tweets");
+        }
+
+        for (let i = 0; i < nonEmptyTweets.length; i++) {
+          if (nonEmptyTweets[i].length > 280) {
+            throw new Error(`Tweet ${i + 1} exceeds 280 character limit`);
+          }
+        }
+      } else if (args.twitterContent) {
+        if (args.twitterContent.trim() === "") {
+          throw new Error("Twitter content cannot be empty");
+        }
+        if (args.twitterContent.length > 280) {
+          throw new Error("Twitter content exceeds 280 character limit");
+        }
       }
-      if (args.twitterContent!.length > 280) {
-        throw new Error("Twitter content exceeds 280 character limit");
-      }
+
       const now = Date.now();
       if (args.twitterScheduledTime! <= now) {
         throw new Error("Twitter scheduled time must be in the future");
@@ -222,9 +274,15 @@ export const updatePost = mutation({
       console.warn("Failed to cancel scheduler:", error);
     }
 
+    // Filter empty tweets from thread if present
+    const cleanedThread = args.twitterThread
+      ? args.twitterThread.filter(t => t.trim() !== "")
+      : undefined;
+
     // Update post content and times
     await ctx.db.patch(args.postId, {
       twitterContent: args.twitterContent || "",
+      twitterThread: cleanedThread,
       linkedInContent: args.linkedInContent || "",
       twitterScheduledTime: args.twitterScheduledTime,
       linkedInScheduledTime: args.linkedInScheduledTime,
@@ -370,6 +428,7 @@ export const clonePost = mutation({
       userId, // Use authenticated user's ID
       status: "draft", // New post starts as draft
       twitterContent: originalPost.twitterContent || "",
+      twitterThread: originalPost.twitterThread,
       linkedInContent: originalPost.linkedInContent || "",
       url: originalPost.url || "",
       // Clear scheduling fields (user must set new times)
@@ -379,6 +438,7 @@ export const clonePost = mutation({
       linkedInSchedulerId: undefined,
       // Clear publishing fields
       twitterPostId: undefined,
+      twitterPostIds: undefined,
       linkedInPostId: undefined,
       errorMessage: undefined,
       retryCount: 0,
@@ -408,6 +468,7 @@ export const updatePostStatus = internalMutation({
     postId: v.id("posts"),
     status: v.string(),
     twitterPostId: v.optional(v.string()),
+    twitterPostIds: v.optional(v.array(v.string())),
     linkedInPostId: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
     retryCount: v.optional(v.number()),
@@ -417,6 +478,7 @@ export const updatePostStatus = internalMutation({
     const updates: {
       status: string;
       twitterPostId?: string;
+      twitterPostIds?: string[];
       linkedInPostId?: string;
       errorMessage?: string;
       retryCount?: number;
@@ -426,6 +488,10 @@ export const updatePostStatus = internalMutation({
 
     if (args.twitterPostId !== undefined) {
       updates.twitterPostId = args.twitterPostId;
+    }
+
+    if (args.twitterPostIds !== undefined) {
+      updates.twitterPostIds = args.twitterPostIds;
     }
 
     if (args.linkedInPostId !== undefined) {

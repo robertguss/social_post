@@ -8,8 +8,6 @@
  * - getTemplates: Query templates with optional tag filtering
  */
 
-import { describe, it, expect, beforeEach } from "@jest/globals";
-
 // Mock Convex context
 const mockContext = {
   db: {
@@ -981,3 +979,5 @@ describe("Name uniqueness validation", () => {
     });
   });
 });
+
+export {};

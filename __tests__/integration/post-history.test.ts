@@ -40,14 +40,14 @@ describe("Post History Integration Tests", () => {
 
       // Create posts for user1
       const post1Id = await asUser1.mutation(api.posts.createPost, {
-        content: "User 1 post",
-        scheduledTime: Date.now() + 60000,
+        twitterContent: "User 1 post",
+        twitterScheduledTime: Date.now() + 60000,
       });
 
       // Create posts for user2
       const post2Id = await asUser2.mutation(api.posts.createPost, {
-        content: "User 2 post",
-        scheduledTime: Date.now() + 60000,
+        twitterContent: "User 2 post",
+        twitterScheduledTime: Date.now() + 60000,
       });
 
       // Query as user1 - should only see user1's posts
@@ -78,13 +78,13 @@ describe("Post History Integration Tests", () => {
 
       // Create posts at different times
       await asUser.mutation(api.posts.createPost, {
-        content: "Recent post",
-        scheduledTime: now + 60000,
+        twitterContent: "Recent post",
+        twitterScheduledTime: now + 60000,
       });
 
       await asUser.mutation(api.posts.createPost, {
-        content: "Old post",
-        scheduledTime: nintyDaysAgo + 60000,
+        twitterContent: "Old post",
+        twitterScheduledTime: nintyDaysAgo + 60000,
       });
 
       // Query with date range: last 7 days
@@ -115,8 +115,8 @@ describe("Post History Integration Tests", () => {
 
       // Create Twitter post
       await asUser.mutation(api.posts.createPost, {
-        content: "Twitter post",
-        scheduledTime: Date.now() + 60000,
+        twitterContent: "Twitter post",
+        twitterScheduledTime: Date.now() + 60000,
       });
 
       // Query for Twitter posts
@@ -141,18 +141,18 @@ describe("Post History Integration Tests", () => {
 
       // Create posts with different scheduled times
       await asUser.mutation(api.posts.createPost, {
-        content: "Post 1",
-        scheduledTime: now + 60000,
+        twitterContent: "Post 1",
+        twitterScheduledTime: now + 60000,
       });
 
       await asUser.mutation(api.posts.createPost, {
-        content: "Post 2",
-        scheduledTime: now + 120000,
+        twitterContent: "Post 2",
+        twitterScheduledTime: now + 120000,
       });
 
       await asUser.mutation(api.posts.createPost, {
-        content: "Post 3",
-        scheduledTime: now + 30000,
+        twitterContent: "Post 3",
+        twitterScheduledTime: now + 30000,
       });
 
       // Query all posts
@@ -177,8 +177,8 @@ describe("Post History Integration Tests", () => {
 
       // Create a scheduled post
       const postId = await asUser.mutation(api.posts.createPost, {
-        content: "Status change test",
-        scheduledTime: Date.now() + 60000,
+        twitterContent: "Status change test",
+        twitterScheduledTime: Date.now() + 60000,
       });
 
       // Initial query - status should be "Scheduled"
@@ -218,8 +218,8 @@ describe("Post History Integration Tests", () => {
 
       // Create a scheduled post
       const postId = await asUser.mutation(api.posts.createPost, {
-        content: "Failed post test",
-        scheduledTime: Date.now() + 60000,
+        twitterContent: "Failed post test",
+        twitterScheduledTime: Date.now() + 60000,
       });
 
       // Update to "Failed" with error message

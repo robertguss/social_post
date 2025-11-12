@@ -7,7 +7,8 @@ export default defineSchema({
   posts: defineTable({
     userId: v.string(),
     status: v.string(), // "draft" | "scheduled" | "publishing" | "published" | "failed"
-    twitterContent: v.optional(v.string()),
+    twitterContent: v.optional(v.string()), // Single tweet (legacy/backward compatible)
+    twitterThread: v.optional(v.array(v.string())), // Twitter thread (array of tweets)
     linkedInContent: v.optional(v.string()),
     twitterScheduledTime: v.optional(v.number()),
     linkedInScheduledTime: v.optional(v.number()),
@@ -16,7 +17,8 @@ export default defineSchema({
     url: v.optional(v.string()), // For auto-commenting
     errorMessage: v.optional(v.string()),
     retryCount: v.optional(v.number()),
-    twitterPostId: v.optional(v.string()),
+    twitterPostId: v.optional(v.string()), // First tweet ID (legacy/single tweet)
+    twitterPostIds: v.optional(v.array(v.string())), // All tweet IDs in thread
     linkedInPostId: v.optional(v.string()),
     clonedFromPostId: v.optional(v.id("posts")), // References original post ID if this post was cloned
     createdByQueueId: v.optional(v.id("recurring_queues")), // References queue ID if this post was created by a recurring queue
