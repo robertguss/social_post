@@ -10,16 +10,23 @@ A self-hosted social media scheduling application for scheduling and publishing 
 ## Features
 
 - **Multi-Platform Publishing** - Schedule posts to X/Twitter and LinkedIn with platform-specific content
+- **Twitter Thread Support** - Create and schedule multi-tweet threads (up to 25 tweets) with drag-and-drop reordering
+- **AI Content Assistant** - Google Gemini-powered features for content creation:
+  - Tone adjustment (professional, casual, engaging, formal)
+  - Twitter-to-LinkedIn expansion (auto-expand short tweets to LinkedIn posts)
+  - Smart hashtag generation (platform-specific, relevant hashtags)
+- **Intelligent Posting Time Recommendations** - Research-based optimal posting times with custom preference overrides
 - **Staggered Scheduling** - Set different publish times for each platform
 - **Template System** - Create and reuse content templates with tags
 - **URL Auto-Posting** - Automatically post URLs as replies/comments after main content
 - **Smart Retry Logic** - Automatic retry with exponential backoff for failed posts
 - **Failure Notifications** - Telegram notifications when posts fail after all retries
-- **Token Management** - Automatic LinkedIn token refresh (60-day validity)
+- **Token Management** - Automatic LinkedIn and Twitter token refresh
 - **Encrypted Storage** - AES-256-GCM encryption for OAuth tokens
 - **Real-Time Updates** - Reactive UI updates with Convex subscriptions
 - **Mobile Responsive** - Optimized for scheduling on the go
 - **Analytics Dashboard** - Track published, scheduled, and failed posts
+- **Usage Tracking & Cost Management** - AI request rate limiting and cost estimation
 
 ---
 
@@ -120,6 +127,7 @@ Visit `http://localhost:3000` to see your app.
 - **Better Auth Setup** - Configured with Convex
 - **X/Twitter Developer Account** - [Apply at developer.twitter.com](https://developer.twitter.com/)
 - **LinkedIn Developer Account** - [Apply at developer.linkedin.com](https://developer.linkedin.com/)
+- **Google Gemini API Key** (optional) - [Get from Google AI Studio](https://aistudio.google.com/app/apikey) for AI content features
 - **Telegram Bot** (optional) - [Create via @BotFather](https://t.me/botfather)
 
 ## Installation
@@ -221,6 +229,17 @@ ENCRYPTION_KEY=your_base64_encoded_32_byte_key
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 
+# Google Gemini AI (optional - for AI content features)
+GEMINI_API_KEY=your_gemini_api_key
+
+# AI Rate Limiting (optional - defaults shown)
+AI_DAILY_RATE_LIMIT=1000              # Daily AI request limit
+AI_MONTHLY_RATE_LIMIT=20000           # Monthly AI request limit
+AI_WARNING_THRESHOLD_PCT=90           # Warning at 90% of limit
+
+# Performance Tracking (optional - for posting time recommendations)
+PERFORMANCE_TRACKING_ENABLED=true     # Enable historical performance tracking
+
 # Single-User Mode (optional - set to "true" to disable new signups)
 DISABLE_SIGNUPS=false
 ```
@@ -308,25 +327,41 @@ social_post/
 │   ├── dashboard/            # Dashboard page
 │   ├── schedule/             # Post scheduling page
 │   ├── history/              # Post history page
-│   ├── settings/             # Settings page
+│   ├── settings/             # Settings page (OAuth + posting preferences)
 │   ├── templates/            # Template library page
 │   └── api/                  # API routes for OAuth callbacks
 ├── components/               # React components
 │   ├── ui/                   # shadcn/ui components
 │   └── features/             # Feature-specific components
+│       ├── TwitterThreadComposer.tsx    # Thread creation UI
+│       ├── TwitterThreadPreview.tsx     # Thread preview
+│       ├── AIAssistantButton.tsx        # AI feature access
+│       ├── AISuggestionPanel.tsx        # AI content suggestions
+│       ├── HashtagSuggestionPanel.tsx   # Hashtag insertion UI
+│       └── RecommendedTimes.tsx         # Posting time suggestions
 ├── convex/                   # Convex backend
 │   ├── schema.ts             # Database schema
-│   ├── posts.ts              # Post mutations & queries
-│   ├── publishing.ts         # Publishing actions
+│   ├── posts.ts              # Post mutations & queries (thread support)
+│   ├── publishing.ts         # Publishing actions (thread publishing)
 │   ├── connections.ts        # OAuth connections
 │   ├── templates.ts          # Template CRUD
 │   ├── dashboard.ts          # Dashboard queries
 │   ├── encryption.ts         # Token encryption
-│   ├── tokenRefresh.ts       # LinkedIn token refresh
-│   └── notifications.ts      # Telegram notifications
+│   ├── tokenRefresh.ts       # Twitter & LinkedIn token refresh
+│   ├── notifications.ts      # Telegram notifications
+│   ├── aiAssistant.ts        # AI feature actions
+│   ├── gemini.ts             # Gemini API integration utilities
+│   ├── aiUsageTracking.ts    # AI usage tracking & rate limiting
+│   ├── aiFeedback.ts         # User feedback collection
+│   ├── postingRecommendations.ts  # Posting time recommendations
+│   └── postingPreferences.ts      # User preference overrides
 ├── docs/                     # Documentation
+│   ├── setup/                # Setup guides (Gemini, OAuth, etc.)
+│   └── archive/              # Completed user stories
 ├── hooks/                    # Custom React hooks
 ├── lib/                      # Utility functions
+│   └── utils/
+│       └── characterCount.ts # Twitter/LinkedIn character counting
 └── middleware.ts             # Better Auth route protection
 ```
 
@@ -368,7 +403,8 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 
 **posts** - Stores scheduled and published content
 
-- Fields: `status`, `twitterContent`, `linkedInContent`, `scheduledTimes`, `url`, `errorMessage`, `retryCount`
+- Fields: `status`, `twitterContent`, `twitterThread`, `linkedInContent`, `scheduledTimes`, `url`, `twitterPostIds`, `errorMessage`, `retryCount`
+- Supports both single tweets (`twitterContent`) and threads (`twitterThread` array)
 - Index: `by_user` on `[userId]`
 
 **user_connections** - Stores encrypted OAuth tokens
@@ -381,6 +417,31 @@ User creates post → Convex mutation → ctx.scheduler.runAt(scheduledTime)
 - Fields: `name`, `content`, `tags`, `lastUsedAt`, `usageCount`
 - Index: `by_user` on `[userId]`
 
+**ai_usage_logs** - Tracks AI API usage and costs
+
+- Fields: `userId`, `timestamp`, `feature`, `tokensUsed`, `cost`, `modelUsed`, `requestId`, `duration`, `success`
+- Indexes: `by_user`, `by_timestamp`, `by_user_timestamp`, `by_feature`
+
+**ai_feedback** - User feedback on AI-generated content
+
+- Fields: `userId`, `feature`, `requestId`, `originalContent`, `aiResponse`, `feedbackType`, `feedbackText`, `timestamp`
+- Indexes: `by_user`, `by_feature`, `by_timestamp`
+
+**posting_time_recommendations** - Research-based optimal posting times
+
+- Fields: `platform`, `dayOfWeek`, `hourStart`, `hourEnd`, `engagementScore`, `timeZone` (stored in UTC)
+- Index: `by_platform_day` on `[platform, dayOfWeek]`
+
+**posting_preferences** - User custom posting time preferences
+
+- Fields: `userId`, `platform`, `dayOfWeek`, `hourStart`, `hourEnd`, `engagementScore`, `timeZone` (stored in local timezone)
+- Index: `by_user_platform_day` on `[userId, platform, dayOfWeek]`
+
+**post_performance** - Historical engagement metrics (feature-gated)
+
+- Fields: `postId`, `userId`, `platform`, `likes`, `shares`, `comments`, `impressions`, `timestamp`
+- Index: `by_post` on `[postId]`
+
 ## Documentation
 
 Comprehensive documentation is available in the `docs/` directory:
@@ -392,6 +453,146 @@ Comprehensive documentation is available in the `docs/` directory:
 - [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
 - [Architecture Document](docs/architecture.md) - Technical architecture details
 - [Product Requirements](docs/prd.md) - Product requirements document
+- [Gemini Setup Guide](docs/setup/gemini-setup.md) - Google Gemini API configuration
+
+## AI Content Features
+
+SocialPost includes AI-powered content creation features using Google Gemini 1.5 Flash:
+
+### Available Features
+
+**1. Tone Adjustment**
+- Rewrite content in different tones: professional, casual, engaging, or formal
+- Preserves meaning while adjusting voice and style
+- Respects platform character limits (280 for Twitter, 3,000 for LinkedIn)
+
+**2. Twitter-to-LinkedIn Expansion**
+- Automatically expand short Twitter content into longer LinkedIn posts
+- Targets 500-1,000 characters for LinkedIn
+- Preserves URLs, hashtags, and @mentions from original
+- Only available when Twitter has content and LinkedIn is empty/shorter
+
+**3. Smart Hashtag Generation**
+- Generate 3-5 relevant hashtags based on post content
+- Platform-aware: short/casual for Twitter, professional/descriptive for LinkedIn
+- Click individual hashtags to insert at cursor position or "Insert All"
+- Character limit validation prevents over-limit insertion
+
+### Rate Limiting & Cost Tracking
+
+**Rate Limits:**
+- Daily: 1,000 requests (configurable via `AI_DAILY_RATE_LIMIT`)
+- Monthly: 20,000 requests (configurable via `AI_MONTHLY_RATE_LIMIT`)
+- Warning displayed at 90% of limit (configurable via `AI_WARNING_THRESHOLD_PCT`)
+
+**Cost Estimation:**
+- Uses Gemini 1.5 Flash model
+- Pricing (paid tier): $0.075/1M input tokens, $0.30/1M output tokens
+- Typical cost per request: $0.000023 - $0.000065
+- All requests tracked in `ai_usage_logs` table with token counts and costs
+
+**User Feedback:**
+- Report issues with AI-generated content via "Report Issue" button
+- Feedback categories: inappropriate, low-quality, other
+- Helps improve AI feature quality over time
+
+### Usage
+
+1. Click the AI Assistant button (sparkles icon) in the post composer
+2. Select a feature from the menu
+3. Review the AI-generated suggestion in a side-by-side panel
+4. Accept, Reject, or Edit the suggestion before applying
+
+## Twitter Threads
+
+Create and schedule multi-tweet threads with advanced composition tools:
+
+### Thread Creation
+
+**Composer Features:**
+- Toggle "Thread Mode" to switch from single tweet to thread composition
+- Add up to 25 tweets (Twitter API limit)
+- Drag-and-drop reordering of tweets in the thread
+- Alternative move up/down buttons for reordering
+- Individual character counters per tweet (280 char limit each)
+- Numbered badges showing tweet position in thread
+- Visual warnings for empty tweets (auto-removed on scheduling)
+- Red borders for tweets exceeding character limit
+
+**Thread Preview:**
+- Live preview showing how thread will appear on Twitter
+- Visual thread connector lines between tweets
+- Character count display per tweet with color-coded warnings
+- Simulated Twitter UI with avatar, handle, timestamp
+- Thread info showing URL will be posted as final reply
+- Empty tweets filtered from preview
+
+### Thread Publishing
+
+**Publishing Flow:**
+1. First tweet published to your timeline
+2. Subsequent tweets posted as replies, creating thread continuity
+3. Optional URL posted as final reply (if provided)
+4. All tweet IDs stored in `twitterPostIds` array for tracking
+
+**Character Counting:**
+- Each tweet: 280 character maximum (strict validation)
+- URLs automatically counted as 23 characters (Twitter's t.co shortening)
+- Emoji counted properly (most count as 2 characters)
+- Real-time character counter with warnings at 260 chars
+
+**Error Handling:**
+- Automatic retry with exponential backoff for transient errors
+- Token refresh before publishing if expiring soon
+- Individual tweet failures don't fail entire thread
+- Detailed error messages for troubleshooting
+
+### Thread vs Single Tweet
+
+**Backward Compatibility:**
+- Existing single tweets stored in `twitterContent` field
+- New threads stored in `twitterThread` array field
+- Publishing logic checks for thread first, falls back to single tweet
+- Edit existing posts to convert between single tweet and thread
+
+## Intelligent Posting Time Recommendations
+
+Get data-driven suggestions for optimal posting times based on research and your preferences:
+
+### How It Works
+
+**Research-Based Recommendations:**
+- Pre-loaded with best practices from social media research
+- Twitter: Tuesday-Thursday 9-11am EST recommended
+- LinkedIn: Wednesday 10am-12pm EST for maximum engagement
+- All times stored in UTC, displayed in your local timezone
+- Top 3 time suggestions shown with engagement level indicators
+
+**Custom Preferences:**
+- Override research-based times with your own preferred posting windows
+- Set custom time ranges per platform and day of week
+- Custom preferences prioritized (95 engagement score) over research data
+- Manage preferences at `/settings/preferences`
+- Side-by-side comparison of custom vs default recommendations
+
+**Conflict Detection:**
+- Shows when suggested times overlap with already-scheduled posts
+- Helps avoid posting multiple times in short succession
+- Visual indicators for conflicting time slots
+
+**Historical Performance Integration (Feature-Gated):**
+- Track engagement metrics (likes, shares, comments) from published posts
+- Algorithm blends research data (60%) with your historical performance (40%)
+- Requires Twitter/LinkedIn analytics API access
+- Enable via `PERFORMANCE_TRACKING_ENABLED` environment variable
+
+### Usage
+
+1. Open post scheduler and select a date
+2. View "Recommended Times" section below date picker
+3. See top 3 suggestions with engagement levels (High/Good/Moderate/Low)
+4. Click a suggestion to auto-fill the posting time
+5. Customize preferences in Settings to override defaults
 
 ## Testing
 
@@ -538,12 +739,23 @@ Contributions are welcome! This is a personal productivity tool, but improvement
 
 ## Roadmap
 
+### Completed ✅
+- [x] Twitter thread support (up to 25 tweets)
+- [x] AI content assistant (tone adjustment, expansion, hashtag generation)
+- [x] Intelligent posting time recommendations
+- [x] Historical performance tracking foundation
+- [x] Custom posting preference overrides
+- [x] AI usage tracking and cost management
+- [x] Twitter token auto-refresh
+
+### Planned
 - [ ] Support for additional platforms (Mastodon, Bluesky)
 - [ ] Image/media attachment support
-- [ ] Post analytics and insights
+- [ ] Full post analytics integration (Twitter/LinkedIn APIs)
 - [ ] Bulk scheduling from CSV
 - [ ] Multi-user support (future)
 - [ ] Browser extension for quick scheduling
+- [ ] AI content improvement based on historical performance
 
 ## License
 
